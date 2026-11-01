@@ -50,6 +50,19 @@
     });
   });
 
+  // app link: live link once SITE.appUrl is set, "launching soon" until then
+  $$('[data-app-link]').forEach(function (el) {
+    if (SITE.appUrl) {
+      el.href = SITE.appUrl;
+      el.target = '_blank';
+      el.rel = 'noopener';
+      el.classList.remove('disabled');
+      if (el.dataset.live) el.textContent = el.dataset.live;
+    } else {
+      el.removeAttribute('href');
+    }
+  });
+
   // role tabs
   $$('[data-tabs]').forEach(function (group) {
     var tabs = $$('.tab', group), panels = $$('.tab-panel', group);
