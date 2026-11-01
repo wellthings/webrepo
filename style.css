@@ -77,6 +77,8 @@ p { margin: 0 0 1em; }
 .app-top { display: flex; justify-content: space-between; align-items: center; }
 .app-brand { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.06em; }
 .app-role { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; background: #f1f5f9; border-radius: 999px; padding: 3px 9px; }
+.app-role.online { display: inline-flex; align-items: center; gap: 5px; color: #15803d; background: #dcfce7; }
+.app-role.online i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block; }
 .app-card { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06); }
 .avatar { flex: none; width: 46px; height: 46px; border-radius: 50%; background: #f77f00; color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 0.95rem; }
 .app-card-info { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
@@ -206,7 +208,13 @@ footer a:hover { color: var(--orange); }
   }
   .nav-links.open { display: flex; }
   .nav-links a { padding: 12px 0; width: 100%; }
-  .hero { padding: 56px 0; }
+  .hero-grid { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; }
+  .hero-text { display: contents; }
+  .hero-text > * { order: 0; }
+  .phone-wrap { order: 1; align-self: center; }
+  .hero-text > .hero-actions { order: 2; margin-top: 0; }
+  .hero-text > .hero-fine { order: 3; margin-top: 0 !important; }
+  .hero { padding: 40px 0; }
   .chip-a { left: 0; }
   .chip-b { right: 0; }
   .section { padding: 56px 0; }
