@@ -5,7 +5,10 @@ window.SITE = {
   // Phone number is stored base64-encoded (not printed in the HTML); decoded only when someone taps "Call us".
   phoneEncoded: 'KzkxOTc5NDEzNDUzNA==',
   // Registered business address shown on the Contact page. Leave empty to hide it.
-  address: 'Colvin College, University Road, New Hyderabad, Lucknow, Uttar Pradesh - 226007',
+  company: 'Wellthings',
+  udyam: 'UDYAM-UP-50-0307327',
+  packageName: 'com.wellthings.interagood',
+  address: 'Kumharan Tola, Sitapur Road, Khadra, Lucknow, Uttar Pradesh - 226020',
   // Android app link (Google Play or APK download). While empty, the site shows "Launching soon".
   appUrl: 'download.html',
   hours: 'Monday to Saturday, 9:00 AM - 6:00 PM (IST)',
