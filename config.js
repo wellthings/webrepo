@@ -7,7 +7,7 @@ window.SITE = {
   // Registered business address shown on the Contact page. Leave empty to hide it.
   address: 'Colvin College, University Road, New Hyderabad, Lucknow, Uttar Pradesh - 226007',
   // Android app link (Google Play or APK download). While empty, the site shows "Launching soon".
-  appUrl: 'downloads/interagood-1.0.0.apk',
+  appUrl: '',
   hours: 'Monday to Saturday, 9:00 AM - 6:00 PM (IST)',
   responseTime: 'within 24 to 48 hours',
 };
