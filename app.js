@@ -56,7 +56,7 @@
       el.href = SITE.appUrl;
       el.target = '_blank';
       el.rel = 'noopener';
-      if (/\.apk$/.test(SITE.appUrl)) { el.setAttribute('download', ''); el.removeAttribute('target'); }
+      if (/\.apk(\?|$)/.test(SITE.appUrl)) { el.setAttribute('download', ''); el.removeAttribute('target'); }
       el.classList.remove('disabled');
       if (el.dataset.live) el.textContent = el.dataset.live;
     } else {
