@@ -9,6 +9,15 @@ window.SITE = {
   udyam: 'UDYAM-UP-50-0307327',
   packageName: 'com.wellthings.interagood',
   address: 'Kumharan Tola, Sitapur Road, Khadra, Lucknow, Uttar Pradesh - 226020',
+  // Backend API (Railway). Used by the Partner Program signup.
+  apiBase: 'https://interagood-production.up.railway.app/api',
+  // Social profile URLs. Leave a value empty to show the name without a link.
+  social: {
+    instagram: '',
+    facebook: '',
+    youtube: '',
+    linkedin: '',
+  },
   // Android app link (Google Play or APK download). While empty, the site shows "Launching soon".
   appUrl: 'download.html',
   hours: 'Monday to Saturday, 9:00 AM - 6:00 PM (IST)',
