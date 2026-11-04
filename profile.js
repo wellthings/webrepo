@@ -84,12 +84,12 @@
       }
     }
     h += '<p class="biz-section">Business address</p>';
-    h += '<button type="button" class="pin-open" id="pin-open">' + svg('pin') + '<span id="pin-open-text">Search &amp; pin business address</span></button><p class="hint" id="pin-open-hint">Opens a map. Search or use your current location.</p>';
+    h += '<div class="field addr-search-field"><label for="addr-search">Search your address</label><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search your address, use comma ( , )" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul><p class="hint" id="loc-hint">Example: Shivaji Road, Kasba Peth, Pune</p></div>';
+    h += '<button type="button" class="btn-sm loc-btn" id="use-location">' + svg('pin').replace('<svg', '<svg class="btn-ic"') + 'Use current location</button>';
     h += field('address', 'Address', 'pin', '<textarea id="address" maxlength="300" placeholder="Shop / office address"></textarea>');
     h += '<div class="field-row">' + text('city', 'City', 'pin', 'City', 'maxlength="80"') + text('state', 'State', 'pin', 'State', 'maxlength="80"') + '</div>';
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
     el.fields.innerHTML = h;
-    buildModal();
     wire();
     if (role === 'partner' || role === 'supplier') loadCategories();
   }
@@ -131,67 +131,9 @@
   }
 
 
-  // ---- location: current position, address search and draggable map pin (OpenStreetMap) ----
+  // ---- location: address search and current position (OpenStreetMap Nominatim), autofills the address fields ----
   var NOM = 'https://nominatim.openstreetmap.org';
-  var map = null, marker = null, coords = null, leafletLoading = null;
-  function loadLeaflet() {
-    if (window.L) return Promise.resolve();
-    if (leafletLoading) return leafletLoading;
-    leafletLoading = new Promise(function (resolve, reject) {
-      var css = document.createElement('link');
-      css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(css);
-      var s = document.createElement('script');
-      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      s.onload = resolve; s.onerror = function () { leafletLoading = null; reject(new Error('map')); };
-      document.head.appendChild(s);
-    });
-    return leafletLoading;
-  }
-
-  function buildModal() {
-    var m = document.createElement('div');
-    m.className = 'doc-modal pin-modal'; m.id = 'pin-modal'; m.hidden = true;
-    m.innerHTML = '<div class="doc-panel pin-panel" role="dialog" aria-modal="true" aria-label="Search and pin business address">' +
-      '<div class="doc-bar"><strong>Pin business address</strong><button type="button" class="doc-close" id="pin-close" aria-label="Close">&times;</button></div>' +
-      '<div class="pin-body"><div class="field pin-search"><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search area, landmark or shop name" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul></div>' +
-      '<button type="button" class="btn-sm loc-btn" id="use-location">Use my current location</button>' +
-      '<div class="map-box"><div id="map" aria-label="Map to pin your business location"></div></div>' +
-      '<p class="hint" id="map-hint">Search, or tap the map / drag the pin to set the exact spot.</p></div>' +
-      '<div class="pin-foot"><button type="button" class="btn create-btn" id="pin-select" disabled>Select this location</button></div></div>';
-    document.body.appendChild(m);
-  }
-  var pending = null;
-  function openModal() {
-    $('pin-modal').hidden = false;
-    document.body.style.overflow = 'hidden';
-    var go = function () {
-      if (!map) {
-        map = L.map('map', { scrollWheelZoom: false }).setView([22.9734, 78.6569], 5);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
-        map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng, true, 17); });
-      }
-      setTimeout(function () {
-        map.invalidateSize();
-        if (coords) setPin(coords.lat, coords.lng, false, 17);
-      }, 50);
-    };
-    loadLeaflet().then(go).catch(function () { $('map-hint').textContent = 'Map could not load. Close and type your address.'; });
-    $('addr-search').focus();
-  }
-  function closeModal() { $('pin-modal').hidden = true; document.body.style.overflow = ''; }
-  function setPin(lat, lng, reverse, zoom) {
-    coords = { lat: lat, lng: lng };
-    pending = { lat: lat, lng: lng, address: null, display: '' };
-    $('pin-select').disabled = false;
-    if (!map) return;
-    if (!marker) {
-      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-      marker.on('dragend', function () { var p = marker.getLatLng(); setPin(p.lat, p.lng, true); });
-    } else marker.setLatLng([lat, lng]);
-    if (zoom) map.setView([lat, lng], zoom);
-    if (reverse) reverseGeocode(lat, lng);
-  }
+  var coords = null;
   function setVal(id, v) { if (v) { $(id).value = v; $(id).closest('.field').classList.remove('bad'); } }
   function fillAddress(a, display) {
     a = a || {};
@@ -201,37 +143,26 @@
     setVal('state', a.state);
     setVal('pincode', (a.postcode || '').replace(/\D/g, '').slice(0, 6));
   }
-  function reverseGeocode(lat, lng) {
-    $('map-hint').textContent = 'Fetching address...';
-    fetch(NOM + '/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=' + lat + '&lon=' + lng, { headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { if (pending) { pending.address = d.address; pending.display = d.display_name; } $('map-hint').textContent = (d.display_name || 'Pin set.'); })
-      .catch(function () { $('map-hint').textContent = 'Pin set, but the address could not be fetched. Please type it.'; });
-  }
   function wireLocation() {
-    $('pin-open').addEventListener('click', openModal);
-    $('pin-close').addEventListener('click', closeModal);
-    $('pin-modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('pin-modal').hidden) closeModal(); });
-    $('pin-select').addEventListener('click', function () {
-      if (!pending) return;
-      fillAddress(pending.address, pending.display);
-      $('pin-open-text').textContent = (pending.display || 'Location pinned').split(',').slice(0, 3).join(',');
-      $('pin-open').classList.add('done');
-      $('pin-open-hint').textContent = 'Location pinned. You can edit the address below.';
-      closeModal();
-    });
+    var hint = $('loc-hint'), box = $('addr-search'), list = $('addr-suggest'), timer = null;
     $('use-location').addEventListener('click', function () {
-      var hint = $('map-hint');
       if (!navigator.geolocation) { hint.textContent = 'Location is not supported on this device.'; return; }
       hint.textContent = 'Waiting for location permission...';
       navigator.geolocation.getCurrentPosition(function (pos) {
-        setPin(pos.coords.latitude, pos.coords.longitude, true, 17);
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        hint.textContent = 'Fetching address...';
+        fetch(NOM + '/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=' + coords.lat + '&lon=' + coords.lng, { headers: { Accept: 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            fillAddress(d.address, d.display_name);
+            box.value = d.display_name || '';
+            hint.textContent = 'Address filled from your current location. You can edit it below.';
+          })
+          .catch(function () { hint.textContent = 'Location found, but the address could not be fetched. Please type it.'; });
       }, function (err) {
-        hint.textContent = err.code === 1 ? 'Permission denied. Search your address or tap the map instead.' : 'Could not get your location. Search your address or tap the map.';
+        hint.textContent = err.code === 1 ? 'Permission denied. Search or type your address instead.' : 'Could not get your location. Search or type your address.';
       }, { enableHighAccuracy: true, timeout: 15000 });
     });
-    var box = $('addr-search'), list = $('addr-suggest'), timer = null;
     box.addEventListener('input', function () {
       clearTimeout(timer);
       var q = box.value.trim();
@@ -247,9 +178,9 @@
               li.textContent = r.display_name;
               li.addEventListener('click', function () {
                 list.hidden = true; box.value = r.display_name;
-                setPin(parseFloat(r.lat), parseFloat(r.lon), false, 17);
-                pending.address = r.address; pending.display = r.display_name;
-                $('map-hint').textContent = r.display_name;
+                coords = { lat: parseFloat(r.lat), lng: parseFloat(r.lon) };
+                fillAddress(r.address, r.display_name);
+                hint.textContent = 'Address filled. You can edit it below.';
               });
               list.appendChild(li);
             });
@@ -276,7 +207,7 @@
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
     if ($('education')) { need('education', val('education').length >= 2, 'Enter your education.'); need('design_software', !!val('design_software'), 'Select software.'); }
     if (toggles.has_team) need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
-    if (role === 'supplier' && !coords) { var ph = $('pin-open-hint'); ph.textContent = 'Pin your shop location on the map.'; ph.style.color = '#d64545'; bad = bad || 'pin-open'; }
+    if (role === 'supplier' && !coords) { setBad('addr-search', 'Search your shop address or use current location.'); bad = bad || 'addr-search'; }
     need('address', val('address').length >= 3, 'Enter your address.');
     need('city', val('city').length >= 2, 'Enter your city.');
     need('state', val('state').length >= 2, 'Enter your state.');

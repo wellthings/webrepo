@@ -140,3 +140,7 @@ body.pp { background: #f5f6f8; }
 .cover-hint { margin: 0 2px 4px; min-height: 0; }
 .cover-hint:empty { display: none; }
 .cover ~ .cover-hint { margin-top: 0; }
+
+.btn-ic { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.loc-btn { margin: 0 0 16px; }
+.addr-search-field { position: relative; margin-bottom: 0; }
