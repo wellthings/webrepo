@@ -207,7 +207,7 @@
       try { sessionStorage.setItem('ig_session', JSON.stringify({ uuid: d.uuid, role: d.role, accessToken: d.accessToken, refreshToken: d.refreshToken })); } catch (err) { /* storage unavailable */ }
       el.stepRole.hidden = el.stepSignup.hidden = true;
       var ph = el.phone.value, un = el.username.value.trim();
-      $('done-summary').textContent = ROLE_LABELS[state.role] + ' - +91 ' + ph + ' - ' + un;
+      $('done-summary').textContent = ROLE_LABELS[state.role] + ' - +91 ' + ph.slice(0, 3) + 'XXXXXXX - ' + un.slice(0, 2) + 'XXXX';
       el.stepDone.hidden = false;
       $('step-business').hidden = false;
       $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
