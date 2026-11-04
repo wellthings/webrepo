@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="style.css?v=20261105-e">
-  <link rel="stylesheet" href="partner.css?v=15">
+  <link rel="stylesheet" href="partner.css?v=19">
 </head>
 <body class="pp">
   <header class="pp-header">
@@ -31,13 +31,11 @@
             <span class="role-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/></svg></span>
             <span class="role-name">Supplier</span>
             <span class="role-desc">Sell materials and supplies to interior projects.</span>
-            <span class="role-price">&#8377;219 / month</span>
           </button>
           <button type="button" class="role-card" role="radio" aria-checked="false" data-role="partner">
             <span class="role-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.5 6.5l3 3M4 20l4.5-1 10-10a2.1 2.1 0 00-3-3l-10 10zM13 8l3 3"/></svg></span>
             <span class="role-name">Partner</span>
             <span class="role-desc">Skilled contractor or karigar doing site work.</span>
-            <span class="role-price">&#8377;109 / month</span>
           </button>
         </div>
       </section>
@@ -116,22 +114,53 @@
       <section id="step-business" class="signup-card" hidden aria-labelledby="biz-title">
         <div class="signup-head">
           <h2 id="biz-title">Business profile</h2>
-          <p>Step 2 of 2. Tell clients about your business.</p>
+          <p>Step 2 of 3. Tell clients about your business.</p>
         </div>
         <form id="biz-form" novalidate autocomplete="off">
           <div id="biz-fields"></div>
-          <button type="submit" class="btn create-btn" id="biz-save">Submit for verification</button>
+          <button type="submit" class="btn create-btn" id="biz-save" disabled>Submit</button>
           <p class="form-error" id="biz-error" role="alert" hidden></p>
         </form>
       </section>
 
-      <section id="step-biz-done" class="signup-card step-locked" hidden aria-live="polite">
-        <span class="done-icon" aria-hidden="true">&#10003;</span>
-        <div class="locked-text">
-          <h2>Submitted for verification</h2>
-          <p id="biz-summary"></p>
-          <p class="hint">Your profile goes live after our team approves it.</p>
+      <section id="step-card" class="signup-card card-step" hidden aria-labelledby="card-title">
+        <div class="signup-head">
+          <h2 id="card-title">Your business card</h2>
+          <p>Step 3 of 3. This is how clients will see you.</p>
         </div>
+        <article class="biz-card">
+          <div class="bc-banner">
+            <img id="bc-banner" alt="" hidden>
+            <div class="bc-id">
+              <div class="bc-avatar"><img id="bc-avatar" alt="" hidden><span id="bc-initial"></span></div>
+              <div class="bc-who">
+                <h3 class="bc-name"><span id="bc-name"></span><svg class="bc-tick" viewBox="0 0 24 24" aria-label="Blue tick"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></h3>
+                <p class="bc-user" id="bc-user"></p>
+              </div>
+              <div class="bc-status">
+                <span id="bc-online-label">Offline</span>
+                <button type="button" class="switch" id="bc-online" role="switch" aria-checked="false" aria-label="Online status"></button>
+              </div>
+            </div>
+          </div>
+          <dl class="bc-details">
+            <div><dt>IG ID</dt><dd id="bc-igid"></dd></div>
+            <div><dt>Role</dt><dd><span id="bc-role"></span> <span class="bc-verified">verified</span></dd></div>
+            <div><dt>Category</dt><dd id="bc-category"></dd></div>
+            <div><dt>Address</dt><dd id="bc-address"></dd></div>
+            <div><dt>Status</dt><dd id="bc-state">Deactivated</dd></div>
+          </dl>
+        </article>
+        <button type="button" class="btn create-btn pay-btn" id="pay-btn">Pay</button>
+        <p class="form-error" id="pay-error" role="alert" hidden></p>
+      </section>
+
+      <section id="step-download" class="signup-card" hidden aria-labelledby="dl-title">
+        <div class="signup-head">
+          <h2 id="dl-title">Download the app</h2>
+          <p>Payment received. Download the Interagood app and log in to start getting leads.</p>
+        </div>
+        <a class="btn create-btn" id="dl-link" href="download.html">Download app</a>
       </section>
     </div>
   </main>
@@ -148,6 +177,6 @@
 
   <script src="config.js?v=20261104d"></script>
   <script src="partner.js?v=7"></script>
-  <script src="profile.js?v=14"></script>
+  <script src="profile.js?v=20"></script>
 </body>
 </html>
