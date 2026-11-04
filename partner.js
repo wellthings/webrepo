@@ -210,6 +210,7 @@
       $('done-summary').textContent = ROLE_LABELS[state.role] + ' - +91 ' + ph.slice(0, 3) + 'XXXXXXX - ' + un.slice(0, 2) + 'XXXX';
       el.stepDone.hidden = false;
       $('step-business').hidden = false;
+      document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: state.role } }));
       $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function (err) {
       el.error.textContent = err.message;
