@@ -55,7 +55,12 @@
   }
 
   function build() {
-    var h = '<p class="biz-section">Basic details</p>';
+    var h = '<div class="cover"><label class="cover-banner" for="banner"><img id="banner-img" alt="" hidden><span class="cover-ph">' + svg('pin').replace(ICONS.pin, '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>') + 'Add banner photo</span></label>' +
+      '<input class="sr" id="banner" type="file" accept="image/jpeg,image/png,image/webp">' +
+      '<label class="avatar" for="profile_photo"><img id="profile_photo-img" alt="" hidden><span class="avatar-ph">' + svg('user') + '</span><span class="avatar-plus">+</span></label>' +
+      '<input class="sr" id="profile_photo" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
+      '<p class="hint cover-hint" id="banner-hint">Banner and profile photo are optional. JPG, PNG or WebP, up to 5 MB.</p><p class="hint cover-hint" id="profile_photo-hint"></p>';
+    h += '<p class="biz-section">Basic details</p>';
     h += text('full_name', 'Full name', 'user', 'Your full name', 'maxlength="120"');
     h += text('business_name', 'Business name', 'shop', 'Your business or brand name', 'maxlength="150"');
     if (role === 'partner' || role === 'supplier') {
@@ -83,8 +88,6 @@
     h += field('address', 'Address', 'pin', '<textarea id="address" maxlength="300" placeholder="Shop / office address"></textarea>');
     h += '<div class="field-row">' + text('city', 'City', 'pin', 'City', 'maxlength="80"') + text('state', 'State', 'pin', 'State', 'maxlength="80"') + '</div>';
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
-    h += '<p class="biz-section">Photos</p>';
-    h += photo('profile_photo', 'Profile photo', 'profile') + photo('banner', 'Banner photo', 'banner');
     el.fields.innerHTML = h;
     buildModal();
     wire();

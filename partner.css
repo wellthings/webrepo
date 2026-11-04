@@ -126,3 +126,17 @@ body.pp { background: #f5f6f8; }
 .pin-modal #map { height: min(52vh, 380px); }
 .map-box, #map { isolation: isolate; position: relative; z-index: 0; }
 .pin-foot { position: relative; z-index: 2; background: #fff; }
+
+.sr { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.cover { position: relative; margin-bottom: 52px; }
+.cover-banner { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 6; border: 1.5px dashed #c9d2de; border-radius: 14px; background: var(--bg-alt); overflow: hidden; cursor: pointer; }
+.cover-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cover-ph { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.88rem; font-weight: 600; }
+.cover-ph svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.avatar { position: absolute; left: 18px; bottom: -44px; display: grid; place-items: center; width: 92px; height: 92px; border: 3px solid #fff; border-radius: 50%; background: #e9eef5; box-shadow: 0 2px 8px rgba(11, 31, 58, 0.18); overflow: hidden; cursor: pointer; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.avatar-ph svg { width: 38px; height: 38px; fill: none; stroke: #8693a4; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.avatar-plus { position: absolute; right: 4px; bottom: 4px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--orange); color: #fff; font-weight: 700; line-height: 1; }
+.cover-hint { margin: 0 2px 4px; min-height: 0; }
+.cover-hint:empty { display: none; }
+.cover ~ .cover-hint { margin-top: 0; }
