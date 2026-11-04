@@ -28,7 +28,7 @@
     ]
   };
 
-  var session = null, role = null, built = false, toggles = {}, files = {};
+  var session = null, role = null, built = false, toggles = {}, files = {}, urls = {};
   var el = { fields: $('biz-fields'), form: $('biz-form'), save: $('biz-save'), error: $('biz-error') };
 
   function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
@@ -120,8 +120,19 @@
         if (!f) return;
         if (['image/jpeg', 'image/png', 'image/webp'].indexOf(f.type) < 0) { hint.textContent = 'Only JPG, PNG or WebP allowed.'; this.value = ''; return; }
         if (f.size > 5 * 1024 * 1024) { hint.textContent = 'File is larger than 5 MB.'; this.value = ''; return; }
-        files[id] = f; hint.textContent = f.name;
-        img.src = URL.createObjectURL(f); img.hidden = false;
+        var input = this, kind = id === 'banner' ? 'banner' : 'profile', av = input.previousElementSibling;
+        files[id] = true; hint.textContent = 'Uploading...';
+        if (av) av.classList.add('uploading');
+        upload(kind, f).then(function (url) {
+          urls[id] = url;
+          var shown = new Image();
+          shown.onload = function () { img.src = url; img.hidden = false; };
+          shown.src = url;
+          hint.textContent = id === 'banner' ? 'Banner saved.' : 'Profile photo saved.';
+        }).catch(function (err) {
+          files[id] = null; urls[id] = null; input.value = '';
+          hint.textContent = err.message;
+        }).then(function () { files[id] = null; if (av) av.classList.remove('uploading'); });
       });
     });
     wireLocation();
@@ -229,7 +240,9 @@
 
   el.form.addEventListener('submit', function (e) {
     e.preventDefault();
-    if (el.save.disabled || !session || !validate()) return;
+    if (el.save.disabled || !session) return;
+    if (files.profile_photo || files.banner) { el.error.textContent = 'Please wait, photo is still uploading.'; el.error.hidden = false; return; }
+    if (!validate()) return;
     el.save.disabled = true; el.save.textContent = 'Saving...'; el.error.hidden = true;
     var body = {
       full_name: val('full_name'), business_name: val('business_name'), address: val('address'),
@@ -239,10 +252,9 @@
     Object.keys(toggles).forEach(function (k) { body[k] = !!toggles[k]; });
     if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
     if (toggles.has_team) body.team_members_count = parseInt(val('team_members_count'), 10);
-    var jobs = [];
-    if (files.profile_photo) jobs.push(upload('profile', files.profile_photo).then(function (u) { body.profile_photo_url = u; }));
-    if (files.banner) jobs.push(upload('banner', files.banner).then(function (u) { body.banner_url = u; }));
-    Promise.all(jobs).then(function () {
+    if (urls.profile_photo) body.profile_photo_url = urls.profile_photo;
+    if (urls.banner) body.banner_url = urls.banner;
+    Promise.resolve().then(function () {
       return fetch(API + '/users/' + session.uuid + '/profile-setup', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken }, body: JSON.stringify(body)
       });
@@ -252,7 +264,6 @@
         return d;
       });
     }).then(function (d) {
-      $('ig-id').textContent = d.ig_id;
       $('biz-summary').textContent = body.business_name + ' - ' + body.city;
       $('step-business').hidden = true;
       $('step-biz-done').hidden = false;
