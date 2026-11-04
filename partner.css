@@ -147,3 +147,16 @@ body.pp { background: #f5f6f8; }
 
 .uploading::after { content: ""; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.65); }
 .cover-banner.uploading, .avatar.uploading { opacity: 0.8; }
+
+/* verification */
+.verify-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.verify-opt { display: flex; flex-direction: column; gap: 4px; padding: 12px; text-align: left; border: 1.5px solid #c9d2de; border-radius: 12px; background: #fff; font: inherit; cursor: pointer; }
+.verify-opt strong { font-size: 0.9rem; color: var(--navy); }
+.verify-opt span { font-size: 0.78rem; color: #5b6778; }
+.verify-opt[aria-checked="true"] { border-color: var(--navy); background: #eef3fb; }
+.verify-box { margin-top: 12px; }
+.verify-box p { font-size: 0.88rem; line-height: 1.45; margin: 0 0 6px; }
+.selfie-box video, .selfie-box img { display: block; width: 100%; max-width: 280px; border-radius: 12px; background: #000; margin-bottom: 8px; transform: scaleX(-1); }
+.selfie-actions { display: flex; gap: 8px; }
+.selfie-actions .btn-sm { margin-top: 0; }
+@media (max-width: 380px) { .verify-choice { grid-template-columns: 1fr; } }

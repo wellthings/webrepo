@@ -42,6 +42,9 @@
   function photo(id, label, cls) {
     return '<div class="field"><label for="' + id + '">' + label + '</label><div class="photo-pick ' + cls + '"><img id="' + id + '-img" alt="" hidden><input id="' + id + '" type="file" accept="image/jpeg,image/png,image/webp"></div><p class="hint" id="' + id + '-hint">Optional. JPG, PNG or WebP, up to 5 MB.</p></div>';
   }
+  function docPick(id, label, hint) {
+    return '<div class="field" data-field="' + id + '"><label for="' + id + '">' + label + '</label><div class="photo-pick"><img id="' + id + '-img" alt="" hidden><input id="' + id + '" type="file" accept="image/jpeg,image/png,image/webp"></div><p class="hint" id="' + id + '-hint">' + hint + '</p></div>';
+  }
   function range(from, to, fmt) {
     var out = [];
     for (var i = from; i <= to; i++) out.push([String(i), fmt ? fmt(i) : String(i)]);
@@ -53,9 +56,9 @@
       '<input class="sr" id="banner" type="file" accept="image/jpeg,image/png,image/webp">' +
       '<label class="avatar" for="profile_photo"><img id="profile_photo-img" alt="" hidden><span class="avatar-ph">' + svg('user') + '</span><span class="avatar-plus">+</span></label>' +
       '<input class="sr" id="profile_photo" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
-      '<p class="hint cover-hint" id="banner-hint">Banner and profile photo are optional. JPG, PNG or WebP, up to 5 MB.</p><p class="hint cover-hint" id="profile_photo-hint"></p>';
+      '<p class="hint cover-hint" id="banner-hint">Profile photo must be your own real photo (face clearly visible). Banner is optional. JPG, PNG or WebP, up to 5 MB.</p><p class="hint cover-hint" id="profile_photo-hint"></p>';
     h += '<p class="biz-section">Basic details</p>';
-    h += text('full_name', 'Full name', 'user', 'Your full name', 'maxlength="120"');
+    h += text('full_name', 'Legal name (as per Aadhaar)', 'user', 'Your name exactly as on Aadhaar', 'maxlength="120"');
     h += text('business_name', 'Business name', 'shop', 'Your business or brand name', 'maxlength="150"');
     if (role === 'partner' || role === 'supplier') {
       h += select('category_id', role === 'partner' ? 'Your work category' : 'Supply category', 'list', [], 'Loading categories...');
@@ -68,10 +71,14 @@
     }
     if (TOGGLES[role]) {
       h += '<p class="biz-section">About your work</p>';
-      TOGGLES[role].forEach(function (t) { h += toggle(t[0], t[1]); });
-      if (role === 'partner') {
-        h += '<div id="team-count-wrap" hidden>' + field('team_members_count', 'Team members', 'user', '<input id="team_members_count" type="text" inputmode="numeric" maxlength="3" placeholder="How many people in your team?">') + '</div>';
-      }
+      TOGGLES[role].forEach(function (t) {
+        h += toggle(t[0], t[1]);
+        if (t[0] === 'has_tools') h += '<div id="tools-wrap" hidden>' + docPick('tools_photo', 'Photo of your tools', 'Upload a clear photo of your tools. JPG, PNG or WebP, up to 5 MB.') + '</div>';
+        if (t[0] === 'has_team') {
+          h += '<div id="team-count-wrap" hidden>' + field('team_members_count', 'Team members', 'user', '<input id="team_members_count" type="text" inputmode="numeric" maxlength="3" placeholder="How many people in your team?">') +
+            docPick('team_photo', 'Photo of your team', 'Upload a photo of you with your team. JPG, PNG or WebP, up to 5 MB.') + '</div>';
+        }
+      });
     }
     h += '<p class="biz-section">Business address</p>';
     h += '<div class="field addr-search-field"><label for="addr-search">Search your address</label><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search your address, use comma ( , )" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul><p class="hint" id="loc-hint">Example: Shivaji Road, Kasba Peth, Pune</p></div>';
@@ -79,6 +86,14 @@
     h += field('address', 'Address', 'pin', '<textarea id="address" maxlength="300" placeholder="Shop / office address"></textarea>');
     h += '<div class="field-row">' + text('city', 'City', 'pin', 'City', 'maxlength="80"') + text('state', 'State', 'pin', 'State', 'maxlength="80"') + '</div>';
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
+    h += '<p class="biz-section">Verification</p>';
+    h += docPick('aadhaar_front', 'Aadhaar card (front)', 'Clear photo of the front side. JPG, PNG or WebP, up to 5 MB.') +
+      docPick('aadhaar_back', 'Aadhaar card (back)', 'Clear photo of the back side. JPG, PNG or WebP, up to 5 MB.') +
+      '<div class="field" data-field="selfie"><label>Live selfie</label><div class="selfie-box"><video id="selfie-video" playsinline muted hidden></video><img id="selfie-img" alt="Your selfie" hidden>' +
+      '<div class="selfie-actions"><button type="button" class="btn-sm" id="selfie-open">Open camera</button><button type="button" class="btn-sm" id="selfie-snap" hidden>Capture</button></div></div>' +
+      '<p class="hint" id="selfie-hint">Take a selfie now. Gallery photos are not accepted.</p></div>';
+    h += select('video_call_slot', 'Video call verification', 'clock', [['morning', 'Morning (9 AM - 12 PM)'], ['afternoon', 'Afternoon (12 PM - 4 PM)'], ['evening', 'Evening (4 PM - 7 PM)']], 'Choose a time for your video call');
+    h += '<p class="hint">Our team will call you on your registered number at this time to complete verification.</p>';
     el.fields.innerHTML = h;
     wire();
     if (role === 'partner' || role === 'supplier') loadCategories();
@@ -101,6 +116,7 @@
         b.setAttribute('aria-checked', on ? 'true' : 'false');
         toggles[b.getAttribute('data-toggle')] = on;
         if (b.getAttribute('data-toggle') === 'has_team' && $('team-count-wrap')) $('team-count-wrap').hidden = !on;
+        if (b.getAttribute('data-toggle') === 'has_tools' && $('tools-wrap')) $('tools-wrap').hidden = !on;
       });
     });
     ['profile_photo', 'banner'].forEach(function (id) {
@@ -125,6 +141,7 @@
         }).then(function () { files[id] = null; if (av) av.classList.remove('uploading'); });
       });
     });
+    wireDocs();
     wireLocation();
     var pin = $('pincode');
     pin.addEventListener('input', function () { pin.value = pin.value.replace(/\D/g, '').slice(0, 6); });
@@ -132,6 +149,53 @@
   }
 
 
+  // ---- extra photos (tools, team, Aadhaar): uploaded on pick; Aadhaar files go to a private bucket and return a path ----
+  var DOC_KINDS = { tools_photo: 'tools', team_photo: 'team', aadhaar_front: 'aadhaar_front', aadhaar_back: 'aadhaar_back' };
+  var busy = {}, stream = null;
+  function showPreview(id, blob) {
+    var img = $(id + '-img'); if (!img) return;
+    img.src = URL.createObjectURL(blob); img.hidden = false;
+  }
+  function sendDoc(id, kind, blob, okText) {
+    var hint = $(id + '-hint');
+    busy[id] = true; urls[id] = null; hint.textContent = 'Uploading...';
+    return upload(kind, blob).then(function (res) {
+      urls[id] = res; showPreview(id, blob); hint.textContent = okText; hint.closest('.field').classList.remove('bad');
+    }).catch(function (err) { hint.textContent = err.message; }).then(function () { busy[id] = false; });
+  }
+  function wireDocs() {
+    Object.keys(DOC_KINDS).forEach(function (id) {
+      var input = $(id); if (!input) return;
+      input.addEventListener('change', function () {
+        var f = this.files[0], hint = $(id + '-hint');
+        urls[id] = null; $(id + '-img').hidden = true;
+        if (!f) return;
+        if (['image/jpeg', 'image/png', 'image/webp'].indexOf(f.type) < 0) { hint.textContent = 'Only JPG, PNG or WebP allowed.'; this.value = ''; return; }
+        if (f.size > 5 * 1024 * 1024) { hint.textContent = 'File is larger than 5 MB.'; this.value = ''; return; }
+        sendDoc(id, DOC_KINDS[id], f, 'Uploaded.');
+      });
+    });
+    function stopCamera() { if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; } $('selfie-video').hidden = true; $('selfie-snap').hidden = true; }
+    $('selfie-open').addEventListener('click', function () {
+      var hint = $('selfie-hint');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { hint.textContent = 'Camera is not supported on this device or browser.'; return; }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }).then(function (s) {
+        stream = s; var v = $('selfie-video'); v.srcObject = s; v.hidden = false; v.play();
+        $('selfie-img').hidden = true; urls.selfie = null; $('selfie-snap').hidden = false;
+        hint.textContent = 'Look at the camera and tap Capture.';
+      }).catch(function () { hint.textContent = 'Camera permission denied. Allow camera access to take your selfie.'; });
+    });
+    $('selfie-snap').addEventListener('click', function () {
+      var v = $('selfie-video');
+      if (!v.videoWidth) return;
+      var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0);
+      c.toBlob(function (blob) {
+        stopCamera();
+        if (blob) sendDoc('selfie', 'selfie', blob, 'Selfie uploaded. Tap Open camera to retake.');
+      }, 'image/jpeg', 0.85);
+    });
+  }
   // ---- location: address search and current position (OpenStreetMap Nominatim), autofills the address fields ----
   var NOM = 'https://nominatim.openstreetmap.org';
   var coords = null;
@@ -206,12 +270,21 @@
     need('business_name', val('business_name').length >= 2, 'Enter your business name.');
     if ($('category_id')) need('category_id', !!val('category_id'), 'Select a category.');
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
-    if (toggles.has_team) need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
+    if (!urls.profile_photo) { $('profile_photo-hint').textContent = 'Add your real profile photo.'; bad = bad || 'profile_photo-hint'; }
+    if (toggles.has_tools) need('tools_photo', !!urls.tools_photo, 'Upload a photo of your tools.');
+    if (toggles.has_team) {
+      need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
+      need('team_photo', !!urls.team_photo, 'Upload a photo of your team.');
+    }
     if (role === 'supplier' && !coords) { setBad('addr-search', 'Search your shop address or use current location.'); bad = bad || 'addr-search'; }
     need('address', val('address').length >= 3, 'Enter your address.');
     need('city', val('city').length >= 2, 'Enter your city.');
     need('state', val('state').length >= 2, 'Enter your state.');
     need('pincode', /^\d{6}$/.test(val('pincode')), 'Pincode must be 6 digits.');
+    need('aadhaar_front', !!urls.aadhaar_front, 'Upload the front of your Aadhaar.');
+    need('aadhaar_back', !!urls.aadhaar_back, 'Upload the back of your Aadhaar.');
+    need('selfie-open', !!urls.selfie, 'Take a live selfie.');
+    need('video_call_slot', !!val('video_call_slot'), 'Choose a time for the video call.');
     if (bad) $(bad).scrollIntoView({ behavior: 'smooth', block: 'center' });
     return !bad;
   }
@@ -222,7 +295,7 @@
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok) throw new Error(d.message || 'Photo upload failed. Please try again.');
-        return d.url;
+        return d.url || d.path;
       });
     });
   }
@@ -230,9 +303,9 @@
   el.form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (el.save.disabled || !session) return;
-    if (files.profile_photo || files.banner) { el.error.textContent = 'Please wait, photo is still uploading.'; el.error.hidden = false; return; }
+    if (files.profile_photo || files.banner || Object.keys(busy).some(function (k) { return busy[k]; })) { el.error.textContent = 'Please wait, photo is still uploading.'; el.error.hidden = false; return; }
     if (!validate()) return;
-    el.save.disabled = true; el.save.textContent = 'Saving...'; el.error.hidden = true;
+    el.save.disabled = true; el.save.textContent = 'Submitting...'; el.error.hidden = true;
     var body = {
       full_name: val('full_name'), business_name: val('business_name'), address: val('address'),
       city: val('city'), state: val('state'), pincode: val('pincode')
@@ -243,6 +316,10 @@
     if (toggles.has_team) body.team_members_count = parseInt(val('team_members_count'), 10);
     if (urls.profile_photo) body.profile_photo_url = urls.profile_photo;
     if (urls.banner) body.banner_url = urls.banner;
+    if (toggles.has_tools) body.tools_photo_url = urls.tools_photo;
+    if (toggles.has_team) body.team_photo_url = urls.team_photo;
+    body.video_call_slot = val('video_call_slot');
+    body.aadhaar_front_path = urls.aadhaar_front; body.aadhaar_back_path = urls.aadhaar_back; body.selfie_path = urls.selfie;
     Promise.resolve().then(function () {
       return fetch(API + '/users/' + session.uuid + '/profile-setup', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken }, body: JSON.stringify(body)
@@ -259,7 +336,7 @@
       $('step-biz-done').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function (err) {
       el.error.textContent = err.message; el.error.hidden = false;
-      el.save.disabled = false; el.save.textContent = 'Save business profile';
+      el.save.disabled = false; el.save.textContent = 'Submit for verification';
     });
   });
 

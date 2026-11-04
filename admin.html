@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Interagood Admin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6fa; color: #1b2433; }
+    main { max-width: 760px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.3rem; }
+    input, button, select { font: inherit; padding: 9px 12px; border-radius: 8px; border: 1px solid #c9d2de; }
+    button { background: #12284c; color: #fff; border: 0; cursor: pointer; font-weight: 600; }
+    button.red { background: #b3261e; }
+    .card { background: #fff; border-radius: 12px; padding: 14px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+    .imgs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .imgs a img { height: 110px; border-radius: 8px; border: 1px solid #ddd; }
+    dl { display: grid; grid-template-columns: 150px 1fr; gap: 4px 10px; margin: 8px 0; font-size: .9rem; }
+    dt { color: #5b6778; }
+    dd { margin: 0; word-break: break-word; }
+    .msg { color: #b3261e; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Profile review</h1>
+  <div class="row">
+    <input id="token" type="password" placeholder="Admin token" autocomplete="off">
+    <select id="status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+    <button id="load" type="button">Load</button>
+  </div>
+  <p class="msg" id="msg"></p>
+  <div id="list"></div>
+</main>
+<script src="config.js"></script>
+<script>
+(function () {
+  var API = window.SITE.apiBase, $ = function (id) { return document.getElementById(id); };
+  $('token').value = sessionStorage.getItem('ig_admin') || '';
+
+  function call(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'x-admin-token': $('token').value, 'Content-Type': 'application/json' }, opts.headers);
+    return fetch(API + path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.message || 'Request failed'); return d; });
+    });
+  }
+  function el(tag, text, cls) { var n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; }
+  function imgLink(label, url) {
+    if (!url) return null;
+    var a = el('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    var i = el('img'); i.src = url; i.alt = label; a.appendChild(i); return a;
+  }
+
+  function render(items) {
+    var list = $('list'); list.textContent = '';
+    if (!items.length) { list.appendChild(el('p', 'Nothing here.')); return; }
+    items.forEach(function (s) {
+      var d = s.data || {}, card = el('div', null, 'card');
+      card.appendChild(el('strong', (d.business_name || '') + ' (' + s.role + ')'));
+      var dl = el('dl');
+      [['Legal name', d.full_name], ['Phone', s.phone], ['Username', s.username], ['Category', d.category_name], ['Address', [d.address, d.city, d.state, d.pincode].join(', ')],
+        ['Age / experience', d.age != null ? d.age + ' / ' + d.experience_years + ' yrs' : null], ['Tools', d.has_tools == null ? null : d.has_tools ? 'Yes' : 'No'],
+        ['Team', d.has_team == null ? null : d.has_team ? 'Yes, ' + d.team_members_count : 'No'], ['Knows work / pricing', d.knows_work_completely == null ? null : (d.knows_work_completely ? 'Yes' : 'No') + ' / ' + (d.knows_pricing ? 'Yes' : 'No')],
+        ['Video call slot', s.video_call_slot], ['Submitted', new Date(s.submitted_at).toLocaleString()], ['Rejection reason', s.rejection_reason]
+      ].forEach(function (r) { if (r[1] != null && r[1] !== '') { dl.appendChild(el('dt', r[0])); dl.appendChild(el('dd', String(r[1]))); } });
+      card.appendChild(dl);
+      var imgs = el('div', null, 'imgs');
+      [['Profile', d.profile_photo_url], ['Banner', d.banner_url], ['Tools', d.tools_photo_url], ['Team', d.team_photo_url],
+        ['Aadhaar front', s.aadhaar_front_url], ['Aadhaar back', s.aadhaar_back_url], ['Selfie', s.selfie_url]].forEach(function (p) {
+        var n = imgLink(p[0], p[1]); if (n) imgs.appendChild(n);
+      });
+      card.appendChild(imgs);
+      if (s.status === 'pending') {
+        var row = el('div', null, 'row'), reason = el('input'), ok = el('button', 'Approve'), no = el('button', 'Reject', 'red');
+        reason.placeholder = 'Rejection reason'; ok.type = no.type = 'button';
+        ok.onclick = function () { if (confirm('Approve this profile?')) act('/approve', s.id, {}); };
+        no.onclick = function () { act('/reject', s.id, { reason: reason.value }); };
+        row.appendChild(ok); row.appendChild(reason); row.appendChild(no); card.appendChild(row);
+      }
+      list.appendChild(card);
+    });
+  }
+  function act(path, id, body) {
+    call('/admin/submissions/' + id + path, { method: 'POST', body: JSON.stringify(body) }).then(load).catch(function (e) { $('msg').textContent = e.message; });
+  }
+  function load() {
+    $('msg').textContent = '';
+    sessionStorage.setItem('ig_admin', $('token').value);
+    call('/admin/submissions?status=' + $('status').value).then(function (d) { render(d.data); }).catch(function (e) { $('msg').textContent = e.message; });
+  }
+  $('load').onclick = load;
+  $('status').onchange = load;
+})();
+</script>
+</body>
+</html>
