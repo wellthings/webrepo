@@ -76,3 +76,8 @@ body.pp { background: #f5f6f8; }
   .role-card { padding: 13px; }
   .role-desc { font-size: 0.8rem; }
 }
+
+.step-locked { display: flex; align-items: center; gap: 14px; margin-top: 0; text-align: left; border-color: #bfe5cf; background: #f4fbf7; }
+.step-locked .done-icon { flex: none; width: 44px; height: 44px; font-size: 1.4rem; }
+.step-locked h2 { margin: 0 0 2px; font-size: 1.05rem; }
+.step-locked p { overflow-wrap: anywhere; font-size: 0.88rem; }

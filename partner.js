@@ -206,8 +206,10 @@
     }).then(function (d) {
       try { sessionStorage.setItem('ig_session', JSON.stringify({ uuid: d.uuid, role: d.role, accessToken: d.accessToken, refreshToken: d.refreshToken })); } catch (err) { /* storage unavailable */ }
       el.stepRole.hidden = el.stepSignup.hidden = true;
+      $('done-summary').textContent = ROLE_LABELS[state.role] + ' \u00b7 +91 ' + el.phone.value + ' \u00b7 ' + el.username.value.trim();
       el.stepDone.hidden = false;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('step-business').hidden = false;
+      $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function (err) {
       el.error.textContent = err.message;
       el.error.hidden = false;

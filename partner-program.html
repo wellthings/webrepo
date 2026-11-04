@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="style.css?v=20261105-e">
-  <link rel="stylesheet" href="partner.css?v=1">
+  <link rel="stylesheet" href="partner.css?v=2">
 </head>
 <body class="pp">
   <header class="pp-header">
@@ -116,10 +116,20 @@
         </form>
       </section>
 
-      <section id="step-done" class="signup-card done" hidden aria-live="polite">
+      <section id="step-done" class="signup-card step-locked" hidden aria-live="polite">
         <span class="done-icon" aria-hidden="true">&#10003;</span>
-        <h2>Account created</h2>
-        <p>Welcome to Interagood. Your account is ready. Next, we will set up your business profile.</p>
+        <div class="locked-text">
+          <h2>Account created</h2>
+          <p id="done-summary"></p>
+        </div>
+      </section>
+
+      <section id="step-business" class="signup-card" hidden aria-labelledby="biz-title">
+        <div class="signup-head">
+          <h2 id="biz-title">Business profile</h2>
+          <p>Step 2 of 2. Tell clients about your business.</p>
+        </div>
+        <p class="hint">Business profile form will appear here.</p>
       </section>
     </div>
   </main>
@@ -135,6 +145,6 @@
   </div>
 
   <script src="config.js?v=20261104a"></script>
-  <script src="partner.js?v=1"></script>
+  <script src="partner.js?v=2"></script>
 </body>
 </html>
