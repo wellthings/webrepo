@@ -104,3 +104,11 @@ body.pp { background: #f5f6f8; }
 .ig-id { margin-top: 4px; }
 .ig-id strong { color: var(--orange-dark); letter-spacing: 0.08em; }
 @media (max-width: 420px) { .field-row { grid-template-columns: 1fr; } }
+
+.loc-btn { margin: 0 0 4px; }
+.suggest { position: absolute; z-index: 500; left: 0; right: 0; margin: 4px 0 0; padding: 4px 0; max-height: 220px; overflow-y: auto; list-style: none; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+.suggest li { padding: 10px 14px; font-size: 0.86rem; line-height: 1.35; cursor: pointer; }
+.suggest li:hover { background: var(--bg-alt); }
+.field:has(.suggest) { position: relative; }
+.map-box { overflow: hidden; border: 1.5px solid #c9d2de; border-radius: 12px; }
+#map { height: 240px; background: var(--bg-alt); }

@@ -78,7 +78,10 @@
         h += '<div id="team-count-wrap" hidden>' + field('team_members_count', 'Team members', 'user', '<input id="team_members_count" type="text" inputmode="numeric" maxlength="3" placeholder="How many people in your team?">') + '</div>';
       }
     }
-    h += '<p class="biz-section">Address</p>';
+    h += '<p class="biz-section">Business address</p>';
+    h += '<button type="button" class="btn-sm loc-btn" id="use-location">Use my current location</button><p class="hint" id="loc-hint">Allow location access to fill the address automatically.</p>';
+    h += '<div class="field"><label for="addr-search">Search address</label><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search area, landmark or shop name" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul></div>';
+    h += '<div class="map-box"><div id="map" aria-label="Map to pin your business location"></div></div><p class="hint" id="map-hint">Tap the map or drag the pin to set your exact location.</p>';
     h += field('address', 'Address', 'pin', '<textarea id="address" maxlength="300" placeholder="Shop / office address"></textarea>');
     h += '<div class="field-row">' + text('city', 'City', 'pin', 'City', 'maxlength="80"') + text('state', 'State', 'pin', 'State', 'maxlength="80"') + '</div>';
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
@@ -86,6 +89,7 @@
     h += photo('profile_photo', 'Profile photo', 'profile') + photo('banner', 'Banner photo', 'banner');
     el.fields.innerHTML = h;
     wire();
+    initMap();
     if (role === 'partner' || role === 'supplier') loadCategories();
   }
 
@@ -119,9 +123,103 @@
         img.src = URL.createObjectURL(f); img.hidden = false;
       });
     });
+    wireLocation();
     var pin = $('pincode');
     pin.addEventListener('input', function () { pin.value = pin.value.replace(/\D/g, '').slice(0, 6); });
     if ($('team_members_count')) $('team_members_count').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 3); });
+  }
+
+
+  // ---- location: current position, address search and draggable map pin (OpenStreetMap) ----
+  var NOM = 'https://nominatim.openstreetmap.org';
+  var map = null, marker = null, coords = null, leafletLoading = null;
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (leafletLoading) return leafletLoading;
+    leafletLoading = new Promise(function (resolve, reject) {
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      s.onload = resolve; s.onerror = function () { leafletLoading = null; reject(new Error('map')); };
+      document.head.appendChild(s);
+    });
+    return leafletLoading;
+  }
+  function initMap() {
+    loadLeaflet().then(function () {
+      map = L.map('map', { scrollWheelZoom: false }).setView([22.9734, 78.6569], 5);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+      map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng, true, 17); });
+    }).catch(function () { $('map-hint').textContent = 'Map could not load. You can still type your address.'; });
+  }
+  function setPin(lat, lng, reverse, zoom) {
+    coords = { lat: lat, lng: lng };
+    if (!map) return;
+    if (!marker) {
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', function () { var p = marker.getLatLng(); setPin(p.lat, p.lng, true); });
+    } else marker.setLatLng([lat, lng]);
+    if (zoom) map.setView([lat, lng], zoom);
+    if (reverse) reverseGeocode(lat, lng);
+  }
+  function setVal(id, v) { if (v) { $(id).value = v; $(id).closest('.field').classList.remove('bad'); } }
+  function fillAddress(a, display) {
+    a = a || {};
+    var line = [a.house_number, a.road, a.neighbourhood || a.suburb || a.hamlet].filter(Boolean).join(', ');
+    setVal('address', line || (display || '').split(',').slice(0, 3).join(',').trim());
+    setVal('city', a.city || a.town || a.village || a.state_district || a.county);
+    setVal('state', a.state);
+    setVal('pincode', (a.postcode || '').replace(/\D/g, '').slice(0, 6));
+  }
+  function reverseGeocode(lat, lng) {
+    $('map-hint').textContent = 'Fetching address...';
+    fetch(NOM + '/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=' + lat + '&lon=' + lng, { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { fillAddress(d.address, d.display_name); $('map-hint').textContent = 'Pin set. Check the address below and edit if needed.'; })
+      .catch(function () { $('map-hint').textContent = 'Pin set, but the address could not be fetched. Please type it.'; });
+  }
+  function wireLocation() {
+    $('use-location').addEventListener('click', function () {
+      var hint = $('loc-hint');
+      if (!navigator.geolocation) { hint.textContent = 'Location is not supported on this device.'; return; }
+      hint.textContent = 'Waiting for location permission...';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        hint.textContent = 'Location found.';
+        setPin(pos.coords.latitude, pos.coords.longitude, true, 17);
+        $('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, function (err) {
+        hint.textContent = err.code === 1 ? 'Permission denied. Search your address or tap the map instead.' : 'Could not get your location. Search your address or tap the map.';
+      }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+    var box = $('addr-search'), list = $('addr-suggest'), timer = null;
+    box.addEventListener('input', function () {
+      clearTimeout(timer);
+      var q = box.value.trim();
+      if (q.length < 3) { list.hidden = true; return; }
+      timer = setTimeout(function () {
+        fetch(NOM + '/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=in&q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (rows) {
+            list.textContent = '';
+            if (!rows.length) { list.hidden = true; return; }
+            rows.forEach(function (r) {
+              var li = document.createElement('li');
+              li.textContent = r.display_name;
+              li.addEventListener('click', function () {
+                list.hidden = true; box.value = r.display_name;
+                setPin(parseFloat(r.lat), parseFloat(r.lon), false, 17);
+                fillAddress(r.address, r.display_name);
+                $('map-hint').textContent = 'Pin set. Check the address below and edit if needed.';
+              });
+              list.appendChild(li);
+            });
+            list.hidden = false;
+          }).catch(function () { list.hidden = true; });
+      }, 500);
+    });
+    document.addEventListener('click', function (e) { if (!list.contains(e.target) && e.target !== box) list.hidden = true; });
   }
 
   function val(id) { var n = $(id); return n ? n.value.trim() : ''; }
@@ -140,6 +238,7 @@
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
     if ($('education')) { need('education', val('education').length >= 2, 'Enter your education.'); need('design_software', !!val('design_software'), 'Select software.'); }
     if (toggles.has_team) need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
+    if (role === 'supplier') need('address', !!coords, 'Pin your shop location on the map.');
     need('address', val('address').length >= 3, 'Enter your address.');
     need('city', val('city').length >= 2, 'Enter your city.');
     need('state', val('state').length >= 2, 'Enter your state.');
@@ -169,6 +268,7 @@
     };
     ['category_id', 'age', 'experience_years', 'education', 'design_software'].forEach(function (k) { if ($(k)) body[k] = val(k); });
     Object.keys(toggles).forEach(function (k) { body[k] = !!toggles[k]; });
+    if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
     if (toggles.has_team) body.team_members_count = parseInt(val('team_members_count'), 10);
     var jobs = [];
     if (files.profile_photo) jobs.push(upload('profile', files.profile_photo).then(function (u) { body.profile_photo_url = u; }));
