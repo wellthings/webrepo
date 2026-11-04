@@ -206,7 +206,8 @@
     }).then(function (d) {
       try { sessionStorage.setItem('ig_session', JSON.stringify({ uuid: d.uuid, role: d.role, accessToken: d.accessToken, refreshToken: d.refreshToken })); } catch (err) { /* storage unavailable */ }
       el.stepRole.hidden = el.stepSignup.hidden = true;
-      $('done-summary').textContent = ROLE_LABELS[state.role] + ' \u00b7 +91 ' + el.phone.value + ' \u00b7 ' + el.username.value.trim();
+      var ph = el.phone.value, un = el.username.value.trim();
+      $('done-summary').textContent = ROLE_LABELS[state.role] + ' - +91 ' + ph + ' - ' + un;
       el.stepDone.hidden = false;
       $('step-business').hidden = false;
       $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -262,3 +263,4 @@
   modal.addEventListener('click', function (e) { if (e.target === modal) closeDoc(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) closeDoc(); });
 })();
+
