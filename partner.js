@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var API = (window.SITE && window.SITE.apiBase) || '';
-  var ROLE_LABELS = { supplier: 'Supplier', partner: 'Partner', architect: 'Architect', site_inspector: 'Site Inspector' };
+  var ROLE_LABELS = { supplier: 'Supplier', partner: 'Partner' };
   var $ = function (id) { return document.getElementById(id); };
 
   var state = { role: null, phoneOk: false, verified: false, otpToken: null, usernameOk: false, passwordOk: false };

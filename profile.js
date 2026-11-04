@@ -12,7 +12,6 @@
     pc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
   };
-  var SOFTWARE = ['AutoCAD', 'SketchUp', '3ds Max', 'Revit', 'Lumion', 'V-Ray', 'Photoshop', 'Other'];
   var TOGGLES = {
     partner: [
       ['has_tools', 'Kya aapke paas auzar hain?'],
@@ -20,11 +19,6 @@
       ['knows_work_completely', 'Kya aapko apne kaam ki poori jaankari hai?'],
       ['knows_pricing', 'Kya aapko apne kaam ki calculation aur pricing ke baare me pata hai?'],
       ['worked_with_team_before', 'Kya aapne apni team ke saath koi alag kaam kiya hai?']
-    ],
-    architect: [['uses_boq_tools', 'Kya aap quotation ke liye BOQ tools use karte hain?']],
-    site_inspector: [
-      ['has_tools', 'Kya aapke paas inspection ke auzar hain?'],
-      ['knows_work_completely', 'Kya aapko site kaam ki poori jaankari hai?']
     ]
   };
 
@@ -71,10 +65,6 @@
       h += select('age', 'Age', 'num', range(18, 65), 'Select age');
       h += select('experience_years', 'Experience', 'clock', [['0', 'Fresher']].concat(range(1, 40, function (n) { return n + (n === 1 ? ' year' : ' years'); })), 'Select experience');
       h += '</div>';
-    }
-    if (role === 'architect') {
-      h += text('education', 'Education / qualification', 'cap', 'e.g. B.Arch, Diploma in Architecture', 'maxlength="150"');
-      h += select('design_software', 'Designing software', 'pc', SOFTWARE.map(function (s) { return [s, s]; }), 'Select software');
     }
     if (TOGGLES[role]) {
       h += '<p class="biz-section">About your work</p>';
@@ -216,7 +206,6 @@
     need('business_name', val('business_name').length >= 2, 'Enter your business name.');
     if ($('category_id')) need('category_id', !!val('category_id'), 'Select a category.');
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
-    if ($('education')) { need('education', val('education').length >= 2, 'Enter your education.'); need('design_software', !!val('design_software'), 'Select software.'); }
     if (toggles.has_team) need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
     if (role === 'supplier' && !coords) { setBad('addr-search', 'Search your shop address or use current location.'); bad = bad || 'addr-search'; }
     need('address', val('address').length >= 3, 'Enter your address.');
@@ -248,7 +237,7 @@
       full_name: val('full_name'), business_name: val('business_name'), address: val('address'),
       city: val('city'), state: val('state'), pincode: val('pincode')
     };
-    ['category_id', 'age', 'experience_years', 'education', 'design_software'].forEach(function (k) { if ($(k)) body[k] = val(k); });
+    ['category_id', 'age', 'experience_years'].forEach(function (k) { if ($(k)) body[k] = val(k); });
     Object.keys(toggles).forEach(function (k) { body[k] = !!toggles[k]; });
     if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
     if (toggles.has_team) body.team_members_count = parseInt(val('team_members_count'), 10);
