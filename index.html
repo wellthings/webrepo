@@ -11,24 +11,25 @@
   <meta name="theme-color" content="#0b1f3a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
-  <link rel="stylesheet" href="style.css?v=20261105-e">
+  <link rel="stylesheet" href="style.css?v=20261105-f">
+  <link rel="stylesheet" href="shop.css?v=1">
 </head>
 <body class="home">
-  <div class="top-fixed">
+  <div class="top-fixed" id="top-fixed">
+  <div class="top-upper" id="top-upper">
   <header class="nav">
     <div class="container nav-inner">
       <a class="brand" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
       <div class="location-bar">
-        <span class="location-icon" aria-hidden="true">⌖</span>
+        <button type="button" class="location-icon loc-btn" id="loc-btn" aria-label="Use my current location">⌖</button>
         <label class="sr-only" for="location-input">Your address or location</label>
-        <input id="location-input" type="text" autocomplete="street-address" placeholder="Enter your address or location">
+        <input id="location-input" type="text" autocomplete="street-address" placeholder="Allow location or type your address">
       </div>
       <a class="header-contact" href="contact.html">Contact</a>
     </div>
   </header>
 
-    <section class="service-finder" id="partner-program">
-      <div class="container finder-inner">
+  <div class="container upper-finder">
         <label class="search-bar">
           <span aria-hidden="true">⌕</span>
           <span class="sr-only">Search services</span>
@@ -40,7 +41,11 @@
           <button type="button" class="role-tab active" data-service-role="partner" aria-pressed="true">Partner</button>
           <button type="button" class="role-tab" data-service-role="supplier" aria-pressed="false">Supplier</button>
         </div>
+  </div>
+  </div>
 
+    <section class="service-finder" id="partner-program">
+      <div class="container finder-inner">
         <div class="category-panel active" data-role-panel="partner" role="region" aria-label="Partner services">
           <div class="category-grid" data-category-list="partner"></div>
         </div>
@@ -65,19 +70,24 @@
     </section>
 
     <section class="project-options" aria-label="Start an interior project">
-      <div class="container project-grid">
+      <div class="container project-grid project-single">
         <article class="project-card">
-          <span class="project-step">01 / START FRESH</span>
+          <span class="project-step">FREE SITE VISIT</span>
           <h2>Planning a new interior?</h2>
-          <p>Connect with a skilled partner who plans and leads your project.</p>
-          <a class="btn" href="contact.html">Find a partner</a>
+          <p>A skilled partner visits your space, plans the work with you and shares a clear budget.</p>
+          <a class="btn" href="inspection.html">Get free inspection</a>
         </article>
-        <article class="project-card project-card-dark">
-          <span class="project-step">02 / MAKE IT BETTER</span>
-          <h2>Already have an interior?</h2>
-          <p>Find the right professional or supplier for your next upgrade.</p>
-          <a class="btn ghost" href="#partner-program">Hire &amp; start now</a>
-        </article>
+      </div>
+    </section>
+
+    <section class="browse" id="browse" aria-label="Browse services">
+      <div class="container">
+        <div class="browse-head">
+          <div><h2 id="browse-title">Popular interior work</h2><p id="browse-sub"></p></div>
+          <div class="swiper-nav"><button type="button" data-swipe="prev" aria-label="Previous">&lsaquo;</button><button type="button" data-swipe="next" aria-label="Next">&rsaquo;</button></div>
+        </div>
+        <div class="swiper" id="browse-strip"></div>
+        <p class="browse-empty" id="browse-empty" hidden>No matching services. Try a different search.</p>
       </div>
     </section>
 
@@ -160,8 +170,8 @@
     <a class="bn-item" href="#" data-soon>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg><span>Orders</span>
     </a>
-    <a class="bn-item" href="#" data-soon>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.1l2-8H6.4"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg><span>Cart</span>
+    <a class="bn-item" href="#" data-cart-open>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.1l2-8H6.4"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg><span>Cart</span><b class="cart-count" data-cart-count hidden>0</b>
     </a>
     <a class="bn-item" href="#" data-soon>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.500 1.500 7.500 5.500"/></svg><span>Profile</span>
@@ -169,6 +179,9 @@
   </nav>
 
   <script src="config.js?v=20261102c"></script>
-  <script src="app.js?v=20261105-app"></script>
+  <script src="catalog.js?v=1"></script>
+  <script src="cart.js?v=1"></script>
+  <script src="app.js?v=20261105-g"></script>
+  <script src="browse.js?v=1"></script>
 </body>
 </html>

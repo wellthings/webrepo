@@ -81,21 +81,10 @@
 
   // homepage partner and supplier category finder
   var palette = ['#f77f00', '#d62828', '#7b2cbf', '#0077b6', '#2a9d8f', '#e63946', '#3a86ff', '#fb5607', '#06a77d', '#c9184a'];
+  var CAT = window.CATALOG || { partner: [], supplier: [] };
   var categoryLists = {
-    partner: [
-      ['🔨', 'Carpentry'], ['🛋️', 'Sofa & Upholstery'], ['🛠️', 'Welding & MS'], ['🚪', 'UPVC & Windows'],
-      ['🧱', 'Civil & Masonry'], ['🏛️', 'Tiles & Stone'], ['🚿', 'Plumbing'], ['⚡', 'Electrical'],
-      ['💡', 'Lighting'], ['🏠', 'Ceiling & POP'], ['🎨', 'Paint & Polish'], ['🪞', 'Glass & Shower'],
-      ['❄️', 'AC & HVAC'], ['📹', 'Home Security'], ['🖼️', 'Wallpaper'], ['📺', 'Chimney & TV'],
-      ['🧵', 'Blinds & Curtains']
-    ],
-    supplier: [
-      ['🌲', 'Plywood & Timber'], ['🗂️', 'Laminates & Panels'], ['🔩', 'Hardware'], ['🔌', 'Electrical'],
-      ['💡', 'Lighting & LED'], ['🚰', 'Plumbing'], ['🛁', 'Bath Fittings'], ['🏗️', 'Cement & Bricks'],
-      ['⬜', 'Tiles & Stone'], ['🖌️', 'Paint & Chemicals'], ['🪞', 'Glass & Mirrors'], ['🚪', 'Aluminium & UPVC'],
-      ['⚙️', 'Steel & Fabrication'], ['🧶', 'Foam & Fabric'], ['🏛️', 'Gypsum & POP'], ['🍳', 'Kitchen Appliances'],
-      ['🖼️', 'Wallpaper & Panels'], ['🧵', 'Blinds & Curtains']
-    ]
+    partner: CAT.partner.map(function (c) { return [c.icon, c.name, c.id]; }),
+    supplier: CAT.supplier.map(function (c) { return [c.icon, c.name, c.id]; })
   };
   var roleTabs = $$('[data-service-role]');
   var categoryPanels = $$('[data-role-panel]');
@@ -114,12 +103,15 @@
       tab.innerHTML = '<span class="cat-icon" aria-hidden="true">' + item[0] + '</span><span class="cat-name"></span>';
       tab.lastChild.textContent = item[1];
       tab.setAttribute('aria-pressed', 'false');
+      tab.setAttribute('data-cat', item[2]);
       tab.addEventListener('click', function () {
+        var wasActive = tab.classList.contains('active');
         $$('.category-tab', list).forEach(function (item) {
-          var selected = item === tab;
+          var selected = item === tab && !wasActive;
           item.classList.toggle('active', selected);
           item.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
+        emitFilter();
       });
       list.appendChild(tab);
     });
@@ -140,19 +132,15 @@
     filterCategories();
   }
 
-  function filterCategories() {
-    var query = categorySearch ? categorySearch.value.trim().toLowerCase() : '';
-    var activePanel = $('[data-role-panel="' + activeRole + '"]');
-    var visibleCount = 0;
-    if (activePanel) {
-      $$('.category-tab', activePanel).forEach(function (tab) {
-        var matches = tab.textContent.toLowerCase().indexOf(query) !== -1;
-        tab.hidden = !matches;
-        if (matches) visibleCount += 1;
-      });
-    }
-    if (categoryEmpty) categoryEmpty.hidden = visibleCount > 0;
+  // tabs stay visible; the search text and selected tab filter the cards below
+  function emitFilter() {
+    var panel = $('[data-role-panel="' + activeRole + '"]');
+    var on = panel && $('.category-tab.active', panel);
+    document.dispatchEvent(new CustomEvent('ig:filter', {
+      detail: { role: activeRole, cat: on ? on.getAttribute('data-cat') : '', q: categorySearch ? categorySearch.value.trim().toLowerCase() : '' }
+    }));
   }
+  function filterCategories() { emitFilter(); }
 
   // mouse drag scrolling for the swipeable strips
   $$('.category-grid').forEach(function (strip) {
@@ -166,6 +154,70 @@
     });
     strip.addEventListener('click', function (e) { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
   });
+
+  // ---- location: ask on first visit, reverse-geocode into the address box, remember it ----
+  var LOC_KEY = 'ig_loc';
+  var locInput = $('#location-input');
+  function savedLoc() { try { return JSON.parse(localStorage.getItem(LOC_KEY)); } catch (e) { return null; } }
+  function setLoc(l) {
+    localStorage.setItem(LOC_KEY, JSON.stringify(l));
+    if (locInput) locInput.value = l.address || '';
+    document.dispatchEvent(new CustomEvent('ig:location', { detail: l }));
+  }
+  function shortAddress(d) {
+    var a = (d && d.address) || {};
+    var parts = [a.road, a.neighbourhood || a.suburb, a.city_district, a.city || a.town || a.village || a.county, a.state, a.postcode];
+    var seen = {};
+    parts = parts.filter(function (p) { if (!p || seen[p]) return false; seen[p] = 1; return true; });
+    return parts.length ? parts.join(', ') : (d && d.display_name) || '';
+  }
+  function requestLocation() {
+    if (!navigator.geolocation) { if (locInput) locInput.placeholder = 'Type your address'; return; }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&lat=' + lat + '&lon=' + lng)
+        .then(function (r) { return r.json(); })
+        .then(function (d) { setLoc({ lat: lat, lng: lng, address: shortAddress(d) || lat.toFixed(4) + ', ' + lng.toFixed(4) }); })
+        .catch(function () { setLoc({ lat: lat, lng: lng, address: lat.toFixed(4) + ', ' + lng.toFixed(4) }); });
+    }, function () { if (locInput) locInput.placeholder = 'Location blocked. Type your address'; }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
+  }
+  function geocodeTyped() {
+    var text = locInput.value.trim();
+    if (text.length < 3) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + encodeURIComponent(text))
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        if (!list.length) { locInput.placeholder = 'Address not found. Try area and city'; return; }
+        setLoc({ lat: parseFloat(list[0].lat), lng: parseFloat(list[0].lon), address: text });
+      }).catch(function () {});
+  }
+  if (locInput) {
+    var stored = savedLoc();
+    if (stored && stored.address) locInput.value = stored.address; else requestLocation();
+    locInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); geocodeTyped(); locInput.blur(); } });
+    locInput.addEventListener('change', geocodeTyped);
+    var locBtn = $('#loc-btn');
+    if (locBtn) locBtn.addEventListener('click', requestLocation);
+    document.addEventListener('ig:location-request', requestLocation);
+  }
+
+  // ---- header: scrolling down hides everything but the category tabs; scrolling up brings it back ----
+  var pinned = $('#top-fixed'), upper = $('#top-upper');
+  if (pinned && upper) {
+    var lastY = window.scrollY, hidden = false;
+    function setHidden(h) {
+      hidden = h;
+      pinned.style.top = h ? -upper.offsetHeight + 'px' : '0px';
+    }
+    window.addEventListener('scroll', function () {
+      var y = window.scrollY, delta = y - lastY;
+      if (Math.abs(delta) < 6) return;
+      if (delta > 0 && y > upper.offsetHeight && !hidden) setHidden(true);
+      else if (delta < 0 && hidden) setHidden(false);
+      lastY = y;
+    }, { passive: true });
+    window.addEventListener('resize', function () { if (hidden) setHidden(true); });
+  }
 
   // footer social links
   $$('[data-social]').forEach(function (el) {
