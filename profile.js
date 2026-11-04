@@ -79,17 +79,15 @@
       }
     }
     h += '<p class="biz-section">Business address</p>';
-    h += '<button type="button" class="btn-sm loc-btn" id="use-location">Use my current location</button><p class="hint" id="loc-hint">Allow location access to fill the address automatically.</p>';
-    h += '<div class="field"><label for="addr-search">Search address</label><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search area, landmark or shop name" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul></div>';
-    h += '<div class="map-box"><div id="map" aria-label="Map to pin your business location"></div></div><p class="hint" id="map-hint">Tap the map or drag the pin to set your exact location.</p>';
+    h += '<button type="button" class="pin-open" id="pin-open">' + svg('pin') + '<span id="pin-open-text">Search &amp; pin business address</span></button><p class="hint" id="pin-open-hint">Opens a map. Search or use your current location.</p>';
     h += field('address', 'Address', 'pin', '<textarea id="address" maxlength="300" placeholder="Shop / office address"></textarea>');
     h += '<div class="field-row">' + text('city', 'City', 'pin', 'City', 'maxlength="80"') + text('state', 'State', 'pin', 'State', 'maxlength="80"') + '</div>';
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
     h += '<p class="biz-section">Photos</p>';
     h += photo('profile_photo', 'Profile photo', 'profile') + photo('banner', 'Banner photo', 'banner');
     el.fields.innerHTML = h;
+    buildModal();
     wire();
-    initMap();
     if (role === 'partner' || role === 'supplier') loadCategories();
   }
 
@@ -147,15 +145,42 @@
     });
     return leafletLoading;
   }
-  function initMap() {
-    loadLeaflet().then(function () {
-      map = L.map('map', { scrollWheelZoom: false }).setView([22.9734, 78.6569], 5);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
-      map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng, true, 17); });
-    }).catch(function () { $('map-hint').textContent = 'Map could not load. You can still type your address.'; });
+
+  function buildModal() {
+    var m = document.createElement('div');
+    m.className = 'doc-modal pin-modal'; m.id = 'pin-modal'; m.hidden = true;
+    m.innerHTML = '<div class="doc-panel pin-panel" role="dialog" aria-modal="true" aria-label="Search and pin business address">' +
+      '<div class="doc-bar"><strong>Pin business address</strong><button type="button" class="doc-close" id="pin-close" aria-label="Close">&times;</button></div>' +
+      '<div class="pin-body"><div class="field pin-search"><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search area, landmark or shop name" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul></div>' +
+      '<button type="button" class="btn-sm loc-btn" id="use-location">Use my current location</button>' +
+      '<div class="map-box"><div id="map" aria-label="Map to pin your business location"></div></div>' +
+      '<p class="hint" id="map-hint">Search, or tap the map / drag the pin to set the exact spot.</p></div>' +
+      '<div class="pin-foot"><button type="button" class="btn create-btn" id="pin-select" disabled>Select this location</button></div></div>';
+    document.body.appendChild(m);
   }
+  var pending = null;
+  function openModal() {
+    $('pin-modal').hidden = false;
+    document.body.style.overflow = 'hidden';
+    var go = function () {
+      if (!map) {
+        map = L.map('map', { scrollWheelZoom: false }).setView([22.9734, 78.6569], 5);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+        map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng, true, 17); });
+      }
+      setTimeout(function () {
+        map.invalidateSize();
+        if (coords) setPin(coords.lat, coords.lng, false, 17);
+      }, 50);
+    };
+    loadLeaflet().then(go).catch(function () { $('map-hint').textContent = 'Map could not load. Close and type your address.'; });
+    $('addr-search').focus();
+  }
+  function closeModal() { $('pin-modal').hidden = true; document.body.style.overflow = ''; }
   function setPin(lat, lng, reverse, zoom) {
     coords = { lat: lat, lng: lng };
+    pending = { lat: lat, lng: lng, address: null, display: '' };
+    $('pin-select').disabled = false;
     if (!map) return;
     if (!marker) {
       marker = L.marker([lat, lng], { draggable: true }).addTo(map);
@@ -177,18 +202,28 @@
     $('map-hint').textContent = 'Fetching address...';
     fetch(NOM + '/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=' + lat + '&lon=' + lng, { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.json(); })
-      .then(function (d) { fillAddress(d.address, d.display_name); $('map-hint').textContent = 'Pin set. Check the address below and edit if needed.'; })
+      .then(function (d) { if (pending) { pending.address = d.address; pending.display = d.display_name; } $('map-hint').textContent = (d.display_name || 'Pin set.'); })
       .catch(function () { $('map-hint').textContent = 'Pin set, but the address could not be fetched. Please type it.'; });
   }
   function wireLocation() {
+    $('pin-open').addEventListener('click', openModal);
+    $('pin-close').addEventListener('click', closeModal);
+    $('pin-modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('pin-modal').hidden) closeModal(); });
+    $('pin-select').addEventListener('click', function () {
+      if (!pending) return;
+      fillAddress(pending.address, pending.display);
+      $('pin-open-text').textContent = (pending.display || 'Location pinned').split(',').slice(0, 3).join(',');
+      $('pin-open').classList.add('done');
+      $('pin-open-hint').textContent = 'Location pinned. You can edit the address below.';
+      closeModal();
+    });
     $('use-location').addEventListener('click', function () {
-      var hint = $('loc-hint');
+      var hint = $('map-hint');
       if (!navigator.geolocation) { hint.textContent = 'Location is not supported on this device.'; return; }
       hint.textContent = 'Waiting for location permission...';
       navigator.geolocation.getCurrentPosition(function (pos) {
-        hint.textContent = 'Location found.';
         setPin(pos.coords.latitude, pos.coords.longitude, true, 17);
-        $('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, function (err) {
         hint.textContent = err.code === 1 ? 'Permission denied. Search your address or tap the map instead.' : 'Could not get your location. Search your address or tap the map.';
       }, { enableHighAccuracy: true, timeout: 15000 });
@@ -210,8 +245,8 @@
               li.addEventListener('click', function () {
                 list.hidden = true; box.value = r.display_name;
                 setPin(parseFloat(r.lat), parseFloat(r.lon), false, 17);
-                fillAddress(r.address, r.display_name);
-                $('map-hint').textContent = 'Pin set. Check the address below and edit if needed.';
+                pending.address = r.address; pending.display = r.display_name;
+                $('map-hint').textContent = r.display_name;
               });
               list.appendChild(li);
             });
@@ -238,7 +273,7 @@
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
     if ($('education')) { need('education', val('education').length >= 2, 'Enter your education.'); need('design_software', !!val('design_software'), 'Select software.'); }
     if (toggles.has_team) need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
-    if (role === 'supplier') need('address', !!coords, 'Pin your shop location on the map.');
+    if (role === 'supplier' && !coords) { var ph = $('pin-open-hint'); ph.textContent = 'Pin your shop location on the map.'; ph.style.color = '#d64545'; bad = bad || 'pin-open'; }
     need('address', val('address').length >= 3, 'Enter your address.');
     need('city', val('city').length >= 2, 'Enter your city.');
     need('state', val('state').length >= 2, 'Enter your state.');
