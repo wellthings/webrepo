@@ -155,50 +155,15 @@
     strip.addEventListener('click', function (e) { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
   });
 
-  // ---- location: ask on first visit, reverse-geocode into the address box, remember it ----
-  var LOC_KEY = 'ig_loc';
+  // ---- location: ask on first visit (see geo.js), show it in the address box ----
   var locInput = $('#location-input');
-  function savedLoc() { try { return JSON.parse(localStorage.getItem(LOC_KEY)); } catch (e) { return null; } }
-  function setLoc(l) {
-    localStorage.setItem(LOC_KEY, JSON.stringify(l));
-    if (locInput) locInput.value = l.address || '';
-    document.dispatchEvent(new CustomEvent('ig:location', { detail: l }));
-  }
-  function shortAddress(d) {
-    var a = (d && d.address) || {};
-    var parts = [a.road, a.neighbourhood || a.suburb, a.city_district, a.city || a.town || a.village || a.county, a.state, a.postcode];
-    var seen = {};
-    parts = parts.filter(function (p) { if (!p || seen[p]) return false; seen[p] = 1; return true; });
-    return parts.length ? parts.join(', ') : (d && d.display_name) || '';
-  }
-  function requestLocation() {
-    if (!navigator.geolocation) { if (locInput) locInput.placeholder = 'Type your address'; return; }
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      var lat = pos.coords.latitude, lng = pos.coords.longitude;
-      fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&lat=' + lat + '&lon=' + lng)
-        .then(function (r) { return r.json(); })
-        .then(function (d) { setLoc({ lat: lat, lng: lng, address: shortAddress(d) || lat.toFixed(4) + ', ' + lng.toFixed(4) }); })
-        .catch(function () { setLoc({ lat: lat, lng: lng, address: lat.toFixed(4) + ', ' + lng.toFixed(4) }); });
-    }, function () { if (locInput) locInput.placeholder = 'Location blocked. Type your address'; }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
-  }
-  function geocodeTyped() {
-    var text = locInput.value.trim();
-    if (text.length < 3) return;
-    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + encodeURIComponent(text))
-      .then(function (r) { return r.json(); })
-      .then(function (list) {
-        if (!list.length) { locInput.placeholder = 'Address not found. Try area and city'; return; }
-        setLoc({ lat: parseFloat(list[0].lat), lng: parseFloat(list[0].lon), address: text });
-      }).catch(function () {});
-  }
-  if (locInput) {
-    var stored = savedLoc();
-    if (stored && stored.address) locInput.value = stored.address; else requestLocation();
-    locInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); geocodeTyped(); locInput.blur(); } });
-    locInput.addEventListener('change', geocodeTyped);
+  if (locInput && window.IGGeo) {
+    var stored = IGGeo.saved();
+    if (stored && stored.address) locInput.value = stored.address; else IGGeo.request();
+    locInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); IGGeo.geocode(locInput.value); locInput.blur(); } });
+    locInput.addEventListener('change', function () { IGGeo.geocode(locInput.value); });
     var locBtn = $('#loc-btn');
-    if (locBtn) locBtn.addEventListener('click', requestLocation);
-    document.addEventListener('ig:location-request', requestLocation);
+    if (locBtn) locBtn.addEventListener('click', IGGeo.request);
   }
 
   // ---- header: scrolling down hides everything but the category tabs; scrolling up brings it back ----
