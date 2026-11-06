@@ -43,7 +43,7 @@
       <section id="step-login" class="signup-card" hidden aria-labelledby="login-title">
         <div class="signup-head">
           <h2 id="login-title">Admin login</h2>
-          <p>Enter all four details and the OTP sent to your number. <button type="button" class="link-btn" id="login-back">Back</button></p>
+          <p>Enter your username and the OTP sent to your number. <button type="button" class="link-btn" id="login-back">Back</button></p>
         </div>
         <form id="login-form" novalidate autocomplete="off">
           <div class="field">
@@ -57,15 +57,7 @@
           </div>
           <div class="field">
             <label for="lg-user">Username</label>
-            <div class="input"><input id="lg-user" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-          </div>
-          <div class="field">
-            <label for="lg-id">Login ID</label>
-            <div class="input"><input id="lg-id" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-          </div>
-          <div class="field">
-            <label for="lg-host">Host</label>
-            <div class="input"><input id="lg-host" type="password" maxlength="200" autocomplete="new-password"></div>
+            <div class="input"><input id="lg-user" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
           </div>
           <p class="hint" id="lg-msg" role="alert" aria-live="polite"></p>
           <button type="submit" class="btn" id="lg-submit" disabled>Login</button>

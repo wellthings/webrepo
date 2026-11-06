@@ -5,7 +5,7 @@
   var trigger = $('top-login'), form = $('login-form');
   if (!trigger || !form) return;
 
-  var phone = $('lg-phone'), otp = $('lg-otp'), user = $('lg-user'), lid = $('lg-id'), host = $('lg-host');
+  var phone = $('lg-phone'), otp = $('lg-otp'), user = $('lg-user');
   var send = $('lg-send'), submit = $('lg-submit'), msg = $('lg-msg');
   var timer = null, busy = false;
 
@@ -22,11 +22,11 @@
   function say(text, bad) { msg.textContent = text || ''; msg.style.color = bad ? '#c0392b' : ''; }
   function validate() {
     send.disabled = !/^[6-9]\d{9}$/.test(phone.value) || !!timer;
-    submit.disabled = busy || !(/^[6-9]\d{9}$/.test(phone.value) && /^\d{6}$/.test(otp.value) && user.value.trim() && lid.value.trim() && host.value);
+    submit.disabled = busy || !(/^[6-9]\d{9}$/.test(phone.value) && /^\d{6}$/.test(otp.value) && user.value.trim());
   }
   phone.addEventListener('input', function () { phone.value = phone.value.replace(/\D/g, '').slice(0, 10); validate(); });
   otp.addEventListener('input', function () { otp.value = otp.value.replace(/\D/g, '').slice(0, 6); validate(); });
-  [user, lid, host].forEach(function (i) { i.addEventListener('input', validate); });
+  user.addEventListener('input', validate);
 
   function post(path, data) {
     return fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(function (r) {
@@ -56,15 +56,14 @@
     validate();
     if (submit.disabled) return;
     busy = true; submit.disabled = true; submit.textContent = 'Checking...'; say('');
-    post('/admin/login', { phone: phone.value, otp: otp.value, username: user.value.trim(), login_id: lid.value.trim(), host: host.value })
+    post('/admin/login', { phone: phone.value, otp: otp.value, username: user.value.trim() })
       .then(function (d) {
         sessionStorage.setItem(TOKEN_KEY, d.token);
-        host.value = '';
         location.href = 'admin.html';
       })
       .catch(function (err) {
         busy = false; submit.textContent = 'Login'; say(err.message, true);
-        otp.value = ''; host.value = ''; validate();
+        otp.value = ''; validate();
       });
   });
   validate();
