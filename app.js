@@ -157,12 +157,11 @@
   // ---- location: ask on first visit (see geo.js), show it in the address box ----
   var locInput = $('#location-input');
   if (locInput && window.IGGeo) {
-    var stored = IGGeo.saved();
-    if (stored && stored.address) locInput.value = stored.address; else IGGeo.request();
+    IGGeo.init();
     locInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); IGGeo.geocode(locInput.value); locInput.blur(); } });
     locInput.addEventListener('change', function () { IGGeo.geocode(locInput.value); });
     var locBtn = $('#loc-btn');
-    if (locBtn) locBtn.addEventListener('click', IGGeo.request);
+    if (locBtn) locBtn.addEventListener('click', function () { IGGeo.request(); });
   }
 
   // ---- header: scrolling down hides everything but the category tabs; scrolling up brings it back ----
