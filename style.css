@@ -299,8 +299,8 @@ footer a:hover { color: var(--orange); }
 }
 
 /* peaceful maintenance overlay */
-.ig-notice { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(135deg, #e0f2f1, #d7ecff); text-align: center; }
-.ig-notice-inner { max-width: 460px; }
+.ig-notice { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(135deg, #e0f2f1, #d7ecff); text-align: center; pointer-events: auto; }
+.ig-notice-inner { max-width: 460px; pointer-events: none; }
 .ig-notice .ig-ico { display: block; width: 56px; height: 56px; margin: 0 auto 16px; color: #2a8a7a; }
 .ig-notice .ig-msg { font-size: 16px; line-height: 1.6; color: #1f4d5e; }
 .ig-notice .ig-x { margin-top: 20px; padding: 8px 22px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.5); color: #3a6b6e; font-size: 14px; cursor: pointer; }
