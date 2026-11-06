@@ -33,7 +33,6 @@
   $$('[data-response]').forEach(function (el) { el.textContent = SITE.responseTime; });
 
   $$('[data-company]').forEach(function (el) { el.textContent = SITE.company; });
-  $$('[data-udyam]').forEach(function (el) { el.textContent = SITE.udyam; });
   $$('[data-package]').forEach(function (el) { el.textContent = SITE.packageName; });
 
   // address (hidden when empty)

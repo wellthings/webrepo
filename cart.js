@@ -29,14 +29,19 @@
   document.body.appendChild(wrap);
   var body = wrap.querySelector('#cart-body');
 
-  function close() { wrap.hidden = true; document.body.style.overflow = ''; }
+  function close() { wrap.hidden = true; document.body.style.overflow = ''; if (step === 'done') { step = ''; sentItems = null; render(); } }
   wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
   wrap.querySelector('.sheet-close').addEventListener('click', close);
 
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
 
-  var step = 'list';
+  // step: 'signup' (slide 1) -> 'order' (slide 2) -> 'done'
+  var step = '';
   var sentItems = null;
+  var timer = null;
+
+  function signedIn() { var c = read(CLIENT); return !!(c && c.token); }
+  function initialStep() { return signedIn() ? 'order' : 'signup'; }
 
   function post(path, data, token) {
     var headers = { 'Content-Type': 'application/json' };
@@ -49,13 +54,21 @@
     });
   }
 
+  // one item as: Work type / Work unit / Requirement type
+  function spec(type, unit, mode) {
+    var d = el('div', 'spec');
+    [['Work type', type], ['Work unit', unit], ['Requirement type', MODE_LABEL[mode] || mode]].forEach(function (r) {
+      var p = el('p'); p.appendChild(el('span', '', r[0] + ': ')); p.appendChild(el('b', '', r[1])); d.appendChild(p);
+    });
+    return d;
+  }
+
   function summary(list, withRemove) {
     var box = el('div', 'cart-summary');
     list.forEach(function (it, idx) {
       var row = el('div', 'cart-item');
       if (it.img) { var im = el('img'); im.alt = ''; im.src = it.img; im.onerror = function () { im.style.visibility = 'hidden'; }; row.appendChild(im); } else row.appendChild(el('span', 'ph'));
-      var d = el('div'); d.appendChild(el('strong', '', it.label)); d.appendChild(el('small', '', it.catName + ' - ' + (MODE_LABEL[it.mode] || it.mode)));
-      row.appendChild(d);
+      row.appendChild(spec(it.catName, it.label, it.mode));
       if (withRemove) {
         var rm = el('button', '', 'Remove'); rm.type = 'button';
         rm.addEventListener('click', function () { var l = items(); l.splice(idx, 1); save(l); });
@@ -67,92 +80,50 @@
   }
 
   function render() {
+    clearInterval(timer);
     body.textContent = '';
-    var list = items();
+    body._slides = null;
+    if (!step) step = initialStep();
     if (step === 'done') return renderDone();
+    var list = items();
     if (!list.length) {
-      step = 'list';
       body.appendChild(el('p', 'sheet-hint', 'Your cart is empty. Add services from the home page.'));
       return;
     }
-    if (step === 'signup') return renderSignup(list);
-    if (step === 'confirm') return renderConfirm(list);
-    body.appendChild(summary(list, true));
-    var go = el('button', 'btn', 'Proceed'); go.type = 'button';
-    go.addEventListener('click', function () {
-      var c = read(CLIENT), loc = read(LOC) || {};
-      // signed up and an address is known: review and send; otherwise sign up first
-      step = c && c.token && (loc.address || c.location_name) ? 'confirm' : 'signup';
-      render();
-    });
-    body.appendChild(go);
+    var slides = el('div', 'slides'), track = el('div', 'slide-track');
+    var s1 = el('div', 'slide'), s2 = el('div', 'slide');
+    track.appendChild(s1); track.appendChild(s2); slides.appendChild(track); body.appendChild(slides);
+    buildSignup(s1, list, function () { goTo('order'); });
+    buildOrder(s2, list);
+    var on2 = step === 'order';
+    track.classList.toggle('on-2', on2);
+    (on2 ? s1 : s2).classList.add('off');
+    slides._parts = { track: track, s1: s1, s2: s2 };
+    body._slides = slides;
   }
 
-  function locationPayload(addr) {
-    var loc = read(LOC) || {};
-    var p = { location_name: addr };
-    if (typeof loc.lat === 'number' && typeof loc.lng === 'number' && loc.address === addr) { p.latitude = loc.lat; p.longitude = loc.lng; }
+  // slides sideways to the order popup (or back to signup if the session expired)
+  function goTo(next) {
+    var sl = body._slides;
+    if (!sl) { step = next; render(); return; }
+    var p = sl._parts, to = next === 'order' ? p.s2 : p.s1, from = next === 'order' ? p.s1 : p.s2;
+    step = next;
+    to.classList.remove('off');
+    p.track.classList.toggle('on-2', next === 'order');
+    setTimeout(function () { from.classList.add('off'); }, 380);
+    wrap.querySelector('.sheet').scrollTop = 0;
+  }
+
+  function locationPayload() {
+    var loc = read(LOC) || {}, c = read(CLIENT) || {};
+    var p = { location_name: loc.address || c.location_name || 'Not shared' };
+    if (typeof loc.lat === 'number' && typeof loc.lng === 'number') { p.latitude = loc.lat; p.longitude = loc.lng; }
     return p;
   }
 
-  function sendRequest(addr, btn, msg) {
-    var c = read(CLIENT);
-    var payload = locationPayload(addr);
-    payload.items = items().map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; });
-    btn.disabled = true;
-    return post('/cart-requests', payload, c && c.token).then(function () {
-      sentItems = items();
-      localStorage.removeItem(KEY); updateBadges();
-      step = 'done'; render();
-    }).catch(function (err) {
-      btn.disabled = false;
-      if (err.status === 401) { localStorage.removeItem(CLIENT); step = 'signup'; render(); return; }
-      msg.textContent = err.message;
-    });
-  }
-
-  function locationField(f, input, hint) {
-    var useBtn = f.querySelector('.use-loc');
-    function onLoc(e) { if (e.detail && e.detail.address) { input.value = e.detail.address; hint.textContent = ''; useBtn.disabled = false; useBtn.textContent = 'Use my current location'; } }
-    document.addEventListener('ig:location', onLoc);
-    useBtn.addEventListener('click', function () {
-      useBtn.disabled = true; useBtn.textContent = 'Getting location...';
-      document.dispatchEvent(new CustomEvent('ig:location-request'));
-      setTimeout(function () { if (useBtn.disabled) { useBtn.disabled = false; useBtn.textContent = 'Use my current location'; hint.textContent = 'Could not get your location. Please type your address.'; } }, 16000);
-    });
-    if (!input.value) document.dispatchEvent(new CustomEvent('ig:location-request'));
-  }
-
-  function renderConfirm(list) {
-    var c = read(CLIENT) || {}, loc = read(LOC) || {};
-    body.appendChild(el('p', 'sheet-hint', 'You selected ' + list.length + (list.length === 1 ? ' service' : ' services') + ':'));
-    body.appendChild(summary(list, false));
-    var f = el('form', 'cart-form');
-    f.noValidate = true;
-    f.innerHTML =
-      '<p class="cart-who"></p>' +
-      '<label for="cf-loc">Your address</label><input id="cf-loc" autocomplete="street-address" maxlength="200" placeholder="Area, city">' +
-      '<button type="button" class="link-btn use-loc">Use my current location</button><p class="cart-msg err" role="alert"></p>' +
-      '<button type="submit" class="btn">Send request</button>' +
-      '<button type="button" class="link-btn back">Back to cart</button>';
-    f.querySelector('.cart-who').textContent = c.name + ' · +91 ' + c.phone;
-    body.appendChild(f);
-    var input = f.querySelector('#cf-loc'), msg = f.querySelector('.cart-msg');
-    input.value = loc.address || c.location_name || '';
-    locationField(f, input, msg);
-    f.querySelector('.back').addEventListener('click', function () { step = 'list'; render(); });
-    f.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var addr = input.value.trim();
-      if (addr.length < 2) { msg.textContent = 'Please add your address.'; return; }
-      sendRequest(addr, f.querySelector('.btn'), msg);
-    });
-  }
-
-  function renderSignup(list) {
-    var loc = read(LOC) || {};
-    body.appendChild(el('p', 'sheet-hint', 'Sign up to send your ' + list.length + (list.length === 1 ? ' selected service' : ' selected services') + ':'));
-    body.appendChild(summary(list, false));
+  function buildSignup(box, list, onSignedUp) {
+    box.appendChild(el('h4', 'slide-title', 'Sign up to continue'));
+    box.appendChild(el('p', 'sheet-hint', 'You have ' + list.length + (list.length === 1 ? ' service' : ' services') + ' in your cart. Verify your mobile number to place the order.'));
     var f = el('form', 'cart-form');
     f.noValidate = true;
     f.innerHTML =
@@ -160,22 +131,14 @@
       '<label for="cf-phone">Mobile number</label>' +
       '<div class="otp-row"><input id="cf-phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number"><button type="button" class="btn-alt send-otp">Send OTP</button></div>' +
       '<div class="otp-field" hidden><label for="cf-otp">OTP</label><input id="cf-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digit OTP"></div>' +
-      '<label for="cf-loc">Your address</label><input id="cf-loc" autocomplete="street-address" maxlength="200" placeholder="Area, city">' +
-      '<button type="button" class="link-btn use-loc">Use my current location</button>' +
       '<p class="cart-msg err" role="alert"></p>' +
-      '<button type="submit" class="btn" disabled>Verify &amp; send request</button>' +
-      '<button type="button" class="link-btn back">Back to cart</button>';
-    body.appendChild(f);
+      '<button type="submit" class="btn" disabled>Verify &amp; sign up</button>';
+    box.appendChild(f);
     var name = f.querySelector('#cf-name'), phone = f.querySelector('#cf-phone'), otp = f.querySelector('#cf-otp');
-    var inLoc = f.querySelector('#cf-loc'), msg = f.querySelector('.cart-msg');
-    var sendBtn = f.querySelector('.send-otp'), submitBtn = f.querySelector('button[type=submit]'), otpField = f.querySelector('.otp-field');
-    inLoc.value = loc.address || '';
-    locationField(f, inLoc, msg);
-    var timer = null;
+    var msg = f.querySelector('.cart-msg'), sendBtn = f.querySelector('.send-otp'), submitBtn = f.querySelector('button[type=submit]'), otpField = f.querySelector('.otp-field');
 
     phone.addEventListener('input', function () { phone.value = phone.value.replace(/\D/g, '').slice(0, 10); });
     otp.addEventListener('input', function () { otp.value = otp.value.replace(/\D/g, '').slice(0, 6); submitBtn.disabled = otp.value.length !== 6; });
-    f.querySelector('.back').addEventListener('click', function () { clearInterval(timer); step = 'list'; render(); });
 
     sendBtn.addEventListener('click', function () {
       msg.className = 'cart-msg err';
@@ -197,42 +160,126 @@
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       msg.className = 'cart-msg err';
-      var addr = inLoc.value.trim();
       if (name.value.trim().length < 2) { msg.textContent = 'Enter your name.'; return; }
-      if (addr.length < 2) { msg.textContent = 'Please add your address or use current location.'; return; }
       submitBtn.disabled = true; msg.textContent = '';
       post('/otp/verify', { phone: phone.value, otp: otp.value })
         .then(function (v) {
-          var p = locationPayload(addr);
+          var p = locationPayload();
           p.name = name.value.trim(); p.phone = phone.value; p.otpToken = v.otpToken;
           return post('/client/signup', p);
         })
         .then(function (d) {
           clearInterval(timer);
-          localStorage.setItem(CLIENT, JSON.stringify({ token: d.token, name: d.client.name, phone: d.client.phone, location_name: addr }));
-          return sendRequest(addr, submitBtn, msg);
+          localStorage.setItem(CLIENT, JSON.stringify({ token: d.token, name: d.client.name, phone: d.client.phone, location_name: locationPayload().location_name }));
+          var who = body.querySelector('.cart-who');
+          if (who) who.textContent = d.client.name + ' · +91 ' + d.client.phone;
+          onSignedUp();
         })
         .catch(function (err) { submitBtn.disabled = otp.value.length !== 6; msg.textContent = err.message; });
     });
   }
 
-  function renderDone() {
-    body.appendChild(el('p', 'cart-msg ok', 'Request sent. Our partner will contact you shortly.'));
-    if (sentItems && sentItems.length) {
-      body.appendChild(el('p', 'sheet-hint', 'Your selection:'));
-      body.appendChild(summary(sentItems, false));
-    }
-    var ok = el('button', 'btn', 'Done'); ok.type = 'button';
-    ok.addEventListener('click', function () { sentItems = null; step = 'list'; close(); render(); });
-    body.appendChild(ok);
+  function buildOrder(box, list) {
+    var c = read(CLIENT) || {};
+    box.appendChild(el('h4', 'slide-title', 'Your order'));
+    box.appendChild(el('p', 'cart-who', c.name ? c.name + ' · +91 ' + c.phone : ''));
+    box.appendChild(summary(list, true));
+    var msg = el('p', 'cart-msg err'); msg.setAttribute('role', 'alert');
+    var go = el('button', 'btn', 'Proceed'); go.type = 'button';
+    go.addEventListener('click', function () {
+      var cur = read(CLIENT);
+      var payload = locationPayload();
+      payload.items = items().map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; });
+      go.disabled = true; msg.textContent = '';
+      post('/cart-requests', payload, cur && cur.token).then(function () {
+        sentItems = items();
+        rememberOrder(sentItems);
+        localStorage.removeItem(KEY); updateBadges();
+        step = 'done'; render();
+      }).catch(function (err) {
+        go.disabled = false;
+        if (err.status === 401) { localStorage.removeItem(CLIENT); goTo('signup'); return; }
+        msg.textContent = err.message;
+      });
+    });
+    box.appendChild(msg);
+    box.appendChild(go);
   }
 
-  function open() { if (step !== 'done') step = 'list'; render(); wrap.hidden = false; document.body.style.overflow = 'hidden'; }
+  function renderDone() {
+    var ok = el('div', 'order-ok');
+    ok.appendChild(el('span', 'tick', '✓'));
+    ok.appendChild(el('h4', '', 'Order placed'));
+    ok.appendChild(el('p', '', 'Our partner will contact you shortly.'));
+    body.appendChild(ok);
+    if (sentItems && sentItems.length) body.appendChild(summary(sentItems, false));
+    var done = el('button', 'btn', 'Done'); done.type = 'button';
+    done.addEventListener('click', close);
+    body.appendChild(done);
+  }
+
+  // ---- Orders sheet ----
+  var ORDERS = 'ig_orders';
+  var STATUS = { new: 'Order under process', contacted: 'Partner will contact you', closed: 'Completed' };
+  function rememberOrder(list) {
+    var all = read(ORDERS) || [];
+    all.unshift({ status: 'new', created_at: new Date().toISOString(), items: list.map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; }) });
+    localStorage.setItem(ORDERS, JSON.stringify(all.slice(0, 20)));
+  }
+
+  var owrap = document.createElement('div');
+  owrap.className = 'sheet-wrap';
+  owrap.hidden = true;
+  owrap.innerHTML =
+    '<div class="sheet" role="dialog" aria-modal="true" aria-label="Your orders">' +
+    '<button type="button" class="sheet-close" aria-label="Close">&times;</button>' +
+    '<div class="sheet-head"><h3>Your orders</h3></div><div class="sheet-body" id="orders-body"></div></div>';
+  document.body.appendChild(owrap);
+  var obody = owrap.querySelector('#orders-body');
+  function closeOrders() { owrap.hidden = true; document.body.style.overflow = ''; }
+  owrap.addEventListener('click', function (e) { if (e.target === owrap) closeOrders(); });
+  owrap.querySelector('.sheet-close').addEventListener('click', closeOrders);
+
+  function fmtDate(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  }
+  function renderOrders(list) {
+    obody.textContent = '';
+    if (!list.length) { obody.appendChild(el('p', 'sheet-hint', 'No orders yet. Add services to your cart and place an order.')); return; }
+    list.forEach(function (o) {
+      var card = el('div', 'order-card');
+      var top = el('div', 'order-top');
+      top.appendChild(el('span', 'order-status st-' + o.status, STATUS[o.status] || 'Order under process'));
+      top.appendChild(el('small', '', fmtDate(o.created_at)));
+      card.appendChild(top);
+      (o.items || []).forEach(function (i) {
+        var line = el('div', 'order-line'); line.appendChild(spec(i.category, i.module, i.mode)); card.appendChild(line);
+      });
+      obody.appendChild(card);
+    });
+  }
+  function openOrders() {
+    owrap.hidden = false; document.body.style.overflow = 'hidden';
+    var c = read(CLIENT), local = read(ORDERS) || [];
+    obody.textContent = '';
+    if (!c || !c.token) { renderOrders(local); return; }
+    obody.appendChild(el('p', 'sheet-hint', 'Loading your orders...'));
+    fetch(API + '/client/orders', { headers: { Authorization: 'Bearer ' + c.token } })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (d) { renderOrders(d.data || []); })
+      .catch(function () { renderOrders(local); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-orders-open]'), function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); openOrders(); });
+  });
+
+  function open() { if (step !== 'done') step = initialStep(); render(); wrap.hidden = false; document.body.style.overflow = 'hidden'; }
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-cart-open]'), function (a) {
     a.addEventListener('click', function (e) { e.preventDefault(); open(); });
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !wrap.hidden) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!wrap.hidden) close(); if (!owrap.hidden) closeOrders(); } });
 
   window.IGCart = { add: add, open: open, items: items };
   updateBadges();

@@ -106,3 +106,31 @@
 .link-btn:disabled { opacity: 0.55; }
 .cart-form .btn:disabled { opacity: 0.55; cursor: default; }
 .cart-form .btn + .link-btn { margin-top: 8px; text-align: center; }
+
+/* cart: two slides (sign up, then order) */
+.slides { overflow: hidden; margin: 0 -14px; }
+.slide-track { display: flex; width: 200%; align-items: flex-start; transition: transform 0.35s ease; }
+.slide-track.on-2 { transform: translateX(-50%); }
+.slide { display: grid; gap: 12px; width: 50%; padding: 0 14px; box-sizing: border-box; }
+.slide.off { height: 0; overflow: hidden; visibility: hidden; }
+.slide-title { margin: 0; font-size: 1.05rem; color: var(--navy); }
+.order-ok { display: grid; justify-items: center; gap: 4px; padding: 12px 0 4px; text-align: center; }
+.order-ok .tick { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #1f9d55; color: #fff; font-size: 1.8rem; font-weight: 700; }
+.order-ok h4 { margin: 8px 0 0; font-size: 1.25rem; color: var(--navy); }
+.order-ok p { margin: 0; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .slide-track { transition: none; } }
+
+/* orders */
+.order-card { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.order-top { flex-wrap: wrap; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.order-top small { color: var(--muted); }
+.order-status { white-space: nowrap; padding: 4px 10px; border-radius: 999px; background: #fff3e3; color: #a35a00; font-size: 0.8rem; font-weight: 700; }
+.order-status.st-contacted { background: #e6f1ff; color: #1a5fb4; }
+.order-status.st-closed { background: #e4f6ec; color: #1f7a45; }
+.order-line { margin: 0; font-size: 0.9rem; color: var(--navy); }
+
+.spec p { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--muted); }
+.spec b { color: var(--navy); font-weight: 700; }
+.order-line { padding-top: 6px; border-top: 1px dashed var(--line); }
+.order-line:first-of-type { border-top: 0; padding-top: 0; }
+.cart-item .spec { flex: 1; min-width: 0; }

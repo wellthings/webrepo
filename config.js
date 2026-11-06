@@ -4,11 +4,10 @@ window.SITE = {
   email: 'support@interagood.in',
   // Phone number is stored base64-encoded (not printed in the HTML); decoded only when someone taps "Call us".
   phoneEncoded: 'KzkxOTc5NDEzNDUzNA==',
-  // Registered business address shown on the Contact page. Leave empty to hide it.
+  // Business location shown on the site. Leave empty to hide it.
   company: 'Wellthings',
-  udyam: 'UDYAM-UP-50-0307327',
   packageName: 'com.wellthings.interagood',
-  address: 'Kumharan Tola, Sitapur Road, Khadra, Lucknow, Uttar Pradesh - 226020',
+  address: 'Lucknow',
   // Backend API (Railway). Used by the Partner Program signup.
   apiBase: 'https://interagood-production.up.railway.app/api',
   // Social profile URLs. Leave a value empty to show the name without a link.
