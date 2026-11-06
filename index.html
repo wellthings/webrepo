@@ -16,9 +16,11 @@
 </head>
 <body class="home">
   <div class="ig-notice" id="ig-notice" role="status" aria-live="polite">
-    <svg class="ig-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-    <span>We're gently polishing the site — a few things are being fixed. Thank you for your patience.</span>
-    <button type="button" class="ig-x" onclick="document.getElementById('ig-notice').style.display='none'" aria-label="Dismiss">Okay</button>
+    <div class="ig-notice-inner">
+      <svg class="ig-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <p class="ig-msg">We're gently polishing the site — a few things are being fixed. We'll be back shortly. Thank you for your patience.</p>
+      <button type="button" class="ig-x" onclick="document.getElementById('ig-notice').style.display='none'">Okay</button>
+    </div>
   </div>
   <div class="top-fixed" id="top-fixed">
   <div class="top-upper" id="top-upper">
