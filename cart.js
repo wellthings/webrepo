@@ -6,10 +6,26 @@
 
   function read(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
   function items() { return read(KEY) || []; }
-  function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); render(); updateBadges(); }
+  var syncTimer = null;
+  // signed-in clients: mirror the cart on the server (debounced) so it is always current there
+  function syncCart() {
+    var c = read(CLIENT);
+    if (!c || !c.token) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () {
+      var cur = read(CLIENT);
+      if (!cur || !cur.token) return;
+      fetch(API + '/client/cart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cur.token },
+        body: JSON.stringify({ items: items().map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; }) })
+      }).catch(function () {});
+    }, 500);
+  }
+  function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); render(); updateBadges(); syncCart(); }
 
   function add(item) {
-    var list = items().filter(function (i) { return !(i.cat === item.cat && i.module === item.module); });
+    var list = items().filter(function (i) { return !(i.cat === item.cat && i.module === item.module && i.mode === item.mode); });
     list.push(item);
     save(list);
   }
@@ -54,29 +70,66 @@
     });
   }
 
-  // one item as: Work type / Work unit / Requirement type
-  function spec(type, unit, mode) {
-    var d = el('div', 'spec');
-    [['Work type', type], ['Work unit', unit], ['Requirement type', MODE_LABEL[mode] || mode]].forEach(function (r) {
-      var p = el('p'); p.appendChild(el('span', '', r[0] + ': ')); p.appendChild(el('b', '', r[1])); d.appendChild(p);
+  // Items grouped under a heading per work type (category); every requirement is its own card.
+  function groupByType(list, typeOf) {
+    var order = [], map = {};
+    list.forEach(function (it, idx) {
+      var t = typeOf(it);
+      if (!map[t]) { map[t] = []; order.push(t); }
+      map[t].push({ it: it, idx: idx });
     });
-    return d;
+    return order.map(function (t) { return { type: t, rows: map[t] }; });
   }
 
-  function summary(list, withRemove) {
+  function modeChip(mode) { return el('span', 'req-chip st-' + mode, MODE_LABEL[mode] || mode); }
+
+  // one item card: Work type / Work unit / Requirement type (+ cross to remove when editable)
+  function itemCard(type, unit, mode, img, onRemove) {
+    var card = el('div', 'item-card');
+    if (img !== undefined) {
+      if (img) { var im = el('img'); im.alt = ''; im.src = img; im.onerror = function () { im.style.visibility = 'hidden'; }; card.appendChild(im); } else card.appendChild(el('span', 'ph'));
+    }
+    var spec = el('div', 'spec');
+    [['Work type', type], ['Work unit', unit], ['Requirement type', MODE_LABEL[mode] || mode]].forEach(function (r) {
+      var p = el('p'); p.appendChild(el('span', '', r[0] + ': ')); p.appendChild(el('b', '', r[1])); spec.appendChild(p);
+    });
+    card.appendChild(spec);
+    if (onRemove) {
+      var rm = el('button', 'rm', '×'); rm.type = 'button'; rm.title = 'Remove'; rm.setAttribute('aria-label', 'Remove ' + unit + ' (' + (MODE_LABEL[mode] || mode) + ')');
+      rm.addEventListener('click', onRemove);
+      card.appendChild(rm);
+    }
+    return card;
+  }
+
+  function groupedList(groups, cardFn, tagFn) {
     var box = el('div', 'cart-summary');
-    list.forEach(function (it, idx) {
-      var row = el('div', 'cart-item');
-      if (it.img) { var im = el('img'); im.alt = ''; im.src = it.img; im.onerror = function () { im.style.visibility = 'hidden'; }; row.appendChild(im); } else row.appendChild(el('span', 'ph'));
-      row.appendChild(spec(it.catName, it.label, it.mode));
-      if (withRemove) {
-        var rm = el('button', '', 'Remove'); rm.type = 'button';
-        rm.addEventListener('click', function () { var l = items(); l.splice(idx, 1); save(l); });
-        row.appendChild(rm);
-      }
-      box.appendChild(row);
+    groups.forEach(function (g) {
+      var sec = el('section', 'type-group');
+      var h = el('h5', 'type-heading', g.type);
+      var tag = tagFn && tagFn(g.type);
+      h.appendChild(el('small', '', tag || g.rows.length + (g.rows.length === 1 ? ' item' : ' items')));
+      sec.appendChild(h);
+      g.rows.forEach(function (r) { sec.appendChild(cardFn(r.it, r.idx)); });
+      box.appendChild(sec);
     });
     return box;
+  }
+
+  function summary(list, editable) {
+    return groupedList(groupByType(list, function (it) { return it.catName; }), function (it, idx) {
+      return itemCard(it.catName, it.label, it.mode, it.img || '', editable ? function () { var l = items(); l.splice(idx, 1); save(l); } : null);
+    });
+  }
+
+  // placed order: {category, module, mode} items grouped by work type
+  var ASSIGN = { unassigned: 'Finding partner', assigned: 'Partner assigned', completed: 'Completed', cancelled: 'Cancelled' };
+  function orderItems(list, assignments) {
+    var st = {};
+    (assignments || []).forEach(function (a) { st[a.work_type] = a.status; });
+    return groupedList(groupByType(list, function (i) { return i.category; }), function (i) {
+      return itemCard(i.category, i.module, i.mode, undefined, null);
+    }, function (type) { return st[type] ? ASSIGN[st[type]] : ''; });
   }
 
   function render() {
@@ -173,6 +226,7 @@
           localStorage.setItem(CLIENT, JSON.stringify({ token: d.token, name: d.client.name, phone: d.client.phone, location_name: locationPayload().location_name }));
           var who = body.querySelector('.cart-who');
           if (who) who.textContent = d.client.name + ' · +91 ' + d.client.phone;
+          syncCart();
           onSignedUp();
         })
         .catch(function (err) { submitBtn.disabled = otp.value.length !== 6; msg.textContent = err.message; });
@@ -256,9 +310,7 @@
       if (o.order_no) card.appendChild(el('strong', 'order-no', 'Order #' + o.order_no));
       top.appendChild(el('small', '', fmtDate(o.created_at)));
       card.appendChild(top);
-      (o.items || []).forEach(function (i) {
-        var line = el('div', 'order-line'); line.appendChild(spec(i.category, i.module, i.mode)); card.appendChild(line);
-      });
+      card.appendChild(orderItems(o.items || [], o.order_assignments));
       obody.appendChild(card);
     });
   }
