@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel | Interagood</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b1f3a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="style.css?v=20261105-e">
+  <link rel="stylesheet" href="partner.css?v=20">
+  <style>
+    body.ad { background: #f5f6f8; }
+    .ad-main { padding: 24px 0 64px; }
+    .ad-wrap { width: min(1100px, 94%); margin: 0 auto; }
+    .ad-user { display: flex; align-items: center; gap: 14px; color: var(--navy); font-size: 0.92rem; font-weight: 600; }
+    .ad-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .ad-bar .tabs { justify-content: flex-start; margin: 0; }
+    .ad-bar .btn-sm { margin-top: 0; }
+
+    .ad-list { display: grid; gap: 14px; }
+    .ad-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 18px; }
+    .ad-card + .ad-card { margin-top: 0; }
+    .ad-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .ad-no { font-weight: 800; color: var(--navy); }
+    .ad-when { color: var(--muted); font-size: 0.82rem; font-weight: 500; }
+    .ad-right { display: flex; align-items: center; gap: 10px; }
+    .ad-tag { padding: 4px 12px; border-radius: 999px; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .st-new { background: var(--orange-soft); color: var(--orange-dark); }
+    .st-contacted { background: #e6efff; color: #1a62d6; }
+    .st-closed { background: #e7f6ee; color: #1f7a45; }
+
+    .ad-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .ad-label { margin: 0 0 4px; color: var(--muted); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .ad-value { margin: 0; color: var(--ink); font-size: 0.94rem; line-height: 1.5; }
+    .ad-value a { color: var(--navy); font-weight: 600; }
+    .ad-sub { margin: 16px 0 8px; color: var(--navy); font-size: 0.82rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .ad-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .ad-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-alt); font-size: 0.9rem; }
+    .ad-row b { color: var(--navy); }
+    .ad-chip { padding: 2px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+    .ad-empty { padding: 26px; border: 1px dashed var(--line); border-radius: 14px; background: #fff; color: var(--muted); text-align: center; }
+    .ad-select { padding: 7px 10px; border: 1.5px solid #c9d2de; border-radius: 9px; background: #fff; color: var(--navy); font: inherit; font-size: 0.86rem; font-weight: 700; cursor: pointer; }
+    .ad-select:disabled { opacity: 0.55; cursor: default; }
+    .ad-main .hint { margin-bottom: 14px; }
+  </style>
+</head>
+<body class="ad">
+  <header class="pp-header">
+    <div class="container pp-header-inner">
+      <a class="brand" href="admin.html" aria-label="Interagood admin"><span class="brand-name">Interagood</span></a>
+      <div class="ad-user">
+        <span id="ad-name">Admin</span>
+        <button type="button" class="btn-sm" id="ad-logout">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="ad-main">
+    <div class="ad-wrap">
+      <div class="ad-bar">
+        <div class="tabs" role="tablist" aria-label="Admin sections">
+          <button type="button" class="tab active" id="tab-orders" role="tab" aria-selected="true" aria-controls="panel-orders">Orders</button>
+          <button type="button" class="tab" id="tab-carts" role="tab" aria-selected="false" aria-controls="panel-carts">Live carts</button>
+        </div>
+        <button type="button" class="btn-sm" id="ad-refresh">Refresh</button>
+      </div>
+
+      <p class="hint" id="ad-msg" role="status" aria-live="polite"></p>
+
+      <section id="panel-orders" class="ad-list" role="tabpanel" aria-labelledby="tab-orders">
+        <p class="ad-empty">Loading orders&hellip;</p>
+      </section>
+
+      <section id="panel-carts" class="ad-list" role="tabpanel" aria-labelledby="tab-carts" hidden></section>
+    </div>
+  </main>
+
+  <script src="config.js?v=20261104d"></script>
+  <script src="admin.js?v=1"></script>
+</body>
+</html>

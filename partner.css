@@ -170,3 +170,9 @@ body.pp { background: #f5f6f8; }
 
 .pay-btn { margin-top: 16px; }
 #dl-link { display: block; text-align: center; text-decoration: none; }
+
+/* admin login (opened from the LOGIN link) */
+body.pp.logging-in .pp-wrap > section:not(#step-login) { display: none; }
+#step-login .btn-sm { margin-top: 8px; }
+#step-login .btn { width: 100%; }
+#step-login .btn:disabled { opacity: 0.55; cursor: default; }
