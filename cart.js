@@ -37,7 +37,7 @@
 
   // step: 'signup' (slide 1) -> 'order' (slide 2) -> 'done'
   var step = '';
-  var sentItems = null;
+  var sentItems = null, orderNo = null;
   var timer = null;
 
   function signedIn() { var c = read(CLIENT); return !!(c && c.token); }
@@ -191,9 +191,10 @@
       var payload = locationPayload();
       payload.items = items().map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; });
       go.disabled = true; msg.textContent = '';
-      post('/cart-requests', payload, cur && cur.token).then(function () {
+      post('/cart-requests', payload, cur && cur.token).then(function (res) {
         sentItems = items();
-        rememberOrder(sentItems);
+        orderNo = res && res.order_no;
+        rememberOrder(sentItems, orderNo);
         localStorage.removeItem(KEY); updateBadges();
         step = 'done'; render();
       }).catch(function (err) {
@@ -210,6 +211,7 @@
     var ok = el('div', 'order-ok');
     ok.appendChild(el('span', 'tick', '✓'));
     ok.appendChild(el('h4', '', 'Order placed'));
+    if (orderNo) ok.appendChild(el('small', '', 'Order #' + orderNo));
     ok.appendChild(el('p', '', 'Our partner will contact you shortly.'));
     body.appendChild(ok);
     if (sentItems && sentItems.length) body.appendChild(summary(sentItems, false));
@@ -221,9 +223,9 @@
   // ---- Orders sheet ----
   var ORDERS = 'ig_orders';
   var STATUS = { new: 'Order under process', contacted: 'Partner will contact you', closed: 'Completed' };
-  function rememberOrder(list) {
+  function rememberOrder(list, no) {
     var all = read(ORDERS) || [];
-    all.unshift({ status: 'new', created_at: new Date().toISOString(), items: list.map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; }) });
+    all.unshift({ order_no: no, status: 'new', created_at: new Date().toISOString(), items: list.map(function (i) { return { category: i.catName, module: i.label, mode: i.mode }; }) });
     localStorage.setItem(ORDERS, JSON.stringify(all.slice(0, 20)));
   }
 
@@ -251,6 +253,7 @@
       var card = el('div', 'order-card');
       var top = el('div', 'order-top');
       top.appendChild(el('span', 'order-status st-' + o.status, STATUS[o.status] || 'Order under process'));
+      if (o.order_no) card.appendChild(el('strong', 'order-no', 'Order #' + o.order_no));
       top.appendChild(el('small', '', fmtDate(o.created_at)));
       card.appendChild(top);
       (o.items || []).forEach(function (i) {

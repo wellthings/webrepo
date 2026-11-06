@@ -134,3 +134,5 @@
 .order-line { padding-top: 6px; border-top: 1px dashed var(--line); }
 .order-line:first-of-type { border-top: 0; padding-top: 0; }
 .cart-item .spec { flex: 1; min-width: 0; }
+.order-no { color: var(--navy); font-size: 0.95rem; }
+.order-ok small { color: var(--muted); font-weight: 700; }
