@@ -48,7 +48,7 @@ async function loadGallery() {
     const data = await res.json();
     images = (data.data || []).map((img, i) => ({
       id: i,
-      name: img.name || 'Interior',
+      name: img.displayName || img.name || 'Interior',
       url: img.url,
     }));
   } catch (e) {
