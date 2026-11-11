@@ -17,7 +17,7 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
   line-height: 1.65;
@@ -43,7 +43,7 @@ p { margin: 0 0 1em; }
 }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 88px; }
 .brand { display: inline-flex; align-items: center; text-decoration: none; }
-.brand-name { color: #f77f00; font-size: 22px; font-weight: 700; line-height: 1.2; }
+.brand-name { color: #f77f00; font-size: 22px; font-weight: 800; line-height: 1.2; font-family: 'Poppins', sans-serif; letter-spacing: -0.02em; }
 .location-bar { display: flex; align-items: center; gap: 10px; width: min(460px, 52vw); min-height: 46px; padding: 0 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .location-icon { color: var(--orange-dark); font-size: 1.5rem; line-height: 1; }
 .location-bar input, .search-bar input { min-width: 0; width: 100%; margin: 0; padding: 0; border: 0; background: transparent; outline: 0; }
@@ -424,4 +424,53 @@ body.home footer { background: #07152a; }
   .trust-stats { gap: 30px; }
   .stat strong { font-size: 1.8rem; }
 }
+
+/* ===== Top bar: category RTL banner ===== */
+.top-fixed { position: sticky; top: 0; z-index: 60; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgba(10, 25, 47, 0.06); }
+.top-fixed .nav { position: static; border: 0; background: transparent; backdrop-filter: none; }
+.top-fixed .nav-inner { height: 64px; gap: 14px; display: flex; align-items: center; justify-content: space-between; }
+.category-banner { background: var(--navy); overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.banner-track { display: flex; gap: 30px; padding: 10px 0; width: max-content; animation: marquee 20s linear infinite; }
+.banner-item { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; background: rgba(255,255,255,0.04); color: #fff; font-size: 0.85rem; font-weight: 700; white-space: nowrap; flex: none; }
+.banner-icon { font-size: 1.1rem; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ===== Trust gradient moving stroke ===== */
+.trust-stroke-wrap { position: relative; display: inline-block; }
+.trust-stroke { position: absolute; inset: 0; border-radius: inherit; padding: 2px; background: linear-gradient(90deg, #ffb74d, #f77f00, #c96500, #f77f00, #ffb74d); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: destination-out; mask-composite: exclude; pointer-events: none; animation: trustGrad 4s linear infinite; }
+@keyframes trustGrad { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+
+/* ===== Image gallery ===== */
+.image-gallery { padding: 76px 0 40px; background: var(--bg); }
+.gallery-head { text-align: center; max-width: 700px; margin: 0 auto 40px; }
+.gallery-wrap { display: flex; gap: 30px; align-items: flex-start; position: relative; overflow: hidden; }
+.gallery-main { flex: 1; position: relative; border-radius: 22px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: #000; min-height: 420px; }
+.gallery-img-box { width: 100%; height: 100%; position: relative; overflow: hidden; }
+.gallery-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s ease; }
+.gallery-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 26px; gap: 10px; }
+.gallery-name { color: #fff; font-size: 1.5rem; font-weight: 800; font-family: 'Poppins', sans-serif; letter-spacing: -0.02em; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.gallery-portraits { display: flex; flex-direction: column; gap: 10px; flex: none; width: 150px; }
+.gallery-portrait { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s, border-color 0.2s; height: 130px; }
+.gallery-portrait.active { border-color: var(--orange); transform: scale(1.03); }
+.gallery-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-portrait .portrait-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.7rem; font-weight: 700; text-align: center; padding: 4px 6px; font-family: 'Poppins', sans-serif; }
+.get-started-btn { background: var(--orange); color: #fff; border: 0; border-radius: 999px; padding: 11px 24px; font-weight: 800; font-size: 0.9rem; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
+.get-started-btn:hover { background: var(--orange-dark); }
+
+.image-gallery.expanded .gallery-main { filter: blur(2px); opacity: 0.5; pointer-events: none; }
+.gallery-expand { position: fixed; inset: 0; z-index: 200; background: #000; display: none; align-items: center; justify-content: center; padding: 30px; }
+.gallery-expand.open { display: flex; }
+.gallery-expand-img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+.gallery-expand-close { position: absolute; top: 20px; right: 24px; color: #fff; font-size: 2rem; font-weight: 700; background: rgba(0,0,0,0.5); border: 0; border-radius: 50%; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; z-index: 210; }
+
+/* Responsive gallery */
+@media (max-width: 860px) {
+  .gallery-wrap { flex-direction: column; gap: 20px; }
+  .gallery-portraits { flex-direction: row; width: 100; height: 130px; overflow-x: auto; gap: 10px; padding-bottom: 10px; scrollbar-width: none; }
+  .gallery-portraits::-webkit-scrollbar { display: none; }
+  .gallery-main { min-height: 320px; }
+  .banner-track { gap: 20px; animation-duration: 14s; }
+  .banner-item { font-size: 0.78rem; padding: 5px 12px; gap: 8px; }
+}
+
 

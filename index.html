@@ -8,10 +8,13 @@
   <meta property="og:title" content="Interagood | Thoughtful interiors, made for you">
   <meta property="og:description" content="Your space, your choices. Custom interiors with transparent budgets and no brokerage.">
   <meta property="og:image" content="assets/logo-square.png">
-  <meta name="theme-color" content="#0b1f3a">
+  <meta name="theme-color" content="#0a192f">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
-  <link rel="stylesheet" href="style.css?v=20261106-g">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20261111-a">
   <link rel="stylesheet" href="shop.css?v=9">
 </head>
 <body class="home">
@@ -20,27 +23,11 @@
       <header class="nav">
         <div class="container nav-inner">
           <a class="brand" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
-          <div class="location-bar">
-            <button type="button" class="location-icon loc-btn" id="loc-btn" aria-label="Use my current location">⌖</button>
-            <label class="sr-only" for="location-input">Your address or location</label>
-            <input id="location-input" type="text" autocomplete="street-address" placeholder="Allow location or type your address">
-          </div>
-          <a class="header-contact" href="contact.html">Contact</a>
         </div>
       </header>
 
-      <div class="container upper-finder">
-        <label class="search-bar">
-          <span aria-hidden="true">⌕</span>
-          <span class="sr-only">Search services</span>
-          <input type="search" data-service-search placeholder="Search carpentry, lighting, tiles..." autocomplete="off">
-          <kbd aria-hidden="true">Search</kbd>
-        </label>
-
-        <div class="role-switch" role="group" aria-label="Choose a service type">
-          <button type="button" class="role-tab active" data-service-role="partner" aria-pressed="true">Partner</button>
-          <button type="button" class="role-tab" data-service-role="supplier" aria-pressed="false">Supplier</button>
-        </div>
+      <div class="category-banner" id="category-banner" aria-label="Service categories">
+        <div class="banner-track" id="banner-track"></div>
       </div>
     </div>
   </div>
@@ -82,38 +69,32 @@
           <h2>Services built for your space</h2>
           <p>Pick a service, see verified partners near you and start your project.</p>
         </div>
-        <div class="service-grid">
-          <article class="service-card">
-            <span class="svc-icon">🪑</span>
-            <h3>Carpentry & Furniture</h3>
-            <p>Wardrobes, beds, modular kitchens and custom woodwork.</p>
-          </article>
-          <article class="service-card">
-            <span class="svc-icon">💡</span>
-            <h3>Lighting & Electrical</h3>
-            <p>Ceiling lights, wiring, switches and smart home setup.</p>
-          </article>
-          <article class="service-card">
-            <span class="svc-icon">🪵</span>
-            <h3>Flooring & Tiles</h3>
-            <p>Marble, vitrified tiles, wooden flooring and installation.</p>
-          </article>
-          <article class="service-card">
-            <span class="svc-icon">🎨</span>
-            <h3>Painting & Interiors</h3>
-            <p>Wall painting, texture work and complete room makeovers.</p>
-          </article>
-          <article class="service-card">
-            <span class="svc-icon">🚿</span>
-            <h3>Bathroom & Plumbing</h3>
-            <p>Fixtures, tiling, plumbing and full bathroom renovation.</p>
-          </article>
-          <article class="service-card">
-            <span class="svc-icon">🏢</span>
-            <h3>Office & Shop Design</h3>
-            <p>Commercial interiors, cabins, shops and workspace layout.</p>
-          </article>
+        <div class="service-grid" id="service-grid"></div>
+      </div>
+    </section>
+
+    <section id="image-gallery" class="image-gallery">
+      <div class="container">
+        <div class="gallery-head">
+          <h2>Explore our work</h2>
+          <p>See what we can build for your space</p>
         </div>
+        <div class="gallery-wrap" id="gallery-wrap">
+          <div class="gallery-main">
+            <div class="gallery-img-box" id="gallery-img-box">
+              <img id="gallery-main-img" alt="">
+            </div>
+            <div class="gallery-overlay">
+              <a class="btn get-started-btn" href="partner-program.html">Get Started</a>
+              <span class="gallery-name" id="gallery-name"></span>
+            </div>
+          </div>
+          <div class="gallery-portraits" id="gallery-portraits"></div>
+        </div>
+      </div>
+      <div class="gallery-expand" id="gallery-expand">
+        <button class="gallery-expand-close" id="gallery-expand-close" aria-label="Close">&times;</button>
+        <img class="gallery-expand-img" id="gallery-expand-img" alt="">
       </div>
     </section>
 
@@ -150,9 +131,12 @@
 
     <section class="trust">
       <div class="container">
-        <div class="section-head center">
-          <span class="eyebrow">Trusted by homeowners</span>
-          <h2>Good people. Clear work. Better spaces.</h2>
+        <div class="trust-stroke-wrap" style="display:inline-block;width:100%;max-width:700px;margin:0 auto;">
+          <div class="trust-stroke" style="border-radius:16px;"></div>
+          <div class="section-head center" style="position:relative;z-index:1;padding:20px;border-radius:16px;background:#fff;">
+            <span class="eyebrow">Trusted by homeowners</span>
+            <h2>Good people. Clear work. Better spaces.</h2>
+          </div>
         </div>
         <div class="trust-stats">
           <div class="stat"><strong>1,000+</strong><span>Homes delivered</span></div>
@@ -223,5 +207,6 @@
   <script src="cart.js?v=10"></script>
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=1"></script>
+  <script src="gallery.js?v=1"></script>
 </body>
 </html>
