@@ -289,7 +289,8 @@
         return d;
       });
     }).then(function (d) {
-      showCard(d.card || {});
+      // Redirect to unified dashboard after profile setup (all roles)
+      window.location.href = 'dashboard.html';
     }).catch(function (err) {
       submitting = false;
       el.error.textContent = err.message; el.error.hidden = false;
