@@ -1,0 +1,206 @@
+(function () {
+  'use strict';
+  var API = (window.SITE && window.SITE.apiBase) || '';
+  var $ = function (id) { return document.getElementById(id); };
+  var ICONS = {
+    home: '<path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/>',
+    orders: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    cart: '<path d="M3 4h2.5l2.2 11h10.1l2-8H6.4"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
+    products: '<path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/>',
+    earnings: '<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 4-5.5 6.5-5.5s5.7 2 6.5 5.5M17 11a3 3 0 100-6M15.5 20c.4-2.5 2-4 4-4"/>',
+    profile: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/>',
+    stats: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  };
+
+  // ---- session ----
+  var session = null;
+  try { session = JSON.parse(sessionStorage.getItem('ig_session')); } catch (e) { session = null; }
+  if (!session || !session.accessToken || !session.uuid) {
+    location.replace('partner-program.html#login');
+    return;
+  }
+
+  var role = session.role || 'client';
+  var pages = {};
+
+  function api(path, options) {
+    options = options || {};
+    options.headers = Object.assign({ Authorization: 'Bearer ' + session.accessToken }, options.headers || {});
+    return fetch(API + path, options).then(function (r) {
+      if (r.status === 401) {
+        sessionStorage.removeItem('ig_session');
+        location.replace('partner-program.html#login');
+        throw new Error('Session expired');
+      }
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.message || d.error || 'Request failed');
+        return d;
+      });
+    });
+  }
+
+  function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
+
+  // ---- nav items per role ----
+  var NAV = {
+    client: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'orders', label: 'My Orders', icon: 'orders' },
+      { id: 'carts', label: 'My Carts', icon: 'cart' },
+      { id: 'profile', label: 'Profile', icon: 'profile' },
+    ],
+    partner: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'orders', label: 'Assigned Orders', icon: 'orders' },
+      { id: 'earnings', label: 'Earnings', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' },
+    ],
+    supplier: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'products', label: 'My Products', icon: 'products' },
+      { id: 'orders', label: 'Material Orders', icon: 'orders' },
+      { id: 'earnings', label: 'Earnings', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' },
+    ],
+    admin: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'orders', label: 'All Orders', icon: 'orders' },
+      { id: 'users', label: 'Users', icon: 'users' },
+      { id: 'carts', label: 'Live Carts', icon: 'cart' },
+      { id: 'stats', label: 'Statistics', icon: 'stats' },
+    ],
+  };
+
+  // ---- render nav ----
+  function renderNav() {
+    var items = NAV[role] || NAV.client;
+    var nav = $('db-nav');
+    nav.innerHTML = items.map(function (it) {
+      return '<a data-page="' + it.id + '">' + svg(it.icon) + '<span>' + it.label + '</span></a>';
+    }).join('');
+    nav.addEventListener('click', function (e) {
+      var link = e.target.closest('[data-page]');
+      if (!link) return;
+      Array.prototype.forEach.call(nav.querySelectorAll('a'), function (a) { a.classList.remove('active'); });
+      link.classList.add('active');
+      showPage(link.getAttribute('data-page'));
+    });
+    // default
+    nav.querySelector('[data-page="overview"]').classList.add('active');
+  }
+
+  // ---- pages ----
+  pages.overview = function () {
+    $('db-page-title').textContent = 'Overview';
+    $('db-page-sub').textContent = 'Here is a quick summary of your activity.';
+    var welcome = 'Welcome back' + (session.username ? ', ' + session.username : '') + '!';
+    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">';
+    if (role === 'client') {
+      html += statCard('#fff3e0', '#e65100', 'cart', '0', 'Active Carts');
+      html += statCard('#e3f2fd', '#1565c0', 'orders', '0', 'Orders Placed');
+    } else if (role === 'partner') {
+      html += statCard('#fff3e0', '#e65100', 'orders', '0', 'New Orders');
+      html += statCard('#e8f5e9', '#2e7d32', 'earnings', '0', 'This Month');
+    } else if (role === 'supplier') {
+      html += statCard('#fff3e0', '#e65100', 'products', '0', 'Products');
+      html += statCard('#e8f5e9', '#2e7d32', 'orders', '0', 'Orders');
+    } else if (role === 'admin') {
+      html += statCard('#fff3e0', '#e65100', 'users', '0', 'Total Users');
+      html += statCard('#e3f2fd', '#1565c0', 'orders', '0', 'Active Orders');
+      html += statCard('#e8f5e9', '#2e7d32', 'cart', '0', 'Live Carts');
+    }
+    html += '</div>';
+    html += '<div class="db-section-title">Getting Started</div>';
+    html += '<div class="db-card"><p>Welcome to your Interagood control panel. Use the menu on the left to navigate. Your profile is set up and ready to go.</p></div>';
+    $('db-content').innerHTML = html;
+  };
+
+  function statCard(bg, color, icon, value, label) {
+    return '<div class="db-card db-stat"><div class="db-stat-ic" style="background:' + bg + ';color:' + color + '">' + svg(icon) + '</div><div><h3>' + value + '</h3><span>' + label + '</span></div></div>';
+  }
+
+  pages.orders = function () {
+    $('db-page-title').textContent = role === 'admin' ? 'All Orders' : (role === 'partner' ? 'Assigned Orders' : (role === 'supplier' ? 'Material Orders' : 'My Orders'));
+    $('db-page-sub').textContent = 'Track and manage your orders.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No orders yet. Orders will appear here once placed.</div></div>';
+  };
+
+  pages.carts = function () {
+    $('db-page-title').textContent = 'My Carts';
+    $('db-page-sub').textContent = 'Your saved carts and items.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No carts yet. Browse services and add items to your cart.</div></div>';
+  };
+
+  pages.products = function () {
+    $('db-page-title').textContent = 'My Products';
+    $('db-page-sub').textContent = 'Manage your product listings.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No products listed yet. Add your first product to start receiving orders.</div></div>';
+  };
+
+  pages.earnings = function () {
+    $('db-page-title').textContent = 'Earnings';
+    $('db-page-sub').textContent = 'Your earnings and payment history.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No earnings yet. Complete orders to start earning.</div></div>';
+  };
+
+  pages.users = function () {
+    $('db-page-title').textContent = 'Users';
+    $('db-page-sub').textContent = 'Manage all platform users.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">User list will appear here.</div></div>';
+  };
+
+  pages.stats = function () {
+    $('db-page-title').textContent = 'Statistics';
+    $('db-page-sub').textContent = 'Platform performance and analytics.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">Statistics will appear here.</div></div>';
+  };
+
+  pages.profile = function () {
+    $('db-page-title').textContent = 'Profile';
+    $('db-page-sub').textContent = 'Your account details.';
+    api('/users/' + session.uuid).then(function (d) {
+      var u = (d && d.data) || {};
+      var p = u.profile || u || {};
+      var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">';
+      html += '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a">Account</h3>';
+      html += '<p><strong>Username:</strong> ' + (u.username || '-') + '</p>';
+      html += '<p><strong>Phone:</strong> +91 ' + (u.phone || '-') + '</p>';
+      html += '<p><strong>Role:</strong> ' + (role.charAt(0).toUpperCase() + role.slice(1)) + '</p>';
+      if (u.ig_id) html += '<p><strong>IG ID:</strong> ' + u.ig_id + '</p>';
+      html += '</div>';
+      html += '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a">Profile</h3>';
+      html += '<p><strong>Name:</strong> ' + (p.full_name || '-') + '</p>';
+      if (p.business_name) html += '<p><strong>Business:</strong> ' + p.business_name + '</p>';
+      if (p.address) html += '<p><strong>Address:</strong> ' + p.address + '</p>';
+      if (p.city) html += '<p><strong>City:</strong> ' + p.city + (p.state ? ', ' + p.state : '') + '</p>';
+      html += '</div>';
+      html += '</div>';
+      $('db-content').innerHTML = html;
+    }).catch(function () {
+      $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">Could not load profile. Please refresh.</div></div>';
+    });
+  };
+
+  function showPage(id) {
+    var fn = pages[id];
+    if (fn) fn();
+  }
+
+  // ---- logout ----
+  $('db-logout-btn').addEventListener('click', function () {
+    sessionStorage.removeItem('ig_session');
+    location.replace('index.html');
+  });
+
+  // ---- mobile menu ----
+  $('db-menu').addEventListener('click', function () {
+    $('db-side').classList.toggle('open');
+  });
+
+  // ---- init ----
+  $('db-username').textContent = session.username || 'User';
+  $('db-role').textContent = (role.charAt(0).toUpperCase() + role.slice(1));
+  renderNav();
+  showPage('overview');
+})();

@@ -22,9 +22,12 @@
   <main class="pp-main">
     <div class="pp-wrap">
       <section id="step-role" aria-labelledby="pp-title">
-        <a class="locked-login" href="#" id="top-login">LOGIN</a>
-        <h1 id="pp-title">Interagood Partner Program</h1>
-        <p class="pp-sub">Get your business card online and receive orders from clients. No commission, no hidden charges. Choose how you want to join.</p>
+        <div class="role-top-actions">
+          <a class="locked-login" href="#" id="top-login">LOGIN</a>
+          <a class="locked-login" href="#" id="admin-login" style="font-size:0.78rem;opacity:0.7">ADMIN</a>
+        </div>
+        <h1 id="pp-title">Join Interagood</h1>
+        <p class="pp-sub">Choose how you want to join. Clients, partners and suppliers all get their own control panel.</p>
 
         <div class="role-cards" role="radiogroup" aria-label="Choose your role">
           <button type="button" class="role-card" role="radio" aria-checked="false" data-role="client">
@@ -67,6 +70,27 @@
           <p class="hint" id="lg-msg" role="alert" aria-live="polite"></p>
           <button type="submit" class="btn" id="lg-submit" disabled>Login</button>
         </form>
+      </section>
+
+      <section id="step-user-login" class="signup-card" hidden aria-labelledby="ulogin-title">
+        <div class="signup-head">
+          <h2 id="ulogin-title">Welcome back</h2>
+          <p>Log in to your Interagood account. <button type="button" class="link-btn" id="ulogin-back">Back</button></p>
+        </div>
+        <form id="ulogin-form" novalidate autocomplete="off">
+          <div class="field">
+            <label for="ulogin-id">Phone, email or username</label>
+            <div class="input"><input id="ulogin-id" type="text" maxlength="100" placeholder="Enter your phone, email or username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+          </div>
+          <div class="field">
+            <label for="ulogin-pass">Password</label>
+            <div class="input"><input id="ulogin-pass" type="password" maxlength="100" placeholder="Your password" autocomplete="current-password"></div>
+          </div>
+          <p class="hint" id="ulogin-msg" role="alert" aria-live="polite"></p>
+          <button type="submit" class="btn" id="ulogin-submit">Log in</button>
+          <p class="form-error" id="ulogin-error" role="alert" hidden></p>
+        </form>
+        <p style="margin-top:16px;text-align:center;font-size:0.9rem;color:#6b7a90">New here? <button type="button" class="link-btn" id="ulogin-signup">Create an account</button></p>
       </section>
 
       <section id="step-signup" class="signup-card" hidden aria-labelledby="signup-title">

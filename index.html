@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interagood | Welcome — Thoughtful interiors, made for you</title>
+  <title>Interagood | Thoughtful interiors, made for you</title>
   <meta name="description" content="Plan your interior with full control, a clear budget and no brokerage. Find verified home-service partners and suppliers with Interagood.">
   <meta property="og:title" content="Interagood | Thoughtful interiors, made for you">
   <meta property="og:description" content="Your space, your choices. Custom interiors with transparent budgets and no brokerage.">
@@ -16,20 +16,20 @@
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
-  <div class="top-upper" id="top-upper">
-  <header class="nav">
-    <div class="container nav-inner">
-      <a class="brand" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
-      <div class="location-bar">
-        <button type="button" class="location-icon loc-btn" id="loc-btn" aria-label="Use my current location">⌖</button>
-        <label class="sr-only" for="location-input">Your address or location</label>
-        <input id="location-input" type="text" autocomplete="street-address" placeholder="Allow location or type your address">
-      </div>
-      <a class="header-contact" href="contact.html">Contact</a>
-    </div>
-  </header>
+    <div class="top-upper" id="top-upper">
+      <header class="nav">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
+          <div class="location-bar">
+            <button type="button" class="location-icon loc-btn" id="loc-btn" aria-label="Use my current location">⌖</button>
+            <label class="sr-only" for="location-input">Your address or location</label>
+            <input id="location-input" type="text" autocomplete="street-address" placeholder="Allow location or type your address">
+          </div>
+          <a class="header-contact" href="contact.html">Contact</a>
+        </div>
+      </header>
 
-  <div class="container upper-finder">
+      <div class="container upper-finder">
         <label class="search-bar">
           <span aria-hidden="true">⌕</span>
           <span class="sr-only">Search services</span>
@@ -41,91 +41,141 @@
           <button type="button" class="role-tab active" data-service-role="partner" aria-pressed="true">Partner</button>
           <button type="button" class="role-tab" data-service-role="supplier" aria-pressed="false">Supplier</button>
         </div>
-  </div>
-  </div>
-
-    <section class="service-finder" id="partner-program">
-      <div class="container finder-inner">
-        <div class="category-panel active" data-role-panel="partner" role="region" aria-label="Partner services">
-          <div class="category-grid" data-category-list="partner"></div>
-        </div>
-        <div class="category-panel" data-role-panel="supplier" role="region" aria-label="Supplier categories" hidden>
-          <div class="category-grid" data-category-list="supplier"></div>
-        </div>
-        <p class="category-empty" data-category-empty hidden>No matching categories. Try a different search.</p>
       </div>
-    </section>
+    </div>
   </div>
 
   <main>
-    <section class="hero-banner">
-      <div class="container hero-content">
-        <span class="hero-kicker">Interiors, made personal</span>
-        <h1>Your home. Your choices. Your budget.</h1>
-        <p>Design and build your space your way—with clear choices, trusted professionals and no brokerage.</p>
-        <div class="hero-promise">
-          <span>Custom</span><i aria-hidden="true"></i><span>Complete control</span><i aria-hidden="true"></i><span>Clear budget</span>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <span class="hero-kicker">Interiors, made personal</span>
+          <h1>Design your home your way<br><strong>no brokerage, clear budget.</strong></h1>
+          <p>Get a free site visit, a transparent quote and verified partners to build the space you actually want.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="partner-program.html">Get free site visit</a>
+            <a class="btn ghost" href="#services">Explore services</a>
+          </div>
+          <div class="hero-trust">
+            <span>★ 4.9</span><span>1,000+ homes</span><span>✓ Verified partners</span><span>₹ Transparent pricing</span>
+          </div>
         </div>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="partner-program.html">Get Started — It's Free</a>
-          <a class="btn ghost" href="#browse">Explore Services</a>
+        <div class="hero-visual">
+          <div class="hero-card">
+            <span class="hero-chip">FREE</span>
+            <h3>Free site visit</h3>
+            <p>A partner visits your space and plans the work with you.</p>
+            <div class="hero-steps">
+              <div class="step">1 · Choose service</div>
+              <div class="step">2 · Book visit</div>
+              <div class="step">3 · Get budget</div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="project-options" aria-label="Start an interior project">
-      <div class="container project-grid project-single">
-        <article class="project-card">
-          <span class="project-step">FREE SITE VISIT</span>
-          <h2>Planning a new interior?</h2>
-          <p>A skilled partner visits your space, plans the work with you and shares a clear budget.</p>
-          <a class="btn" href="inspection.html">Get free inspection</a>
-        </article>
-      </div>
-    </section>
-
-    <section class="browse" id="browse" aria-label="Browse services">
-      <div class="container">
-        <div class="browse-head">
-          <div><h2 id="browse-title">Popular interior work</h2><p id="browse-sub"></p></div>
-          <div class="swiper-nav"><button type="button" data-swipe="prev" aria-label="Previous">&lsaquo;</button><button type="button" data-swipe="next" aria-label="Next">&rsaquo;</button></div>
-        </div>
-        <div class="swiper" id="browse-strip"></div>
-        <p class="browse-empty" id="browse-empty" hidden>No matching services. Try a different search.</p>
-      </div>
-    </section>
-
-    <section class="trust-section">
+    <section id="services" class="services">
       <div class="container">
         <div class="section-head">
-          <span class="eyebrow">Built around your trust</span>
+          <span class="eyebrow">What you need</span>
+          <h2>Services built for your space</h2>
+          <p>Pick a service, see verified partners near you and start your project.</p>
+        </div>
+        <div class="service-grid">
+          <article class="service-card">
+            <span class="svc-icon">🪑</span>
+            <h3>Carpentry & Furniture</h3>
+            <p>Wardrobes, beds, modular kitchens and custom woodwork.</p>
+          </article>
+          <article class="service-card">
+            <span class="svc-icon">💡</span>
+            <h3>Lighting & Electrical</h3>
+            <p>Ceiling lights, wiring, switches and smart home setup.</p>
+          </article>
+          <article class="service-card">
+            <span class="svc-icon">🪵</span>
+            <h3>Flooring & Tiles</h3>
+            <p>Marble, vitrified tiles, wooden flooring and installation.</p>
+          </article>
+          <article class="service-card">
+            <span class="svc-icon">🎨</span>
+            <h3>Painting & Interiors</h3>
+            <p>Wall painting, texture work and complete room makeovers.</p>
+          </article>
+          <article class="service-card">
+            <span class="svc-icon">🚿</span>
+            <h3>Bathroom & Plumbing</h3>
+            <p>Fixtures, tiling, plumbing and full bathroom renovation.</p>
+          </article>
+          <article class="service-card">
+            <span class="svc-icon">🏢</span>
+            <h3>Office & Shop Design</h3>
+            <p>Commercial interiors, cabins, shops and workspace layout.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-it-works alt">
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow">How it works</span>
+          <h2>From idea to finished space</h2>
+        </div>
+        <div class="steps-grid">
+          <div class="step-card">
+            <span class="step-num">01</span>
+            <h3>Tell us your need</h3>
+            <p>Choose your service and share your address.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-num">02</span>
+            <h3>Free site visit</h3>
+            <p>A verified partner visits and plans with you.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-num">03</span>
+            <h3>Clear budget</h3>
+            <p>Get a transparent quote with no hidden charges.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-num">04</span>
+            <h3>Work begins</h3>
+            <p>Skilled partners build your space on time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust">
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow">Trusted by homeowners</span>
           <h2>Good people. Clear work. Better spaces.</h2>
-          <p>From the first idea to the finishing touch, find support for every step of your interior project.</p>
+        </div>
+        <div class="trust-stats">
+          <div class="stat"><strong>1,000+</strong><span>Homes delivered</span></div>
+          <div class="stat"><strong>95%</strong><span>Customers return</span></div>
+          <div class="stat"><strong>✓ Verified</strong><span>Skilled partners</span></div>
+          <div class="stat"><strong>₹ Zero</strong><span>Brokerage fee</span></div>
         </div>
         <div class="trust-grid">
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">★</span><h3>Honest client reviews</h3><p>Real feedback and ratings help you choose with confidence.</p></article>
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">⌂</span><h3>1,000+ professionals</h3><p>Explore designers and experienced specialists.</p></article>
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">◎</span><h3>Growing city coverage</h3><p>Discover interior services and suppliers in more cities.</p></article>
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">✓</span><h3>Skilled, verified partners</h3><p>Find experienced professionals for work that matters.</p></article>
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">◷</span><h3>Site visit by partners</h3><p>A skilled partner visits your space and plans the work with you.</p></article>
-          <article class="trust-card"><span class="trust-icon" aria-hidden="true">₹</span><h3>Budget-friendly suppliers</h3><p>Compare material options to make your budget go further.</p></article>
-          <article class="trust-card trust-stat"><strong>1,000+</strong><h3>Dream homes delivered</h3><p>Thoughtful interiors, made for everyday living.</p></article>
-          <article class="trust-card trust-stat"><strong>95%</strong><h3>Customers return</h3><p>Good experiences are worth coming back to.</p></article>
+          <article class="trust-card"><span class="trust-icon">★</span><h3>Honest client reviews</h3><p>Real feedback and ratings help you choose with confidence.</p></article>
+          <article class="trust-card"><span class="trust-icon">⌂</span><h3>1,000+ professionals</h3><p>Explore designers and experienced specialists.</p></article>
+          <article class="trust-card"><span class="trust-icon">◎</span><h3>Growing city coverage</h3><p>Discover interior services and suppliers in more cities.</p></article>
+          <article class="trust-card"><span class="trust-icon">✓</span><h3>Skilled, verified partners</h3><p>Find experienced professionals for work that matters.</p></article>
         </div>
       </div>
     </section>
 
-    <section class="spaces-section">
-      <div class="container">
-        <div class="section-head">
-          <span class="eyebrow">Spaces we help shape</span>
-          <h2>Ideas for every kind of space</h2>
+    <section class="cta">
+      <div class="container cta-inner">
+        <div>
+          <h2>Ready to start your interior?</h2>
+          <p>Book your free site visit today and get a clear budget for your space.</p>
         </div>
-        <div class="space-grid" aria-label="Interior project examples">
-          <div class="space-card space-office"><span>Office layouts</span></div>
-          <div class="space-card space-shop"><span>Shop makeovers</span></div>
-          <div class="space-card space-restaurant"><span>Restaurant design</span></div>
-        </div>
+        <a class="btn btn-primary" href="partner-program.html">Book free site visit</a>
       </div>
     </section>
   </main>

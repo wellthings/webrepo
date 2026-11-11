@@ -342,10 +342,7 @@
 
   function paid() {
     isPaid = true;
-    $('pay-btn').hidden = true; payError('');
-    $('bc-state').textContent = 'Active'; $('bc-state').classList.add('on');
-    $('step-download').hidden = false;
-    $('step-download').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.location.href = 'dashboard.html';
   }
 
   function loadRazorpay() {

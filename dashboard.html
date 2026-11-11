@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interagood | Dashboard</title>
+  <meta name="theme-color" content="#0b1f3a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="style.css?v=20261106-g">
+  <link rel="stylesheet" href="partner.css?v=20">
+  <style>
+    .db-shell { display: flex; min-height: 100vh; background: #f5f7fb; }
+    .db-side { width: 260px; background: #0b1f3a; color: #cfe2ff; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; }
+    .db-brand { padding: 22px 24px; font-size: 1.25rem; font-weight: 800; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .db-user { padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .db-user .nm { font-weight: 700; color: #fff; }
+    .db-user .dbu-role { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+    .db-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .db-nav a { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: #cfe2ff; text-decoration: none; font-size: 0.95rem; border-left: 3px solid transparent; cursor: pointer; }
+    .db-nav a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .db-nav a.active { background: rgba(255,255,255,0.1); color: #fff; border-left-color: #f58220; }
+    .db-nav a svg { width: 20px; height: 20px; }
+    .db-logout { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .db-logout button { width: 100%; padding: 10px; background: rgba(255,255,255,0.08); border: 0; color: #cfe2ff; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+    .db-logout button:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .db-main { margin-left: 260px; flex: 1; padding: 32px; }
+    .db-head h1 { font-size: 1.6rem; margin: 0 0 6px; color: #0b1f3a; }
+    .db-head p { color: #6b7a90; margin: 0 0 24px; }
+    .db-grid { display: grid; gap: 16px; }
+    .db-card { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 2px 12px rgba(11,31,58,0.06); }
+    .db-stat { display: flex; align-items: center; gap: 16px; }
+    .db-stat .db-stat-ic { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+    .db-stat h3 { margin: 0; font-size: 1.6rem; color: #0b1f3a; }
+    .db-stat span { font-size: 0.85rem; color: #6b7a90; }
+    .db-section-title { font-size: 1.1rem; font-weight: 700; color: #0b1f3a; margin: 28px 0 14px; }
+    .db-empty { text-align: center; padding: 40px 20px; color: #6b7a90; }
+    .db-table { width: 100%; border-collapse: collapse; }
+    .db-table th, .db-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eef1f6; font-size: 0.9rem; }
+    .db-table th { color: #6b7a90; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .db-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .db-badge.new { background: #fff3e0; color: #e65100; }
+    .db-badge.contacted { background: #e3f2fd; color: #1565c0; }
+    .db-badge.closed { background: #e8f5e9; color: #2e7d32; }
+    .db-mob-toggle { display: none; }
+    @media (max-width: 768px) {
+      .db-side { transform: translateX(-100%); transition: transform 0.25s; z-index: 100; }
+      .db-side.open { transform: translateX(0); }
+      .db-main { margin-left: 0; padding: 20px; }
+      .db-mob-toggle { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; position: fixed; top: 12px; left: 12px; z-index: 101; background: #0b1f3a; color: #fff; border: 0; border-radius: 10px; font-size: 1.2rem; cursor: pointer; }
+    }
+  </style>
+</head>
+<body>
+  <button class="db-mob-toggle" id="db-menu" aria-label="Menu">&#9776;</button>
+  <div class="db-shell">
+    <aside class="db-side" id="db-side">
+      <div class="db-brand">Interagood</div>
+      <div class="db-user">
+        <div class="db-usernm" id="db-username">User</div>
+        <div class="dbu-role" id="db-role">Client</div>
+      </div>
+      <nav class="db-nav" id="db-nav"></nav>
+      <div class="db-logout">
+        <button type="button" id="db-logout-btn">Logout</button>
+      </div>
+    </aside>
+    <main class="db-main">
+      <div class="db-head">
+        <h1 id="db-page-title">Dashboard</h1>
+        <p id="db-page-sub">Welcome back</p>
+      </div>
+      <div id="db-content"></div>
+    </main>
+  </div>
+
+  <script src="config.js?v=20261104d"></script>
+  <script src="dashboard.js?v=1"></script>
+</body>
+</html>

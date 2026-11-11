@@ -2,7 +2,17 @@
   var API = (window.SITE && window.SITE.apiBase) || '';
   var TOKEN_KEY = 'ig_admin_token';
   var $ = function (id) { return document.getElementById(id); };
-  var trigger = $('top-login'), form = $('login-form');
+  var trigger = $('admin-login'), form = $('login-form');
+  var userTrigger = $('top-login');
+  if (userTrigger) {
+    userTrigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      $('step-role').hidden = true;
+      $('step-user-login').hidden = false;
+      $('step-user-login').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('ulogin-id').focus();
+    });
+  }
   if (!trigger || !form) return;
 
   var phone = $('lg-phone'), otp = $('lg-otp'), user = $('lg-user');
@@ -12,11 +22,16 @@
   function show(on) {
     document.body.classList.toggle('logging-in', on);
     $('step-login').hidden = !on;
-    if (on) { phone.focus(); if (location.hash !== '#login') history.replaceState(null, '', '#login'); }
+    if (on) {
+      $('step-role').hidden = true;
+      $('step-user-login').hidden = true;
+      phone.focus();
+      if (location.hash !== '#login') history.replaceState(null, '', '#login');
+    }
     else if (location.hash === '#login') history.replaceState(null, '', location.pathname + location.search);
   }
   trigger.addEventListener('click', function (e) { e.preventDefault(); show(true); });
-  $('login-back').addEventListener('click', function () { show(false); });
+  $('login-back').addEventListener('click', function () { show(false); $('step-role').hidden = false; });
   if (location.hash === '#login') show(true);
 
   function say(text, bad) { msg.textContent = text || ''; msg.style.color = bad ? '#c0392b' : ''; }

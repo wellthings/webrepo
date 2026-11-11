@@ -220,6 +220,31 @@
     });
   });
 
+  // user login (client/partner/supplier)
+  var ulogin = $('step-user-login');
+  if (ulogin) {
+    var uForm = $('ulogin-form'), uId = $('ulogin-id'), uPass = $('ulogin-pass'), uErr = $('ulogin-error'), uBtn = $('ulogin-submit');
+    uForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      uErr.hidden = true;
+      uBtn.disabled = true;
+      uBtn.textContent = 'Logging in...';
+      post('/login', { identifier: uId.value.trim(), password: uPass.value })
+        .then(function (d) {
+          sessionStorage.setItem('ig_session', JSON.stringify({ uuid: d.uuid, role: d.role, username: d.username, accessToken: d.accessToken, refreshToken: d.refreshToken }));
+          location.href = 'dashboard.html';
+        })
+        .catch(function (err) {
+          uErr.textContent = err.message;
+          uErr.hidden = false;
+          uBtn.disabled = false;
+          uBtn.textContent = 'Log in';
+        });
+    });
+    $('ulogin-back').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
+    $('ulogin-signup').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
+  }
+
   // terms and privacy, fetched from the backend (stored in the admin_uploads bucket)
   var modal = $('doc-modal'), body = $('doc-body'), lastFocus = null;
   var DOC_TITLES = { terms: 'Terms & Conditions', privacy: 'Privacy Policy' };
