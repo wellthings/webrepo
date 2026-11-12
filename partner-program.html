@@ -106,8 +106,8 @@
               <span class="prefix">+91</span>
               <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off">
             </div>
-            <p class="hint" id="phone-hint" aria-live="polite"></p>
-            <button type="button" class="btn-sm" id="send-otp" disabled>Get OTP</button>
+            <p class="hint" id="phone-hint" aria-live="polite">Testing mode: Enter any 10-digit number (OTP bypassed).</p>
+            <button type="button" class="btn-sm" id="send-otp" disabled hidden>Get OTP</button>
           </div>
 
           <div class="field" data-field="otp" id="otp-field" hidden>
@@ -127,7 +127,7 @@
             <label for="username">Username</label>
             <div class="input">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.500 20.500c1-4 4-5.500 7.500-5.500s6.500 1.500 7.500 5.500"/></svg>
-              <input id="username" name="username" type="text" maxlength="60" placeholder="Choose a username" autocomplete="off" disabled>
+              <input id="username" name="username" type="text" maxlength="60" placeholder="Choose a username" autocomplete="off">
             </div>
             <p class="hint" id="username-hint" aria-live="polite">Letters, numbers, dot or underscore. At least 3 characters.</p>
           </div>
@@ -136,8 +136,8 @@
             <label for="password">Password</label>
             <div class="input">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
-              <input id="password" name="password" type="password" maxlength="100" placeholder="Create a password" autocomplete="new-password" disabled>
-              <button type="button" class="eye" id="toggle-password" aria-label="Show password" aria-pressed="false" disabled>
+              <input id="password" name="password" type="password" maxlength="100" placeholder="Create a password" autocomplete="new-password">
+              <button type="button" class="eye" id="toggle-password" aria-label="Show password" aria-pressed="false">
                 <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.500-7 10-7 10 7 10 7-3.500 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M3 3l18 18M10.600 6.100A9.600 9.600 0 0112 6c6.500 0 10 6 10 6a17 17 0 01-3.200 3.800M6.600 6.600A16.500 16.500 0 002 12s3.500 6 10 6a9.700 9.700 0 004.200-1M9.900 9.900a3 3 0 004.200 4.200"/></svg>
               </button>

@@ -8,7 +8,7 @@ body.pp { background: #f5f6f8; }
 .pp-wrap h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4.5vw, 2rem); color: var(--navy); }
 .pp-sub { margin: 0 0 22px; color: var(--muted); }
 
-.role-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.role-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .role-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
 .role-card:hover { border-color: #c5ced9; }
 .role-card[aria-checked="true"] { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.15); }
