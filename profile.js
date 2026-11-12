@@ -413,7 +413,7 @@
     payError(''); btn.disabled = true; btn.textContent = 'Please wait...';
     function reset() { btn.disabled = false; btn.textContent = label; }
     Promise.all([
-      fetch(API + '/users/' + session.uuid + '/subscription', { method: 'POST', headers: authHeaders(), body: '{}' })
+      fetch(API + '/users/' + session.uuid + '/payment/order', { method: 'POST', headers: authHeaders(), body: '{}' })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
           if (!r.ok) throw new Error(r.status === 503 ? 'Payments are not available yet. Please try later.' : (d.message || 'Could not start payment.'));
           return d;
@@ -422,14 +422,14 @@
     ]).then(function (res) {
       var d = res[0];
       new window.Razorpay({
-        key: d.key_id, subscription_id: d.subscription_id, name: 'Interagood',
+        key: d.key_id, order_id: d.order_id, amount: d.amount * 100, name: 'Interagood',
         description: 'Monthly plan', prefill: { name: d.name, contact: d.contact, email: d.email },
         theme: { color: '#f58220' },
         modal: { ondismiss: reset },
         handler: function (resp) {
-          fetch(API + '/users/' + session.uuid + '/subscription/verify', {
+          fetch(API + '/users/' + session.uuid + '/payment/verify', {
             method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({ razorpay_payment_id: resp.razorpay_payment_id, razorpay_subscription_id: resp.razorpay_subscription_id, razorpay_signature: resp.razorpay_signature })
+            body: JSON.stringify({ razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature })
           }).then(function (r) {
             if (!r.ok) throw new Error('Payment could not be confirmed. Contact support.');
             paid();

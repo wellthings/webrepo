@@ -61,7 +61,9 @@
         $('tb-quota-used').textContent = used;
         $('tb-quota-max').textContent = role === 'supplier' ? '4' : '4';
       }
-      setOnlineToggle(!!p.is_online);
+      // Online is allowed only while the monthly payment is active (paid and not past due)
+      var active = p.payment_status === 'paid' && (!p.next_due_at || new Date(p.next_due_at).getTime() > Date.now());
+      setOnlineToggle(active && !!p.is_online, active);
     }).catch(function () { /* ignore */ });
 
     // actions
@@ -76,17 +78,20 @@
     if (ordersBtn) ordersBtn.addEventListener('click', function () { showPage('orders'); });
   }
 
-  function setOnlineToggle(on) {
+  function setOnlineToggle(on, canGoOnline) {
     var btn = $('tb-online');
     var lbl = $('tb-online-label');
     if (!btn) return;
+    var allowed = canGoOnline !== false;
     btn.setAttribute('aria-checked', on ? 'true' : 'false');
     btn.classList.toggle('on', on);
-    if (lbl) lbl.textContent = on ? 'Online' : 'Offline';
+    btn.classList.toggle('locked', !allowed);
+    if (lbl) lbl.textContent = allowed ? (on ? 'Online' : 'Offline') : 'Pay to go online';
     btn.onclick = function () {
+      if (!allowed) { alert('Your payment is not active. Please pay to go online.'); return; }
       var want = btn.getAttribute('aria-checked') !== 'true';
       api('/users/' + session.uuid + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_online: want }) })
-        .then(function () { setOnlineToggle(want); })
+        .then(function () { setOnlineToggle(want, true); })
         .catch(function () { /* keep old state */ });
     };
   }
