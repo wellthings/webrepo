@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="style.css?v=20261106-g">
-  <link rel="stylesheet" href="partner.css?v=20">
+  <link rel="stylesheet" href="partner.css?v=20261112e">
 </head>
 <body class="pp">
   <header class="pp-header">
@@ -94,6 +94,7 @@
 
       <section id="step-signup" class="signup-card" hidden aria-labelledby="signup-title">
         <div class="signup-head">
+          <div style="display:inline-block;padding:4px 12px;background:#e7f6ee;color:#1f9d55;font-weight:700;font-size:0.82rem;border-radius:6px;margin-bottom:10px;border:1px solid #c3e6cb">TESTING MODE: OTP SYSTEM TURNED OFF</div>
           <h2 id="signup-title">Create your account</h2>
           <p>Joining as <strong id="chosen-role">Partner</strong> <button type="button" class="link-btn" id="change-role">Change</button></p>
         </div>
@@ -106,8 +107,7 @@
               <span class="prefix">+91</span>
               <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off">
             </div>
-            <p class="hint" id="phone-hint" aria-live="polite">Testing mode: Enter any 10-digit number (OTP bypassed).</p>
-            <button type="button" class="btn-sm" id="send-otp" disabled hidden>Get OTP</button>
+            <p class="hint" id="phone-hint" aria-live="polite">Enter any 10-digit number (OTP is turned off for testing).</p>
           </div>
 
           <div class="field" data-field="otp" id="otp-field" hidden>
@@ -228,7 +228,7 @@
   </div>
 
   <script src="config.js?v=20261104d"></script>
-  <script src="partner.js?v=7"></script>
+  <script src="partner.js?v=20261112e"></script>
   <script src="profile.js?v=20"></script>
   <script src="admin-login.js?v=1"></script>
 </body>

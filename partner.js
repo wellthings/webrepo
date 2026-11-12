@@ -60,7 +60,8 @@
     state.otpToken = 'test_token';
     $('signup-form').reset();
     ['phone', 'otp', 'username', 'password'].forEach(function (n) { var f = document.querySelector('[data-field="' + n + '"]'); if (f) f.classList.remove('ok', 'bad'); });
-    el.phoneHint.textContent = el.otpHint.textContent = '';
+    if (el.phoneHint) el.phoneHint.textContent = '';
+    if (el.otpHint) el.otpHint.textContent = '';
     el.phone.disabled = false;
     if (el.otpField) el.otpField.hidden = true;
     if (el.send) { el.send.hidden = true; el.send.disabled = true; }
