@@ -54,6 +54,26 @@
     return out;
   }
 
+  // ---- upload a file to the backend media endpoint, returns the public URL ----
+  function upload(kind, file) {
+    if (!session) return Promise.reject(new Error('Not signed in.'));
+    return fetch(API + '/users/' + session.uuid + '/upload?kind=' + encodeURIComponent(kind), {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+        Authorization: 'Bearer ' + session.accessToken,
+      },
+      body: file,
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.message || d.error || 'Upload failed');
+        if (!d.url) throw new Error('Upload did not return a URL.');
+        return d.url;
+      });
+    });
+  }
+  window.InteraUpload = upload;
+
   function build() {
     var h = '<div class="cover"><label class="cover-banner" for="banner"><img id="banner-img" alt="" hidden><span class="cover-ph">' + svg('pin').replace(ICONS.pin, '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>') + 'Add banner photo</span></label>' +
       '<input class="sr" id="banner" type="file" accept="image/jpeg,image/png,image/webp">' +
@@ -330,6 +350,8 @@
 
   // ---- business card + payment ----
   var cardData = null;
+  var AVATAR_PLACEHOLDER = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#e9eef6"/><circle cx="60" cy="46" r="22" fill="#c3cede"/><path d="M18 120c0-24 19-38 42-38s42 14 42 38z" fill="#c3cede"/></svg>');
+  var BANNER_PLACEHOLDER = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a192f"/><stop offset="1" stop-color="#112543"/></linearGradient></defs><rect width="600" height="200" fill="url(#g)"/></svg>');
   function showCard(c) {
     cardData = c;
     $('bc-name').textContent = c.business_name || '';
@@ -340,7 +362,9 @@
     $('bc-address').textContent = c.address || '';
     $('bc-initial').textContent = (c.business_name || '?').charAt(0).toUpperCase();
     [['bc-avatar', c.profile_photo_url], ['bc-banner', c.banner_url]].forEach(function (x) {
-      var im = $(x[0]); if (x[1]) { im.src = x[1]; im.hidden = false; } else im.hidden = true;
+      var im = $(x[0]); if (!im) return;
+      im.src = x[1] || (x[0] === 'bc-avatar' ? AVATAR_PLACEHOLDER : BANNER_PLACEHOLDER);
+      im.hidden = false;
     });
     $('bc-initial').hidden = !!c.profile_photo_url;
     setOnline(!!c.is_online);

@@ -308,10 +308,18 @@
   pages.profile = function () {
     $('db-page-title').textContent = 'Profile';
     $('db-page-sub').textContent = 'Your account details.';
+    var AVATAR_PH = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#e9eef6"/><circle cx="60" cy="46" r="22" fill="#c3cede"/><path d="M18 120c0-24 19-38 42-38s42 14 42 38z" fill="#c3cede"/></svg>');
+    var BANNER_PH = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" preserveAspectRatio="none"><rect width="600" height="200" fill="#0a192f"/></svg>');
     api('/users/' + session.uuid).then(function (d) {
       var u = (d && d.data) || {};
       var p = u.profile || u || {};
-      var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">';
+      var avatar = p.profile_photo_url || AVATAR_PH;
+      var banner = p.banner_url || BANNER_PH;
+      var html = '<div class="db-profile-hero">';
+      html += '<div class="db-profile-banner"><img src="' + banner + '" alt="" onerror="this.src=\'' + BANNER_PH + '\'"></div>';
+      html += '<div class="db-profile-avatar"><img src="' + avatar + '" alt="" onerror="this.src=\'' + AVATAR_PH + '\'"></div>';
+      html += '</div>';
+      html += '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">';
       html += '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a">Account</h3>';
       html += '<p><strong>Username:</strong> ' + (u.username || '-') + '</p>';
       html += '<p><strong>Phone:</strong> +91 ' + (u.phone || '-') + '</p>';
