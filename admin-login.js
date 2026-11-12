@@ -71,7 +71,7 @@
     validate();
     if (submit.disabled) return;
     busy = true; submit.disabled = true; submit.textContent = 'Checking...'; say('');
-    post('/admin/login', { phone: phone.value, otp: otp.value, username: user.value.trim() })
+    post('/admin/login', { phone: phone.value, otp: otp.value, username: user.value.trim(), login_id: ($('lg-loginid') && $('lg-loginid').value || '').trim() })
       .then(function (d) {
         sessionStorage.setItem(TOKEN_KEY, d.token);
         location.href = 'admin.html';

@@ -176,3 +176,39 @@ body.pp.logging-in .pp-wrap > section:not(#step-login) { display: none; }
 #step-login .btn-sm { margin-top: 8px; }
 #step-login .btn { width: 100%; }
 #step-login .btn:disabled { opacity: 0.55; cursor: default; }
+
+/* onboarding warnings & tips */
+.warn-banner {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid #f2b705;
+  border-left: 5px solid #f2b705;
+  border-radius: 12px;
+  background: #fff8e1;
+  color: #6b4e00;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.tip-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef6ff;
+  color: #1a4d8f;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* secret admin login id (no label/placeholder/hint by design) */
+.secret-loginid {
+  width: 100%;
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #0b1f3a;
+  background: #fff;
+  font-family: inherit;
+}

@@ -14,13 +14,16 @@
   };
   var TOGGLES = {
     partner: [
-      ['has_tools', 'Kya aapke paas auzar hain?'],
-      ['has_team', 'Kya aapke saath kaam karne wali team hai?'],
-      ['knows_work_completely', 'Kya aapko apne kaam ki poori jaankari hai?'],
-      ['knows_pricing', 'Kya aapko apne kaam ki calculation aur pricing ke baare me pata hai?'],
-      ['worked_with_team_before', 'Kya aapne apni team ke saath koi alag kaam kiya hai?']
+      ['has_team', 'Do you have a working team?'],
+      ['has_tools', 'Do you have your own tool/toolbox?'],
+      ['knows_work_completely', 'Do you have complete knowledge of your work, pricing, calculation and client dealing?']
     ]
   };
+  var WARNINGS = {
+    partner: 'WARNING: Strict KYC/Aadhaar verification in progress. Any mismatch or fake profile will lead to immediate account suspension. Ensure you possess the required team, tools, and technical skill before proceeding. For support: support@interagood.in',
+    architect: 'NOTE: Architect accounts are reviewed. Any mismatch or fake profile will lead to immediate account suspension. Ensure your qualifications and design software details are accurate. For support: support@interagood.in'
+  };
+  var SKILL_LEVELS = [['new', 'New'], ['intermediate', 'Intermediate'], ['experienced', 'Experienced']];
 
   var session = null, role = null, built = false, toggles = {}, files = {}, urls = {};
   var el = { fields: $('biz-fields'), form: $('biz-form'), save: $('biz-save'), error: $('biz-error') };
@@ -57,17 +60,33 @@
       '<label class="avatar" for="profile_photo"><img id="profile_photo-img" alt="" hidden><span class="avatar-ph">' + svg('user') + '</span><span class="avatar-plus">+</span></label>' +
       '<input class="sr" id="profile_photo" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
       '<p class="hint cover-hint" id="banner-hint">Banner and profile photo are optional. JPG, PNG or WebP, up to 5 MB.</p><p class="hint cover-hint" id="profile_photo-hint"></p>';
+    if (WARNINGS[role]) {
+      h += '<div class="warn-banner" role="alert">' + WARNINGS[role] + '</div>';
+    }
     h += '<p class="biz-section">Basic details</p>';
-    h += text('full_name', 'Legal name (as per Aadhaar)', 'user', 'Your name exactly as on Aadhaar', 'maxlength="120"');
+    h += text('full_name', 'Full name (as per Aadhaar)', 'user', 'Your name exactly as on Aadhaar', 'maxlength="120"');
     h += text('business_name', 'Business name', 'shop', 'Your business or brand name', 'maxlength="150"');
     if (role === 'partner' || role === 'supplier') {
       h += select('category_id', role === 'partner' ? 'Your work category' : 'Supply category', 'list', [], 'Loading categories...');
+    }
+    if (role === 'partner' || role === 'architect') {
+      h += select('skill_level', 'Skill level', 'cap', SKILL_LEVELS, 'Select skill level');
+    }
+    if (role === 'supplier') {
+      h += select('shop_years', 'Years shop is active', 'clock', range(0, 60, function (n) { return n + (n === 1 ? ' year' : ' years'); }), 'Select years in business');
     }
     if (role !== 'supplier') {
       h += '<p class="biz-section">Experience</p><div class="field-row">';
       h += select('age', 'Age', 'num', range(18, 65), 'Select age');
       h += select('experience_years', 'Experience', 'clock', [['0', 'Fresher']].concat(range(1, 40, function (n) { return n + (n === 1 ? ' year' : ' years'); })), 'Select experience');
       h += '</div>';
+    }
+    if (role === 'architect') {
+      h += '<p class="biz-section">Qualifications</p>';
+      h += text('education', 'Courses completed', 'cap', 'e.g. B.Arch, Interior Design Diploma', 'maxlength="150"');
+      h += text('design_software', 'Design software used', 'pc', 'e.g. AutoCAD, SketchUp, Revit', 'maxlength="80"');
+      h += toggle('uses_boq_tools', 'Do you use BOQ tools?');
+      h += toggle('worked_with_team_before', 'Have you worked with a team before?');
     }
     if (TOGGLES[role]) {
       h += '<p class="biz-section">About your work</p>';
@@ -79,6 +98,10 @@
             docPick('team_photo', 'Photo of your team', 'Upload a photo of you with your team. JPG, PNG or WebP, up to 5 MB.') + '</div>';
         }
       });
+      h += '<p class="hint tip-hint">Tip: You can form a legal team with friends or family members who have the required tools and skills to meet the requirements above.</p>';
+    }
+    if (role === 'supplier') {
+      h += '<p class="hint tip-hint">Note: No video call verification is required during onboarding. Your account is created instantly on submission.</p>';
     }
     h += '<p class="biz-section">Business address</p>';
     h += '<div class="field addr-search-field"><label for="addr-search">Search your address</label><div class="input">' + svg('pin') + '<input id="addr-search" type="text" placeholder="Search your address, use comma ( , )" autocomplete="off"></div><ul class="suggest" id="addr-suggest" hidden></ul><p class="hint" id="loc-hint">Example: Shivaji Road, Kasba Peth, Pune</p></div>';
@@ -242,11 +265,18 @@
     need('full_name', val('full_name').length >= 2, 'Enter your full name.');
     need('business_name', val('business_name').length >= 2, 'Enter your business name.');
     if ($('category_id')) need('category_id', !!val('category_id'), 'Select a category.');
+    if ($('skill_level')) need('skill_level', !!val('skill_level'), 'Select your skill level.');
+    if ($('shop_years')) need('shop_years', !!val('shop_years'), 'Select years in business.');
     if ($('age')) { need('age', !!val('age'), 'Select your age.'); need('experience_years', !!val('experience_years'), 'Select your experience.'); }
-    if (toggles.has_tools) need('tools_photo', !!urls.tools_photo, 'Upload a photo of your tools.');
-    if (toggles.has_team) {
-      need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
-      need('team_photo', !!urls.team_photo, 'Upload a photo of your team.');
+    if (role === 'partner') {
+      if (!toggles.has_team) need('has_team', false, 'All mandatory toggles must be enabled.');
+      if (!toggles.has_tools) need('has_tools', false, 'All mandatory toggles must be enabled.');
+      if (!toggles.knows_work_completely) need('knows_work_completely', false, 'All mandatory toggles must be enabled.');
+      if (toggles.has_tools) need('tools_photo', !!urls.tools_photo, 'Upload a photo of your tools.');
+      if (toggles.has_team) {
+        need('team_members_count', parseInt(val('team_members_count'), 10) > 0, 'Enter team size.');
+        need('team_photo', !!urls.team_photo, 'Upload a photo of your team.');
+      }
     }
     if (role === 'supplier') need('addr-search', !!coords, 'Search your shop address or use current location.');
     need('address', val('address').length >= 3, 'Enter your address.');
@@ -271,7 +301,7 @@
       full_name: val('full_name'), business_name: val('business_name'), address: val('address'),
       city: val('city'), state: val('state'), pincode: val('pincode')
     };
-    ['category_id', 'age', 'experience_years'].forEach(function (k) { if ($(k)) body[k] = val(k); });
+    ['category_id', 'age', 'experience_years', 'skill_level', 'shop_years', 'education', 'design_software'].forEach(function (k) { if ($(k)) body[k] = val(k); });
     Object.keys(toggles).forEach(function (k) { body[k] = !!toggles[k]; });
     if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
     if (toggles.has_team) body.team_members_count = parseInt(val('team_members_count'), 10);

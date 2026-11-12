@@ -43,6 +43,30 @@
     .db-badge.contacted { background: #e3f2fd; color: #1565c0; }
     .db-badge.closed { background: #e8f5e9; color: #2e7d32; }
     .db-mob-toggle { display: none; }
+    .db-topbar { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 18px; padding: 16px 18px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(11,31,58,0.06); }
+    .db-topbar-item { display: flex; flex-direction: column; gap: 3px; padding-right: 18px; border-right: 1px solid #eef1f6; min-width: 120px; }
+    .db-topbar-item:last-child { border-right: 0; }
+    .tb-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8a99ad; font-weight: 700; }
+    .tb-value { font-size: 0.92rem; color: #0b1f3a; font-weight: 600; }
+    .tb-status { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 700; color: #0b1f3a; }
+    .db-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 22px; }
+    .db-actions .btn { padding: 10px 20px; font-size: 0.9rem; }
+    .db-form { display: flex; flex-direction: column; gap: 14px; }
+    .db-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .db-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+    .db-field label { font-size: 0.8rem; font-weight: 700; color: #5b6778; }
+    .db-field input, .db-field select, .db-field textarea { padding: 10px 12px; border: 1px solid #dfe4ec; border-radius: 10px; font-size: 0.92rem; font-family: inherit; }
+    .db-field textarea { min-height: 80px; resize: vertical; }
+    .db-total { padding: 12px 14px; border-radius: 10px; background: #f5f8ff; font-size: 0.95rem; color: #0b1f3a; }
+    .with-material { display: inline-block; margin-left: 8px; padding: 3px 10px; border-radius: 999px; background: #e6f4ea; color: #1f9d55; font-size: 0.75rem; font-weight: 700; }
+    .db-prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+    .db-prod-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(11,31,58,0.06); cursor: pointer; }
+    .db-prod-img { height: 120px; background: #eef1f6; }
+    .db-prod-img img { width: 100%; height: 100%; object-fit: cover; }
+    .db-prod-body { padding: 12px; }
+    .db-prod-body h4 { margin: 0 0 6px; font-size: 0.95rem; color: #0b1f3a; }
+    .db-prod-meta { margin: 0 0 6px; font-size: 0.78rem; color: #8a99ad; }
+    .db-prod-price { margin: 0; font-size: 1.05rem; font-weight: 800; color: #0b1f3a; }
     @media (max-width: 768px) {
       .db-side { transform: translateX(-100%); transition: transform 0.25s; z-index: 100; }
       .db-side.open { transform: translateX(0); }
@@ -70,6 +94,38 @@
         <h1 id="db-page-title">Dashboard</h1>
         <p id="db-page-sub">Welcome back</p>
       </div>
+
+      <div class="db-topbar" id="db-topbar" hidden>
+        <div class="db-topbar-item">
+          <span class="tb-label">Address</span>
+          <span class="tb-value" id="tb-address">-</span>
+        </div>
+        <div class="db-topbar-item">
+          <span class="tb-label">Payment</span>
+          <span class="tb-value" id="tb-payment">-</span>
+        </div>
+        <div class="db-topbar-item">
+          <span class="tb-label">Next billing</span>
+          <span class="tb-value" id="tb-billing">-</span>
+        </div>
+        <div class="db-topbar-item" id="tb-quota-item" hidden>
+          <span class="tb-label">Sample quota</span>
+          <span class="tb-value"><span id="tb-quota-used">0</span> / <span id="tb-quota-max">4</span> today</span>
+        </div>
+        <div class="db-topbar-item">
+          <span class="tb-label">Status</span>
+          <span class="tb-status" id="tb-online-wrap">
+            <span id="tb-online-label">Offline</span>
+            <button type="button" class="switch" id="tb-online" role="switch" aria-checked="false" aria-label="Online status"></button>
+          </span>
+        </div>
+      </div>
+
+      <div class="db-actions" id="db-actions" hidden>
+        <button type="button" class="btn btn-primary" id="db-action-sample" hidden>Upload Sample</button>
+        <button type="button" class="btn btn-ghost" id="db-action-orders">Completed Orders</button>
+      </div>
+
       <div id="db-content"></div>
     </main>
   </div>

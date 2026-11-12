@@ -42,6 +42,55 @@
 
   function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
 
+  // ---- common top bar: address, payment, billing, quota, online toggle ----
+  function populateTopbar() {
+    var bar = $('db-topbar');
+    if (!bar) return;
+    bar.hidden = false;
+    api('/users/' + session.uuid).then(function (d) {
+      var u = (d && d.data) || {};
+      var p = u.profile || u || {};
+      var addr = [p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ') || '-';
+      $('tb-address').textContent = addr;
+      $('tb-payment').textContent = p.payment_status ? (p.payment_status.charAt(0).toUpperCase() + p.payment_status.slice(1)) : 'Unpaid';
+      $('tb-billing').textContent = p.next_due_at ? new Date(p.next_due_at).toLocaleDateString() : '-';
+      if (role === 'supplier' || role === 'partner') {
+        var quotaItem = $('tb-quota-item');
+        if (quotaItem) quotaItem.hidden = false;
+        var used = p.daily_upload_count || 0;
+        $('tb-quota-used').textContent = used;
+        $('tb-quota-max').textContent = role === 'supplier' ? '4' : '4';
+      }
+      setOnlineToggle(!!p.is_online);
+    }).catch(function () { /* ignore */ });
+
+    // actions
+    var actions = $('db-actions');
+    if (actions) actions.hidden = false;
+    var sampleBtn = $('db-action-sample');
+    if (sampleBtn) {
+      sampleBtn.hidden = !(role === 'supplier' || role === 'partner' || role === 'architect');
+      sampleBtn.addEventListener('click', function () { showPage(role === 'architect' ? 'posts' : 'products'); });
+    }
+    var ordersBtn = $('db-action-orders');
+    if (ordersBtn) ordersBtn.addEventListener('click', function () { showPage('orders'); });
+  }
+
+  function setOnlineToggle(on) {
+    var btn = $('tb-online');
+    var lbl = $('tb-online-label');
+    if (!btn) return;
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.classList.toggle('on', on);
+    if (lbl) lbl.textContent = on ? 'Online' : 'Offline';
+    btn.onclick = function () {
+      var want = btn.getAttribute('aria-checked') !== 'true';
+      api('/users/' + session.uuid + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_online: want }) })
+        .then(function () { setOnlineToggle(want); })
+        .catch(function () { /* keep old state */ });
+    };
+  }
+
   // ---- nav items per role ----
   var NAV = {
     client: [
@@ -53,14 +102,19 @@
     partner: [
       { id: 'overview', label: 'Overview', icon: 'home' },
       { id: 'orders', label: 'Assigned Orders', icon: 'orders' },
-      { id: 'earnings', label: 'Earnings', icon: 'earnings' },
+      { id: 'samples', label: 'My Samples', icon: 'products' },
       { id: 'profile', label: 'Profile', icon: 'profile' },
     ],
     supplier: [
       { id: 'overview', label: 'Overview', icon: 'home' },
       { id: 'products', label: 'My Products', icon: 'products' },
       { id: 'orders', label: 'Material Orders', icon: 'orders' },
-      { id: 'earnings', label: 'Earnings', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' },
+    ],
+    architect: [
+      { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'posts', label: 'My Posts', icon: 'products' },
+      { id: 'orders', label: 'Project Orders', icon: 'orders' },
       { id: 'profile', label: 'Profile', icon: 'profile' },
     ],
     admin: [
@@ -132,10 +186,105 @@
     $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No carts yet. Browse services and add items to your cart.</div></div>';
   };
 
+  // ---- supplier: product listing engine with dynamic calculation ----
+  var UNITS = ['sqfit', 'runningfit', 'inch', 'pcs', 'bundle', 'combo', 'fit'];
+  var UNIT_LABELS = { sqfit: 'Square Feet', runningfit: 'Running Feet', inch: 'Inches', pcs: 'Pieces', bundle: 'Bundle', combo: 'Combo', fit: 'Fit' };
+  function calcForm() {
+    return '<div class="db-card">' +
+      '<h3 style="margin:0 0 14px;color:#0b1f3a">Create a listing</h3>' +
+      '<div class="db-form">' +
+      '<div class="db-field"><label>Product name</label><input id="p-name" type="text" placeholder="e.g. Modular Kitchen" maxlength="80"></div>' +
+      '<div class="db-row">' +
+      '<div class="db-field"><label>Measurement type</label><select id="p-unit">' + UNITS.map(function (u) { return '<option value="' + u + '">' + UNIT_LABELS[u] + '</option>'; }).join('') + '</select></div>' +
+      '<div class="db-field"><label>Rate per unit (&#8377;)</label><input id="p-rate" type="number" min="0" step="0.01" placeholder="0"></div>' +
+      '<div class="db-field"><label>Quantity</label><input id="p-qty" type="number" min="0" step="1" value="1"></div>' +
+      '</div>' +
+      '<div class="db-total">Total: <strong id="p-total">&#8377;0</strong> <span id="p-formula"></span></div>' +
+      '<button type="button" class="btn btn-primary" id="p-post">Post</button>' +
+      '</div>' +
+      '</div>';
+  }
+  function wireCalc(root) {
+    function recalc() {
+      var rate = parseFloat(($('p-rate') || {}).value || '0') || 0;
+      var qty = parseFloat(($('p-qty') || {}).value || '1') || 0;
+      var unit = ($('p-unit') || {}).value || 'sqfit';
+      var total = rate * qty;
+      var el = $('p-total'); if (el) el.textContent = '\u20B9' + total.toLocaleString();
+      var f = $('p-formula'); if (f) f.textContent = ' = \u20B9' + rate + ' x ' + qty + ' ' + UNIT_LABELS[unit];
+    }
+    ['p-rate', 'p-qty', 'p-unit'].forEach(function (id) {
+      var n = $(id); if (n) n.addEventListener('input', recalc);
+    });
+    recalc();
+  }
+  function productCards(items) {
+    if (!items.length) return '<div class="db-card"><div class="db-empty">No listings yet. Add your first product above.</div></div>';
+    return '<div class="db-section-title">Your listings</div><div class="db-prod-grid">' + items.map(function (it) {
+      return '<article class="db-prod-card" data-id="' + it.id + '">' +
+        '<div class="db-prod-img"><img src="' + (it.img || '') + '" alt="" onerror="this.style.display=\'none\'"></div>' +
+        '<div class="db-prod-body"><h4>' + it.name + '</h4>' +
+        '<p class="db-prod-meta">' + UNIT_LABELS[it.unit] + ' &#183; \u20B9' + it.rate + ' / unit</p>' +
+        '<p class="db-prod-price">\u20B9' + (it.rate * it.qty).toLocaleString() + '</p></div>' +
+        '</article>';
+    }).join('') + '</div>';
+  }
+  function getStore(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
+  function setStore(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
   pages.products = function () {
     $('db-page-title').textContent = 'My Products';
-    $('db-page-sub').textContent = 'Manage your product listings.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No products listed yet. Add your first product to start receiving orders.</div></div>';
+    $('db-page-sub').textContent = 'Create product listings and manage your catalog.';
+    var items = getStore('ig_products');
+    $('db-content').innerHTML = calcForm() + productCards(items);
+    wireCalc();
+    function onPost() {
+      var name = ($('p-name') || {}).value || '';
+      if (name.trim().length < 2) { $('p-name').focus(); return; }
+      items.push({ id: Date.now(), name: name.trim(), unit: $('p-unit').value, rate: parseFloat($('p-rate').value || '0') || 0, qty: parseFloat($('p-qty').value || '1') || 1, img: '' });
+      setStore('ig_products', items);
+      $('db-content').innerHTML = calcForm() + productCards(items);
+      wireCalc();
+      $('p-post').addEventListener('click', onPost);
+    }
+    $('p-post').addEventListener('click', onPost);
+  };
+
+  // ---- architect: post creation with calculation engine + "with material" tag ----
+  pages.posts = function () {
+    $('db-page-title').textContent = 'My Posts';
+    $('db-page-sub').textContent = 'Create posts with measurement and calculation.';
+    var items = getStore('ig_posts');
+    var html = '<div class="db-card">' +
+      '<h3 style="margin:0 0 14px;color:#0b1f3a">Create a post</h3>' +
+      '<div class="db-form">' +
+      '<div class="db-field"><label>Category</label><select id="a-cat"><option>Kitchen</option><option>Wardrobe</option><option>Bedroom</option><option>Living Room</option><option>Office</option></select></div>' +
+      '<div class="db-field"><label>Description</label><textarea id="a-desc" maxlength="300" placeholder="Describe the work..."></textarea></div>' +
+      '<div class="db-row">' +
+      '<div class="db-field"><label>Measurement type</label><select id="p-unit">' + UNITS.map(function (u) { return '<option value="' + u + '">' + UNIT_LABELS[u] + '</option>'; }).join('') + '</select></div>' +
+      '<div class="db-field"><label>Rate per unit (&#8377;)</label><input id="p-rate" type="number" min="0" step="0.01" placeholder="0"></div>' +
+      '<div class="db-field"><label>Quantity</label><input id="p-qty" type="number" min="0" step="1" value="1"></div>' +
+      '</div>' +
+      '<div class="db-total">Total: <strong id="p-total">&#8377;0</strong> <span id="p-formula"></span> <span class="with-material">with material</span></div>' +
+      '<button type="button" class="btn btn-primary" id="p-post">Post</button>' +
+      '</div></div>';
+    var cards = items.length ? '<div class="db-section-title">Your posts</div><div class="db-prod-grid">' + items.map(function (it) {
+      return '<article class="db-prod-card"><div class="db-prod-body"><h4>' + it.cat + '</h4><p>' + it.desc + '</p><p class="db-prod-meta">' + UNIT_LABELS[it.unit] + ' &#183; \u20B9' + it.rate + '</p><p class="db-prod-price">\u20B9' + (it.rate * it.qty).toLocaleString() + '</p><span class="with-material">with material</span></div></article>';
+    }).join('') + '</div>' : '<div class="db-card"><div class="db-empty">No posts yet.</div></div>';
+    $('db-content').innerHTML = html + cards;
+    wireCalc();
+    $('p-post').addEventListener('click', function () {
+      items.push({ id: Date.now(), cat: $('a-cat').value, desc: $('a-desc').value || '', unit: $('p-unit').value, rate: parseFloat($('p-rate').value || '0') || 0, qty: parseFloat($('p-qty').value || '1') || 1 });
+      setStore('ig_posts', items);
+      location.reload();
+    });
+  };
+
+  // ---- partner: private sample uploads (admin only) ----
+  pages.samples = function () {
+    $('db-page-title').textContent = 'My Samples';
+    $('db-page-sub').textContent = 'Upload work samples for admin evaluation. These are never shown to clients.';
+    $('db-content').innerHTML = '<div class="db-card"><p>Partners upload sample images solely for admin evaluation. They are private and never displayed to clients.</p></div>';
   };
 
   pages.earnings = function () {
@@ -202,5 +351,6 @@
   $('db-username').textContent = session.username || 'User';
   $('db-role').textContent = (role.charAt(0).toUpperCase() + role.slice(1));
   renderNav();
+  populateTopbar();
   showPage('overview');
 })();
