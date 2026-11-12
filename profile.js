@@ -399,44 +399,29 @@
     window.location.href = 'dashboard.html';
   }
 
-  function loadRazorpay() {
-    return new Promise(function (ok, no) {
-      if (window.Razorpay) return ok();
-      var sc = document.createElement('script');
-      sc.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      sc.onload = ok; sc.onerror = function () { no(new Error('Could not load payment window.')); };
-      document.head.appendChild(sc);
-    });
-  }
   $('pay-btn').addEventListener('click', function () {
     var btn = this, label = btn.textContent;
-    payError(''); btn.disabled = true; btn.textContent = 'Please wait...';
-    function reset() { btn.disabled = false; btn.textContent = label; }
-    Promise.all([
-      fetch(API + '/users/' + session.uuid + '/payment/order', { method: 'POST', headers: authHeaders(), body: '{}' })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
-          if (!r.ok) throw new Error(r.status === 503 ? 'Payments are not available yet. Please try later.' : (d.message || 'Could not start payment.'));
-          return d;
-        }); }),
-      loadRazorpay()
-    ]).then(function (res) {
-      var d = res[0];
-      new window.Razorpay({
-        key: d.key_id, order_id: d.order_id, amount: d.amount * 100, name: 'Interagood',
-        description: 'Monthly plan', prefill: { name: d.name, contact: d.contact, email: d.email },
-        theme: { color: '#f58220' },
-        modal: { ondismiss: reset },
-        handler: function (resp) {
-          fetch(API + '/users/' + session.uuid + '/payment/verify', {
-            method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({ razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature })
-          }).then(function (r) {
-            if (!r.ok) throw new Error('Payment could not be confirmed. Contact support.');
-            paid();
-          }).catch(function (e) { payError(e.message); reset(); });
-        }
-      }).open();
-    }).catch(function (e) { payError(e.message); reset(); });
+    payError(''); btn.disabled = true; btn.textContent = 'Redirecting...';
+    fetch(API + '/payments/payu/init', { method: 'POST', headers: authHeaders(), body: '{}' })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(r.status === 503 ? 'Payments are not available yet. Please try later.' : (d.message || 'Could not start payment.'));
+        return d;
+      }); })
+      .then(function (d) {
+        var order = d && d.order;
+        if (!order || !order.action || !order.fields) throw new Error('Could not start payment.');
+        var form = document.createElement('form');
+        form.method = order.method || 'POST';
+        form.action = order.action;
+        Object.keys(order.fields).forEach(function (k) {
+          var inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = k; inp.value = order.fields[k] == null ? '' : order.fields[k];
+          form.appendChild(inp);
+        });
+        document.body.appendChild(form);
+        form.submit();
+      })
+      .catch(function (e) { payError(e.message); btn.disabled = false; btn.textContent = label; });
   });
 
   document.addEventListener('ig:account', function (e) {

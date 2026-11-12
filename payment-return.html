@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment status | Interagood</title>
+  <meta name="theme-color" content="#0b1f3a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="style.css?v=20261102c">
+  <style>
+    .pr-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .pr-card { max-width: 440px; width: 100%; background: #fff; border-radius: 18px; padding: 32px 26px; text-align: center; box-shadow: 0 18px 50px rgba(11,31,58,.12); }
+    .pr-icon { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .pr-ok { background: #e7f7ee; color: #178a4c; }
+    .pr-bad { background: #fdecec; color: #c0392b; }
+    .pr-card h1 { font-size: 22px; margin: 0 0 8px; color: #0b1f3a; }
+    .pr-card p { color: #556; margin: 0 0 22px; line-height: 1.5; }
+    .pr-btn { display: inline-block; background: #f58220; color: #fff; text-decoration: none; padding: 12px 26px; border-radius: 10px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="pr-wrap">
+    <div class="pr-card">
+      <div class="pr-icon" id="pr-icon"></div>
+      <h1 id="pr-title">Checking payment…</h1>
+      <p id="pr-msg">Please wait.</p>
+      <a class="pr-btn" id="pr-btn" href="dashboard.html">Go to dashboard</a>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var status = q.get('status');
+      var reason = q.get('reason') || '';
+      var icon = document.getElementById('pr-icon');
+      var title = document.getElementById('pr-title');
+      var msg = document.getElementById('pr-msg');
+      var btn = document.getElementById('pr-btn');
+      if (status === 'success') {
+        icon.className = 'pr-icon pr-ok'; icon.textContent = '✓';
+        title.textContent = 'Payment successful';
+        msg.textContent = 'Your monthly plan is now active. You are online and can receive leads, orders and deals.';
+        btn.textContent = 'Go to dashboard';
+      } else {
+        icon.className = 'pr-icon pr-bad'; icon.textContent = '✕';
+        title.textContent = 'Payment not completed';
+        var reasons = { hash: 'We could not verify the payment. If money was deducted, contact support.', user: 'We could not match this payment to your account.', status: 'The payment was not successful.', amount: 'The paid amount did not match your plan.', activate: 'Payment received but activation failed. Contact support.' };
+        msg.textContent = reasons[reason] || 'Your payment was not completed. You can try again from the app.';
+        btn.textContent = 'Back to payment';
+        btn.href = 'partner-program.html';
+      }
+    })();
+  </script>
+</body>
+</html>
