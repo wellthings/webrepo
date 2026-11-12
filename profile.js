@@ -86,8 +86,8 @@
     h += '<p class="biz-section">Basic details</p>';
     h += text('full_name', 'Full name (as per Aadhaar)', 'user', 'Your name exactly as on Aadhaar', 'maxlength="120"');
     h += text('business_name', 'Business name', 'shop', 'Your business or brand name', 'maxlength="150"');
-    if (role === 'partner' || role === 'supplier' || role === 'architect') {
-      h += select('category_id', role === 'supplier' ? 'Supply category' : 'Work category', 'list', [], 'Loading categories...');
+    if (role === 'partner' || role === 'supplier') {
+      h += select('category_id', role === 'partner' ? 'Your work category' : 'Supply category', 'list', [], 'Loading categories...');
     }
     if (role === 'partner' || role === 'architect') {
       h += select('skill_level', 'Skill level', 'cap', SKILL_LEVELS, 'Select skill level');
@@ -131,14 +131,12 @@
     h += text('pincode', 'Pincode', 'pin', '6 digit pincode', 'inputmode="numeric" maxlength="6"');
     el.fields.innerHTML = h;
     wire();
-    if (role === 'partner' || role === 'supplier' || role === 'architect') loadCategories();
+    if (role === 'partner' || role === 'supplier') loadCategories();
   }
 
   function loadCategories() {
     var sel = $('category_id');
-    // Architect specialisations reuse the partner categories on the backend
-    var catRole = role === 'architect' ? 'partner' : role;
-    fetch(API + '/categories/' + catRole).then(function (r) { return r.json(); }).then(function (d) {
+    fetch(API + '/categories/' + role).then(function (r) { return r.json(); }).then(function (d) {
       sel.innerHTML = '<option value="">Select category</option>' + (d.data || []).map(function (c) {
         return '<option value="' + c.id + '">' + c.name.replace(/</g, '&lt;') + '</option>';
       }).join('');
