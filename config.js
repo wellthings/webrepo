@@ -21,4 +21,8 @@ window.SITE = {
   appUrl: 'download.html',
   hours: 'Monday to Saturday, 9:00 AM - 6:00 PM (IST)',
   responseTime: 'within 24 to 48 hours',
+  // PayU Payment Gateway Modular Configuration
+  payuMerchantKey: 'PLACEHOLDER_KEY',
+  payuMerchantSalt: 'PLACEHOLDER_SALT',
+  payuMode: 'test',
 };

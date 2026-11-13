@@ -9,9 +9,11 @@
   var token = sessionStorage.getItem(TOKEN_KEY) || '';
   if (!token) { location.replace(LOGIN_PAGE); return; }
 
-  var msg = $('ad-msg'), ordersEl = $('panel-orders'), cartsEl = $('panel-carts');
-  var tabOrders = $('tab-orders'), tabCarts = $('tab-carts');
-  var loaded = { orders: false, carts: false };
+  var msg = $('ad-msg'), ordersEl = $('panel-orders'), usersWrap = $('panel-users'), usersEl = $('ad-users-list'), cartsEl = $('panel-carts');
+  var tabOrders = $('tab-orders'), tabUsers = $('tab-users'), tabCarts = $('tab-carts');
+  var fltOnline = $('flt-online-only'), fltRole = $('flt-role');
+  var loaded = { orders: false, users: false, carts: false };
+  var onlinePros = [];
 
   function say(text, bad) { msg.textContent = text || ''; msg.style.color = bad ? '#c0392b' : ''; }
 
@@ -39,14 +41,17 @@
     a.href = 'tel:+91' + phone;
     return a;
   }
+
   function setTab(name) {
-    var onOrders = name === 'orders';
-    tabOrders.classList.toggle('active', onOrders);
-    tabCarts.classList.toggle('active', !onOrders);
-    tabOrders.setAttribute('aria-selected', String(onOrders));
-    tabCarts.setAttribute('aria-selected', String(!onOrders));
-    ordersEl.hidden = !onOrders;
-    cartsEl.hidden = onOrders;
+    var tabs = { orders: tabOrders, users: tabUsers, carts: tabCarts };
+    Object.keys(tabs).forEach(function (k) {
+      var on = k === name;
+      tabs[k].classList.toggle('active', on);
+      tabs[k].setAttribute('aria-selected', String(on));
+    });
+    ordersEl.hidden = name !== 'orders';
+    usersWrap.hidden = name !== 'users';
+    cartsEl.hidden = name !== 'carts';
     if (!loaded[name]) load(name);
   }
 
@@ -78,8 +83,7 @@
   function itemList(items) {
     var list = el('ul', 'ad-rows');
     if (!items || !items.length) {
-      var empty = el('li', 'ad-row', 'No items');
-      list.appendChild(empty);
+      list.appendChild(el('li', 'ad-row', 'No items'));
       return list;
     }
     items.forEach(function (i) { list.appendChild(itemRow(i)); });
@@ -104,7 +108,7 @@
       api('/admin/orders/' + order.id + '/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ status: next })
       })
         .then(function () {
           order.status = next;
@@ -136,25 +140,91 @@
     grid.appendChild(line('Client', client.name || '-'));
     grid.appendChild(line('Mobile', phoneLink(client.phone)));
     grid.appendChild(line('Location', where));
-    var assigned = (order.order_assignments || []).length;
-    grid.appendChild(line('Categories', String(assigned)));
+    grid.appendChild(line('Online Pool', onlinePros.length + ' online pro(s) available'));
     card.appendChild(grid);
 
     card.appendChild(el('p', 'ad-sub', 'Requested work'));
     card.appendChild(itemList(order.order_items));
 
     var assignments = order.order_assignments || [];
-    if (assignments.length) {
-      card.appendChild(el('p', 'ad-sub', 'Assignments'));
-      var rows = el('ul', 'ad-rows');
-      assignments.forEach(function (a) {
-        var row = el('li', 'ad-row');
-        row.appendChild(el('b', '', a.work_type));
-        row.appendChild(el('span', 'ad-chip', a.status));
-        row.appendChild(el('span', 'ad-chip', a.partner_id ? 'partner: ' + String(a.partner_id).slice(0, 8) : 'unassigned'));
-        rows.appendChild(row);
+    card.appendChild(el('p', 'ad-sub', 'Assignments (Online Users Only)'));
+    var rows = el('ul', 'ad-rows');
+    var listToRender = assignments.length ? assignments : [{ id: null, work_type: 'General Work', status: 'unassigned', partner_id: null }];
+    listToRender.forEach(function (a) {
+      var row = el('li', 'ad-row');
+      row.appendChild(el('b', '', a.work_type));
+      row.appendChild(el('span', 'ad-chip', a.status));
+      var sel = el('select', 'ad-select');
+      var def = el('option', '', onlinePros.length ? 'Assign online partner / pro...' : 'No online pros available');
+      def.value = '';
+      sel.appendChild(def);
+      onlinePros.forEach(function (u) {
+        var opt = el('option', '', (u.business_name || u.username) + ' (' + u.role + (u.category_name ? ' · ' + u.category_name : '') + ')');
+        opt.value = u.id;
+        if (a.partner_id === u.id) opt.selected = true;
+        sel.appendChild(opt);
       });
-      card.appendChild(rows);
+      sel.addEventListener('change', function () {
+        var pid = sel.value;
+        if (!pid) return;
+        sel.disabled = true;
+        api('/admin/orders/' + order.id + '/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignment_id: a.id || undefined, partner_id: pid, work_type: a.work_type })
+        }).then(function (d) {
+          say('Assigned to ' + d.assigned_to + '.');
+          a.status = 'assigned';
+          a.partner_id = pid;
+        }).catch(function (e) { say(e.message, true); }).then(function () { sel.disabled = false; });
+      });
+      row.appendChild(sel);
+      rows.appendChild(row);
+    });
+    card.appendChild(rows);
+    return card;
+  }
+
+  function userCard(u) {
+    var card = el('article', 'ad-card');
+    var top = el('div', 'ad-top');
+    var head = el('div');
+    head.appendChild(el('span', 'ad-no', (u.business_name || u.full_name || u.username || 'User') + ' '));
+    head.appendChild(el('span', 'ad-chip', u.role.toUpperCase()));
+    if (u.ig_id) head.appendChild(el('span', 'ad-chip', u.ig_id));
+    top.appendChild(head);
+
+    var right = el('div', 'ad-right');
+    right.appendChild(el('span', 'ad-tag ' + (u.is_online ? 'st-online' : 'st-offline'), u.is_online ? 'Online' : 'Offline'));
+    top.appendChild(right);
+    card.appendChild(top);
+
+    var grid = el('div', 'ad-grid');
+    grid.appendChild(line('Aadhaar Full Name', u.full_name || '-'));
+    grid.appendChild(line('Username & Mobile', (u.username || '-') + ' · +91 ' + (u.phone || '-')));
+    grid.appendChild(line('Category / Skill', (u.category_name || '-') + ' · ' + (u.skill_level || 'intermediate')));
+    grid.appendChild(line('City / Address', [u.city, u.state].filter(Boolean).join(', ') || u.address || '-'));
+    card.appendChild(grid);
+
+    if (u.role === 'partner') {
+      var privSamples = u.private_samples || [];
+      card.appendChild(el('p', 'ad-sub', 'Partner Private Skill Evaluation Samples (' + privSamples.length + ')'));
+      if (!privSamples.length) {
+        card.appendChild(el('p', 'ad-when', 'No private samples uploaded yet by this partner.'));
+      } else {
+        var sgrid = el('div', 'ad-samples-grid');
+        privSamples.forEach(function (s) {
+          var box = el('div', 'ad-sample-item');
+          var im = el('img');
+          im.src = s.image_url || 'assets/logo-square.png';
+          im.alt = s.title || 'Private sample';
+          im.onerror = function () { im.onerror = null; im.src = 'assets/logo-square.png'; };
+          box.appendChild(im);
+          box.appendChild(el('div', '', s.title || 'Work Sample'));
+          sgrid.appendChild(box);
+        });
+        card.appendChild(sgrid);
+      }
     }
     return card;
   }
@@ -190,24 +260,56 @@
     rows.forEach(function (r) { target.appendChild(build(r)); });
   }
 
+  function fetchOnlinePool() {
+    return api('/admin/users?online=true').then(function (d) {
+      onlinePros = d.data || [];
+    }).catch(function () { onlinePros = []; });
+  }
+
   function load(name) {
-    var target = name === 'orders' ? ordersEl : cartsEl;
     say('Loading...');
-    var path = name === 'orders' ? '/admin/orders' : '/admin/carts';
-    return api(path)
-      .then(function (d) {
-        loaded[name] = true;
+    if (name === 'users') {
+      var onlineParam = fltOnline && fltOnline.checked ? 'true' : 'false';
+      var roleParam = fltRole ? fltRole.value : 'all';
+      return api('/admin/users?online=' + onlineParam + '&role=' + encodeURIComponent(roleParam))
+        .then(function (d) {
+          loaded.users = true;
+          var rows = d.data || [];
+          render(usersEl, rows, userCard, 'No matching professionals found for this availability filter.');
+          say(rows.length + ' registered professional(s) shown.');
+        }).catch(function (e) { say(e.message, true); });
+    }
+
+    if (name === 'orders') {
+      return fetchOnlinePool().then(function () {
+        return api('/admin/orders');
+      }).then(function (d) {
+        loaded.orders = true;
         var rows = d.data || [];
-        render(target, rows, name === 'orders' ? orderCard : cartCard,
-          name === 'orders' ? 'No orders yet.' : 'No client has items in the cart right now.');
-        say(rows.length + (name === 'orders' ? ' order(s)' : ' live cart(s)') + '.');
+        render(ordersEl, rows, orderCard, 'No orders yet.');
+        say(rows.length + ' order(s) · ' + onlinePros.length + ' online pro(s) ready.');
+      }).catch(function (e) { say(e.message, true); });
+    }
+
+    return api('/admin/carts')
+      .then(function (d) {
+        loaded.carts = true;
+        var rows = d.data || [];
+        render(cartsEl, rows, cartCard, 'No client has items in the cart right now.');
+        say(rows.length + ' live cart(s).');
       })
       .catch(function (e) { say(e.message, true); });
   }
 
-  $('ad-refresh').addEventListener('click', function () { load(tabOrders.classList.contains('active') ? 'orders' : 'carts'); });
+  $('ad-refresh').addEventListener('click', function () {
+    var active = tabOrders.classList.contains('active') ? 'orders' : tabUsers.classList.contains('active') ? 'users' : 'carts';
+    load(active);
+  });
   tabOrders.addEventListener('click', function () { setTab('orders'); });
+  tabUsers.addEventListener('click', function () { setTab('users'); });
   tabCarts.addEventListener('click', function () { setTab('carts'); });
+  if (fltOnline) fltOnline.addEventListener('change', function () { load('users'); });
+  if (fltRole) fltRole.addEventListener('change', function () { load('users'); });
   $('ad-logout').addEventListener('click', function () {
     sessionStorage.removeItem(TOKEN_KEY);
     location.replace(LOGIN_PAGE);

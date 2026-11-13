@@ -5,13 +5,40 @@
   var ICONS = {
     home: '<path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/>',
     orders: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
-    cart: '<path d="M3 4h2.5l2.2 11h10.1l2-8H6.4"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
     products: '<path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/>',
+    upload: '<path d="M12 16V4m0 0l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
     earnings: '<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2"/>',
-    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 4-5.5 6.5-5.5s5.7 2 6.5 5.5M17 11a3 3 0 100-6M15.5 20c.4-2.5 2-4 4-4"/>',
-    profile: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/>',
-    stats: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    profile: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/>'
   };
+
+  var SUB_CATEGORIES = {
+    Carpentry: ['Modular Kitchen', 'Wardrobe', 'TV Unit', 'Pooja Unit', 'Study Table', 'Door & Frames'],
+    'Modular Kitchen': ['L-Shape Kitchen', 'U-Shape Kitchen', 'Parallel Kitchen', 'Island Kitchen'],
+    'Ceiling & POP': ['Gypsum False Ceiling', 'POP Design', 'Cove Lighting', 'Wooden Ceiling'],
+    'Paint & Polish': ['Interior Emulsion', 'Texture Paint', 'PU Wood Polish', 'Waterproofing'],
+    'Tiles & Stone': ['Living Room Flooring', 'Kitchen Countertop', 'Bathroom Wall Tiles', 'Italian Marble'],
+    'Full Interior': ['1 BHK Turnkey', '2 BHK Turnkey', '3 BHK Turnkey', 'Office Renovation']
+  };
+
+  var SUPPLIER_UNITS = [
+    ['sqft', 'Square Feet (Sq.ft)'],
+    ['pieces', 'Pieces / Pcs'],
+    ['rft', 'Running Feet (Rft)'],
+    ['feet', 'Feet'],
+    ['inches', 'Inches'],
+    ['liters', 'Liters'],
+    ['bundles', 'Bundles']
+  ];
+
+  var ARCHITECT_UNITS = [
+    ['sqft', 'Square Feet (Sq.ft)'],
+    ['rft', 'Running Feet (Rft)'],
+    ['feet', 'Feet'],
+    ['inches', 'Inches'],
+    ['pieces', 'Per Unit / Piece']
+  ];
+
+  var PLAN_AMOUNTS = { partner: 109, supplier: 219, architect: 310 };
 
   // ---- session ----
   var session = null;
@@ -21,10 +48,36 @@
     return;
   }
 
-  var role = session.role || 'client';
-  var pages = {};
+  var role = session.role || 'partner';
+  var isLocalTest = String(session.uuid).indexOf('test_') === 0;
+  var state = {
+    user: null,
+    listings: [],
+    quota: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 4, maxImages: 2, maxVideos: 2 },
+    isOnline: true,
+    activePage: 'overview'
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function showToast(msg, isError) {
+    var existing = $('ig-dash-toast');
+    if (existing) existing.remove();
+    var el = document.createElement('div');
+    el.id = 'ig-dash-toast';
+    el.setAttribute('role', 'status');
+    el.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);max-width:340px;color:#fff;background:' + (isError ? '#dc2626' : '#0b1f3a') + ';';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 3800);
+  }
+  function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || ICONS.home) + '</svg>'; }
 
   function api(path, options) {
+    if (isLocalTest) return Promise.resolve({ success: true, data: session.profile || null });
     options = options || {};
     options.headers = Object.assign({ Authorization: 'Bearer ' + session.accessToken }, options.headers || {});
     return fetch(API + path, options).then(function (r) {
@@ -40,100 +93,39 @@
     });
   }
 
-  function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
-
-  // ---- common top bar: address, payment, billing, quota, online toggle ----
-  function populateTopbar() {
-    var bar = $('db-topbar');
-    if (!bar) return;
-    bar.hidden = false;
-    api('/users/' + session.uuid).then(function (d) {
-      var u = (d && d.data) || {};
-      var p = u.profile || u || {};
-      var addr = [p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ') || '-';
-      $('tb-address').textContent = addr;
-      $('tb-payment').textContent = p.payment_status ? (p.payment_status.charAt(0).toUpperCase() + p.payment_status.slice(1)) : 'Unpaid';
-      $('tb-billing').textContent = p.next_due_at ? new Date(p.next_due_at).toLocaleDateString() : '-';
-      if (role === 'supplier' || role === 'partner') {
-        var quotaItem = $('tb-quota-item');
-        if (quotaItem) quotaItem.hidden = false;
-        var used = p.daily_upload_count || 0;
-        $('tb-quota-used').textContent = used;
-        $('tb-quota-max').textContent = role === 'supplier' ? '4' : '4';
-      }
-      // Online is allowed only while the monthly payment is active (paid and not past due)
-      var active = p.payment_status === 'paid' && (!p.next_due_at || new Date(p.next_due_at).getTime() > Date.now());
-      setOnlineToggle(active && !!p.is_online, active);
-    }).catch(function () { /* ignore */ });
-
-    // actions
-    var actions = $('db-actions');
-    if (actions) actions.hidden = false;
-    var sampleBtn = $('db-action-sample');
-    if (sampleBtn) {
-      sampleBtn.hidden = !(role === 'supplier' || role === 'partner' || role === 'architect');
-      sampleBtn.addEventListener('click', function () { showPage(role === 'architect' ? 'posts' : 'products'); });
-    }
-    var ordersBtn = $('db-action-orders');
-    if (ordersBtn) ordersBtn.addEventListener('click', function () { showPage('orders'); });
-  }
-
-  function setOnlineToggle(on, canGoOnline) {
-    var btn = $('tb-online');
-    var lbl = $('tb-online-label');
-    if (!btn) return;
-    var allowed = canGoOnline !== false;
-    btn.setAttribute('aria-checked', on ? 'true' : 'false');
-    btn.classList.toggle('on', on);
-    btn.classList.toggle('locked', !allowed);
-    if (lbl) lbl.textContent = allowed ? (on ? 'Online' : 'Offline') : 'Pay to go online';
-    btn.onclick = function () {
-      if (!allowed) { alert('Your payment is not active. Please pay to go online.'); return; }
-      var want = btn.getAttribute('aria-checked') !== 'true';
-      api('/users/' + session.uuid + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_online: want }) })
-        .then(function () { setOnlineToggle(want, true); })
-        .catch(function () { /* keep old state */ });
-    };
-  }
-
-  // ---- nav items per role ----
+  // ---- Navigation ----
   var NAV = {
-    client: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'orders', label: 'My Orders', icon: 'orders' },
-      { id: 'carts', label: 'My Carts', icon: 'cart' },
-      { id: 'profile', label: 'Profile', icon: 'profile' },
-    ],
     partner: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'orders', label: 'Assigned Orders', icon: 'orders' },
-      { id: 'samples', label: 'My Samples', icon: 'products' },
-      { id: 'profile', label: 'Profile', icon: 'profile' },
+      { id: 'upload', label: 'Private Sample Upload', icon: 'upload' },
+      { id: 'orders', label: 'Completed & Assigned Orders', icon: 'orders' },
+      { id: 'earnings', label: 'Billing & Plan', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' }
     ],
     supplier: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'products', label: 'My Products', icon: 'products' },
-      { id: 'orders', label: 'Material Orders', icon: 'orders' },
-      { id: 'profile', label: 'Profile', icon: 'profile' },
+      { id: 'upload', label: 'Product & Sample Engine', icon: 'products' },
+      { id: 'orders', label: 'Completed Orders', icon: 'orders' },
+      { id: 'earnings', label: 'Billing & PayU', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' }
     ],
     architect: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'posts', label: 'My Posts', icon: 'products' },
-      { id: 'orders', label: 'Project Orders', icon: 'orders' },
-      { id: 'profile', label: 'Profile', icon: 'profile' },
-    ],
-    admin: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'orders', label: 'All Orders', icon: 'orders' },
-      { id: 'users', label: 'Users', icon: 'users' },
-      { id: 'carts', label: 'Live Carts', icon: 'cart' },
-      { id: 'stats', label: 'Statistics', icon: 'stats' },
-    ],
+      { id: 'upload', label: 'Create Design Post', icon: 'products' },
+      { id: 'orders', label: 'Completed Projects', icon: 'orders' },
+      { id: 'earnings', label: 'Billing & PayU', icon: 'earnings' },
+      { id: 'profile', label: 'Profile', icon: 'profile' }
+    ]
   };
 
-  // ---- render nav ----
+  function setActiveNav(id) {
+    Array.prototype.forEach.call($('db-nav').querySelectorAll('a'), function (a) {
+      a.classList.toggle('active', a.getAttribute('data-page') === id);
+    });
+  }
+
   function renderNav() {
-    var items = NAV[role] || NAV.client;
+    var items = NAV[role] || NAV.partner;
     var nav = $('db-nav');
     nav.innerHTML = items.map(function (it) {
       return '<a data-page="' + it.id + '">' + svg(it.icon) + '<span>' + it.label + '</span></a>';
@@ -141,229 +133,585 @@
     nav.addEventListener('click', function (e) {
       var link = e.target.closest('[data-page]');
       if (!link) return;
-      Array.prototype.forEach.call(nav.querySelectorAll('a'), function (a) { a.classList.remove('active'); });
-      link.classList.add('active');
-      showPage(link.getAttribute('data-page'));
+      var pageId = link.getAttribute('data-page');
+      $('db-side').classList.remove('open');
+      showPage(pageId);
     });
-    // default
-    nav.querySelector('[data-page="overview"]').classList.add('active');
   }
 
-  // ---- pages ----
+  // ---- Top Control Bar Updates ----
+  function updateTopBar() {
+    var u = state.user || session.profile || {};
+    var addrParts = [u.address, u.city, u.state, u.pincode].filter(Boolean);
+    $('tcb-address').textContent = addrParts.length ? addrParts.join(', ') : 'Address pending — complete profile';
+    $('tcb-igid').textContent = u.ig_id ? 'IG ID: ' + u.ig_id + (u.category_name ? ' · ' + u.category_name : '') : (u.category_name || (role.toUpperCase() + ' Account'));
+
+    var isPaid = u.payment_status === 'paid';
+    $('tcb-billing').textContent = isPaid ? 'Active · Monthly Cycle' : 'Trial / PayU Ready';
+    var nextDue = u.next_due_at || u.payment_due_date;
+    if (nextDue) {
+      var dt = new Date(nextDue);
+      $('tcb-next-bill').textContent = 'Next billing: ' + (!isNaN(dt) ? dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : nextDue);
+    } else {
+      var est = new Date(Date.now() + 30 * 86400000);
+      $('tcb-next-bill').textContent = 'Next billing: ' + est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (30-day cycle)';
+    }
+
+    var q = state.quota;
+    if (role === 'supplier') {
+      $('tcb-quota-label').textContent = 'Daily Quota (2 Img + 2 Vid)';
+      $('tcb-quota-val').textContent = q.totalUsed + ' / ' + q.maxTotal + ' today (' + q.imagesUsed + '/2 Img · ' + q.videosUsed + '/2 Vid)';
+      var pct = Math.min(100, Math.round((q.totalUsed / q.maxTotal) * 100));
+      var fill = $('tcb-quota-fill');
+      fill.style.width = pct + '%';
+      fill.classList.toggle('full', q.totalUsed >= q.maxTotal);
+    } else if (role === 'architect') {
+      $('tcb-quota-label').textContent = 'Published Design Posts';
+      $('tcb-quota-val').textContent = state.listings.length + ' active posts (with material)';
+      $('tcb-quota-fill').style.width = Math.min(100, state.listings.length * 10) + '%';
+    } else {
+      $('tcb-quota-label').textContent = 'Private Skill Samples';
+      $('tcb-quota-val').textContent = state.listings.length + ' admin evaluation sample(s)';
+      $('tcb-quota-fill').style.width = Math.min(100, state.listings.length * 20) + '%';
+    }
+
+    var sw = $('tcb-online-switch');
+    sw.setAttribute('aria-checked', state.isOnline ? 'true' : 'false');
+    sw.classList.toggle('on', state.isOnline);
+    var lbl = $('tcb-online-label');
+    lbl.textContent = state.isOnline ? 'Online' : 'Offline';
+    lbl.className = 'tcb-status-txt ' + (state.isOnline ? 'on' : 'off');
+    $('tcb-online-hint').textContent = state.isOnline ? 'Visible in admin assignment filters' : 'Hidden from admin assignment filters';
+  }
+
+  $('tcb-online-switch').addEventListener('click', function () {
+    var next = !state.isOnline;
+    state.isOnline = next;
+    updateTopBar();
+    api('/users/' + session.uuid + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_online: next })
+    }).catch(function (err) {
+      state.isOnline = !next;
+      updateTopBar();
+      showToast(err.message || 'Status update failed', true);
+    });
+  });
+
+  $('tcb-upload-btn').addEventListener('click', function () { showPage('upload'); });
+  $('tcb-completed-btn').addEventListener('click', function () { showPage('orders'); });
+  $('tcb-payu-btn').addEventListener('click', triggerPayU);
+
+  function triggerPayU() {
+    if (!window.InteragoodPayU) return;
+    var u = state.user || session.profile || {};
+    var amt = PLAN_AMOUNTS[role] || 199;
+    window.InteragoodPayU.initiatePayment({
+      amount: amt,
+      productInfo: 'Interagood ' + role.charAt(0).toUpperCase() + role.slice(1) + ' Monthly Plan',
+      firstName: u.full_name || session.username || 'Member',
+      email: u.email || 'billing@interagood.in',
+      phone: u.phone || '9999999999',
+      onSuccess: function (res) {
+        api('/payments/payu/sandbox-activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txnid: res.txnid })
+        }).then(function (d) {
+          if (state.user) {
+            state.user.payment_status = d.payment_status || 'paid';
+            state.user.next_due_at = d.next_due_at;
+          }
+          state.isOnline = true;
+          updateTopBar();
+          if (state.activePage === 'earnings' || state.activePage === 'overview') showPage(state.activePage);
+        }).catch(function () {
+          state.isOnline = true;
+          updateTopBar();
+        });
+      }
+    });
+  }
+
+  // ---- Calculator & Media Upload Helper ----
+  function calcTotals(rate, qty) {
+    var r = Math.max(0, Number(rate) || 0);
+    var q = Math.max(0, Number(qty) || 0);
+    var subtotal = Math.round(r * q * 100) / 100;
+    var gst = Math.round(subtotal * 0.18 * 100) / 100;
+    return { subtotal: subtotal, gst: gst, total: Math.round((subtotal + gst) * 100) / 100 };
+  }
+
+  function uploadFile(kind, file) {
+    if (isLocalTest) return Promise.resolve(URL.createObjectURL(file));
+    return fetch(API + '/users/' + session.uuid + '/upload?kind=' + encodeURIComponent(kind), {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'image/jpeg',
+        Authorization: 'Bearer ' + session.accessToken
+      },
+      body: file
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.message || 'Upload failed');
+        return d.url;
+      });
+    });
+  }
+
+  function loadLocalFallback() {
+    try { return JSON.parse(localStorage.getItem('ig_local_listings_' + session.uuid)) || []; } catch (e) { return []; }
+  }
+  function saveLocalFallback(list) {
+    try { localStorage.setItem('ig_local_listings_' + session.uuid, JSON.stringify(list)); } catch (e) {}
+  }
+
+  function fetchListings() {
+    if (isLocalTest) {
+      state.listings = loadLocalFallback();
+      updateTopBar();
+      return Promise.resolve();
+    }
+    return api('/users/' + session.uuid + '/listings').then(function (d) {
+      state.listings = d.data || [];
+      if (d.quota) state.quota = d.quota;
+      updateTopBar();
+    }).catch(function () {
+      state.listings = loadLocalFallback();
+      updateTopBar();
+    });
+  }
+
+  // ---- Pages ----
+  var pages = {};
+
   pages.overview = function () {
-    $('db-page-title').textContent = 'Overview';
-    $('db-page-sub').textContent = 'Here is a quick summary of your activity.';
-    var welcome = 'Welcome back' + (session.username ? ', ' + session.username : '') + '!';
-    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">';
-    if (role === 'client') {
-      html += statCard('#fff3e0', '#e65100', 'cart', '0', 'Active Carts');
-      html += statCard('#e3f2fd', '#1565c0', 'orders', '0', 'Orders Placed');
-    } else if (role === 'partner') {
-      html += statCard('#fff3e0', '#e65100', 'orders', '0', 'New Orders');
-      html += statCard('#e8f5e9', '#2e7d32', 'earnings', '0', 'This Month');
-    } else if (role === 'supplier') {
-      html += statCard('#fff3e0', '#e65100', 'products', '0', 'Products');
-      html += statCard('#e8f5e9', '#2e7d32', 'orders', '0', 'Orders');
-    } else if (role === 'admin') {
-      html += statCard('#fff3e0', '#e65100', 'users', '0', 'Total Users');
-      html += statCard('#e3f2fd', '#1565c0', 'orders', '0', 'Active Orders');
-      html += statCard('#e8f5e9', '#2e7d32', 'cart', '0', 'Live Carts');
+    $('db-page-title').textContent = (role.charAt(0).toUpperCase() + role.slice(1)) + ' Overview';
+    $('db-page-sub').textContent = 'Manage your daily uploads, availability status, and client engagements.';
+
+    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:22px;">';
+    if (role === 'supplier') {
+      html += statCard('#fff3e0', '#e65100', 'products', String(state.listings.length), 'Listed Products & Samples');
+      html += statCard('#e8f5e9', '#1f9d55', 'upload', state.quota.totalUsed + ' / 4', 'Daily Quota Used (2 Img · 2 Vid)');
+      html += statCard('#e3f2fd', '#1565c0', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Shop Availability');
+    } else if (role === 'architect') {
+      html += statCard('#fff3e0', '#e65100', 'products', String(state.listings.length), 'Design Posts (with material)');
+      html += statCard('#e8f5e9', '#1f9d55', 'profile', 'Verified', 'Architect Business Card');
+      html += statCard('#e3f2fd', '#1565c0', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Client Consultation Status');
+    } else {
+      html += statCard('#fff3e0', '#e65100', 'upload', String(state.listings.length), 'Private Samples for Admin Review');
+      html += statCard('#e8f5e9', '#1f9d55', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Admin Assignment Pool');
+      html += statCard('#e3f2fd', '#1565c0', 'earnings', '₹' + PLAN_AMOUNTS.partner + '/mo', 'Partner Cycle Plan');
     }
     html += '</div>';
-    html += '<div class="db-section-title">Getting Started</div>';
-    html += '<div class="db-card"><p>Welcome to your Interagood control panel. Use the menu on the left to navigate. Your profile is set up and ready to go.</p></div>';
+
+    if (role === 'partner') {
+      html += '<div class="private-notice"><strong>Private Sample Evaluation Mode:</strong> Partner sample uploads are strictly private and visible ONLY to Interagood Admins for skill verification &amp; project assignment.</div>';
+    }
+
+    html += '<div class="db-card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;">' +
+      '<div><h3 style="margin:0 0 4px;color:#0b1f3a;">' +
+      (role === 'supplier' ? 'Add Products or Daily Work Samples' : role === 'architect' ? 'Publish New Architecture Post & Rate Calculator' : 'Upload Private Work Sample for Admin Skill Review') +
+      '</h3><p style="margin:0;color:#64748b;font-size:0.88rem;">' +
+      (role === 'supplier' ? 'Supports independent hardware/material products (Locks, Hinges, Paint) and daily rate calculations.' : role === 'architect' ? 'Includes category, sub-category, measurement calculator, and mandatory green "with material" tag.' : 'Showcase past interior work securely to receive matching site assignments.') +
+      '</p></div>' +
+      '<button type="button" class="tcb-btn primary" id="ov-go-upload">' +
+      (role === 'supplier' ? '+ Post Product / Sample' : role === 'architect' ? '+ Create Architect Post' : '+ Upload Private Sample') +
+      '</button></div>';
+
+    html += renderListingsSection();
     $('db-content').innerHTML = html;
+    $('ov-go-upload').addEventListener('click', function () { showPage('upload'); });
+    wireListingDeletes();
   };
 
   function statCard(bg, color, icon, value, label) {
-    return '<div class="db-card db-stat"><div class="db-stat-ic" style="background:' + bg + ';color:' + color + '">' + svg(icon) + '</div><div><h3>' + value + '</h3><span>' + label + '</span></div></div>';
+    return '<div class="db-card db-stat"><div class="db-stat-ic" style="background:' + bg + ';color:' + color + '">' + svg(icon) + '</div><div><h3>' + esc(value) + '</h3><span>' + esc(label) + '</span></div></div>';
+  }
+
+  pages.upload = function () {
+    if (role === 'supplier') renderSupplierEngine();
+    else if (role === 'architect') renderArchitectEngine();
+    else renderPartnerPrivateUploader();
+  };
+
+  function renderSupplierEngine() {
+    $('db-page-title').textContent = 'Supplier Product & Sample Listing Engine';
+    $('db-page-sub').textContent = 'Daily cap: strictly max 4 samples per day (2 Images + 2 Videos). Independent items appear as clickable product cards.';
+
+    var q = state.quota;
+    var capReached = q.totalUsed >= 4;
+    var catOpts = ['Hardware (Locks, Hinges)', 'Paint & Chemicals', 'Plywood & Timber', 'Laminates & Panels', 'Tiles & Stone', 'Electrical & Lighting', 'Plumbing & Bath', 'Glass & Mirrors']
+      .map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+    var unitOpts = SUPPLIER_UNITS.map(function (u) { return '<option value="' + u[0] + '">' + u[1] + '</option>'; }).join('');
+
+    var html = '<div class="calc-panel">' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;">' +
+      '<strong style="color:#0b1f3a;font-size:1.05rem;">Post Product or Sample</strong>' +
+      '<span style="font-size:0.84rem;font-weight:700;color:' + (capReached ? '#dc2626' : '#1f9d55') + ';font-variant-numeric:tabular-nums;">' +
+      'Today: ' + q.totalUsed + '/4 total · ' + q.imagesUsed + '/2 images · ' + q.videosUsed + '/2 videos</span></div>' +
+      '<form id="sup-post-form">' +
+      '<div class="calc-grid">' +
+      '<div class="calc-field"><label for="sp-title">Sample / Product Name</label><input id="sp-title" type="text" required placeholder="e.g., Brass Door Lock Set, Marine Ply 18mm"></div>' +
+      '<div class="calc-field"><label for="sp-cat">Product Category</label><select id="sp-cat">' + catOpts + '</select></div>' +
+      '<div class="calc-field"><label for="sp-unit">Measurement Type</label><select id="sp-unit">' + unitOpts + '</select></div>' +
+      '<div class="calc-field"><label for="sp-rate">Rate per Unit (₹ / sq.ft or piece)</label><input id="sp-rate" type="number" min="1" step="0.01" value="150" required></div>' +
+      '<div class="calc-field"><label for="sp-qty">Default Quantity / Pieces</label><input id="sp-qty" type="number" min="1" step="0.5" value="1" required></div>' +
+      '<div class="calc-field"><label for="sp-media">Upload Image or Video (Max 2 Img / 2 Vid daily)</label><input id="sp-media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"></div>' +
+      '</div>' +
+      '<div class="calc-field" style="margin-top:12px;"><label for="sp-desc">Product Description &amp; Specs</label><textarea id="sp-desc" placeholder="Brand, finish, thickness, pieces per box, delivery details..."></textarea></div>' +
+      '<div class="calc-preview">' +
+      '<div><div class="tcb-label">Auto-Calculated Total (incl. 18% GST)</div><div class="calc-total" id="sp-calc-total">₹177</div><div class="tcb-sub" id="sp-calc-sub">Base: ₹150 + GST (18%): ₹27</div></div>' +
+      '<button type="submit" class="tcb-btn primary" id="sp-submit" ' + (capReached ? 'disabled' : '') + '>' + (capReached ? 'Daily Limit (4/4) Reached' : 'Post Listing') + '</button>' +
+      '</div>' +
+      '<p class="hint" id="sp-msg" style="margin-top:10px;"></p>' +
+      '</form></div>' + renderListingsSection();
+
+    $('db-content').innerHTML = html;
+
+    function recalc() {
+      var res = calcTotals($('sp-rate').value, $('sp-qty').value);
+      $('sp-calc-total').textContent = '₹' + res.total.toLocaleString('en-IN');
+      $('sp-calc-sub').textContent = 'Base: ₹' + res.subtotal.toLocaleString('en-IN') + ' + GST (18%): ₹' + res.gst.toLocaleString('en-IN');
+    }
+    $('sp-rate').addEventListener('input', recalc);
+    $('sp-qty').addEventListener('input', recalc);
+    recalc();
+
+    $('sup-post-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var file = $('sp-media').files[0];
+      var isVid = file && /^video\//.test(file.type);
+      var mediaType = isVid ? 'video' : 'image';
+      var msg = $('sp-msg'), btn = $('sp-submit');
+
+      if (q.totalUsed >= 4) { msg.textContent = 'Daily limit of 4 uploads reached.'; msg.style.color = '#dc2626'; return; }
+      if (!isVid && q.imagesUsed >= 2) { msg.textContent = 'Max 2 images per day reached. Try uploading a video (max 2) tomorrow or use video slot.'; msg.style.color = '#dc2626'; return; }
+      if (isVid && q.videosUsed >= 2) { msg.textContent = 'Max 2 videos per day reached.'; msg.style.color = '#dc2626'; return; }
+
+      btn.disabled = true; btn.textContent = 'Posting...'; msg.textContent = '';
+      var upPromise = file ? uploadFile('supplier_product', file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
+
+      upPromise.then(function (imgUrl) {
+        var payload = {
+          title: $('sp-title').value.trim(),
+          category: $('sp-cat').value,
+          description: $('sp-desc').value.trim(),
+          unit: $('sp-unit').value,
+          rate_per_unit: Number($('sp-rate').value) || 0,
+          quantity: Number($('sp-qty').value) || 1,
+          image_url: imgUrl,
+          media_type: mediaType,
+          with_material: true,
+          is_private: false
+        };
+        if (isLocalTest) {
+          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString(), total_amount: calcTotals(payload.rate_per_unit, payload.quantity).subtotal }, payload);
+          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
+          state.listings = list;
+          state.quota.totalUsed += 1;
+          if (mediaType === 'video') state.quota.videosUsed += 1; else state.quota.imagesUsed += 1;
+          return { success: true };
+        }
+        return api('/users/' + session.uuid + '/listings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).then(function (d) {
+          if (d.quota) state.quota = d.quota;
+          return fetchListings();
+        });
+      }).then(function () {
+        updateTopBar();
+        renderSupplierEngine();
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Post Listing';
+        msg.textContent = err.message; msg.style.color = '#dc2626';
+      });
+    });
+    wireListingDeletes();
+  }
+
+  function renderArchitectEngine() {
+    $('db-page-title').textContent = 'Architect Design Post & Calculation Engine';
+    $('db-page-sub').textContent = 'Create client-facing interior posts with dynamic measurements, verified business card popup, and mandatory "with material" label.';
+
+    var catOpts = Object.keys(SUB_CATEGORIES).map(function (c) {
+      return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+    }).join('');
+    var unitOpts = ARCHITECT_UNITS.map(function (u) {
+      return '<option value="' + u[0] + '">' + u[1] + '</option>';
+    }).join('');
+
+    var html = '<div class="calc-panel">' +
+      '<form id="arch-post-form">' +
+      '<div class="calc-grid">' +
+      '<div class="calc-field"><label for="ar-title">Design / Work Title</label><input id="ar-title" type="text" required placeholder="e.g., Modern Veneer TV Unit & Cove Wall"></div>' +
+      '<div class="calc-field"><label for="ar-cat">Category</label><select id="ar-cat">' + catOpts + '</select></div>' +
+      '<div class="calc-field"><label for="ar-sub">Optional Sub-category</label><select id="ar-sub"></select></div>' +
+      '<div class="calc-field"><label for="ar-unit">Measurement Type</label><select id="ar-unit">' + unitOpts + '</select></div>' +
+      '<div class="calc-field"><label for="ar-rate">Rate per Unit (₹)</label><input id="ar-rate" type="number" min="1" step="0.01" value="1250" required></div>' +
+      '<div class="calc-field"><label for="ar-qty">Sample Estimate Dimension / Qty</label><input id="ar-qty" type="number" min="1" step="0.5" value="100" required></div>' +
+      '</div>' +
+      '<div class="calc-grid" style="margin-top:12px;">' +
+      '<div class="calc-field"><label for="ar-img">Design Image Upload</label><input id="ar-img" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
+      '<div class="calc-field"><label for="ar-desc">Work Scope &amp; Description</label><textarea id="ar-desc" placeholder="Describe laminate finish, plywood grade, hardware fittings, execution timeline..."></textarea></div>' +
+      '</div>' +
+      '<div class="calc-preview">' +
+      '<div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><span class="with-mat-label">with material</span><span class="tcb-label" style="margin:0;">Mandatory Tag Active</span></div>' +
+      '<div class="calc-total" id="ar-calc-total">₹1,47,500</div><div class="tcb-sub" id="ar-calc-sub">Base: ₹1,25,000 + GST (18%): ₹22,500</div></div>' +
+      '<button type="submit" class="tcb-btn primary" id="ar-submit">Publish Architect Post</button>' +
+      '</div>' +
+      '<p class="hint" id="ar-msg" style="margin-top:10px;"></p>' +
+      '</form></div>' + renderListingsSection();
+
+    $('db-content').innerHTML = html;
+
+    function syncSubs() {
+      var list = SUB_CATEGORIES[$('ar-cat').value] || [];
+      $('ar-sub').innerHTML = '<option value="">None (General)</option>' + list.map(function (s) {
+        return '<option value="' + esc(s) + '">' + esc(s) + '</option>';
+      }).join('');
+    }
+    $('ar-cat').addEventListener('change', syncSubs);
+    syncSubs();
+
+    function recalc() {
+      var res = calcTotals($('ar-rate').value, $('ar-qty').value);
+      $('ar-calc-total').textContent = '₹' + res.total.toLocaleString('en-IN');
+      $('ar-calc-sub').textContent = 'Base: ₹' + res.subtotal.toLocaleString('en-IN') + ' + GST (18%): ₹' + res.gst.toLocaleString('en-IN');
+    }
+    $('ar-rate').addEventListener('input', recalc);
+    $('ar-qty').addEventListener('input', recalc);
+    recalc();
+
+    $('arch-post-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = $('ar-submit'), msg = $('ar-msg');
+      var file = $('ar-img').files[0];
+      btn.disabled = true; btn.textContent = 'Publishing...'; msg.textContent = '';
+
+      var up = file ? uploadFile('architect_post', file) : Promise.resolve('https://interagood.in/assets/interior-hero.webp');
+      up.then(function (imgUrl) {
+        var payload = {
+          title: $('ar-title').value.trim(),
+          category: $('ar-cat').value,
+          sub_category: $('ar-sub').value || null,
+          description: $('ar-desc').value.trim(),
+          unit: $('ar-unit').value,
+          rate_per_unit: Number($('ar-rate').value) || 0,
+          quantity: Number($('ar-qty').value) || 1,
+          with_material: true,
+          image_url: imgUrl,
+          media_type: 'image',
+          is_private: false
+        };
+        if (isLocalTest) {
+          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString(), total_amount: calcTotals(payload.rate_per_unit, payload.quantity).subtotal }, payload);
+          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
+          state.listings = list;
+          return { success: true };
+        }
+        return api('/users/' + session.uuid + '/listings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).then(fetchListings);
+      }).then(function () {
+        updateTopBar();
+        renderArchitectEngine();
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Publish Architect Post';
+        msg.textContent = err.message; msg.style.color = '#dc2626';
+      });
+    });
+    wireListingDeletes();
+  }
+
+  function renderPartnerPrivateUploader() {
+    $('db-page-title').textContent = 'Private Sample Upload (Admin Skill Evaluation)';
+    $('db-page-sub').textContent = 'Upload photos of your real site work. Admins evaluate these privately to assign incoming projects.';
+
+    var catOpts = (window.CATALOG && window.CATALOG.partner || []).map(function (c) {
+      return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
+    }).join('');
+
+    var html = '<div class="private-notice">' +
+      '<strong>Privacy Guarantee:</strong> Partner sample uploads are stored in a private bucket and <strong>never shown to clients</strong>. Only Interagood Admins review them to verify skill level and assign projects.' +
+      '</div>' +
+      '<div class="calc-panel">' +
+      '<form id="partner-sample-form">' +
+      '<div class="calc-grid">' +
+      '<div class="calc-field"><label for="pt-title">Sample Work Title</label><input id="pt-title" type="text" required placeholder="e.g., Wardrobe Laminate Finishing, POP Cove Work"></div>' +
+      '<div class="calc-field"><label for="pt-cat">Work Category</label><select id="pt-cat">' + catOpts + '</select></div>' +
+      '<div class="calc-field"><label for="pt-img">Work Photo (JPG, PNG, WebP)</label><input id="pt-img" type="file" accept="image/jpeg,image/png,image/webp" required></div>' +
+      '</div>' +
+      '<div class="calc-field" style="margin-top:12px;"><label for="pt-desc">Site Work Details</label><textarea id="pt-desc" placeholder="Brief note about tools used, finish quality, and completion time..."></textarea></div>' +
+      '<div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+      '<span class="tcb-sub">Marked automatically as Private · Admin Evaluation Only</span>' +
+      '<button type="submit" class="tcb-btn primary" id="pt-submit">Submit Private Sample</button>' +
+      '</div>' +
+      '<p class="hint" id="pt-msg" style="margin-top:10px;"></p>' +
+      '</form></div>' + renderListingsSection();
+
+    $('db-content').innerHTML = html;
+
+    $('partner-sample-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var file = $('pt-img').files[0];
+      if (!file) { $('pt-msg').textContent = 'Please select a sample photo.'; return; }
+      var btn = $('pt-submit'), msg = $('pt-msg');
+      btn.disabled = true; btn.textContent = 'Uploading securely...'; msg.textContent = '';
+
+      uploadFile('partner_sample', file).then(function (url) {
+        var payload = {
+          title: $('pt-title').value.trim(),
+          category: $('pt-cat').value,
+          description: $('pt-desc').value.trim(),
+          unit: 'pieces',
+          rate_per_unit: 0,
+          quantity: 1,
+          image_url: url,
+          media_type: 'image',
+          is_private: true
+        };
+        if (isLocalTest) {
+          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString() }, payload);
+          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
+          state.listings = list;
+          return { success: true };
+        }
+        return api('/users/' + session.uuid + '/listings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).then(fetchListings);
+      }).then(function () {
+        updateTopBar();
+        renderPartnerPrivateUploader();
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Submit Private Sample';
+        msg.textContent = err.message; msg.style.color = '#dc2626';
+      });
+    });
+    wireListingDeletes();
+  }
+
+  function renderListingsSection() {
+    var title = role === 'partner' ? 'Your Private Evaluation Samples' : role === 'architect' ? 'Your Published Architect Posts' : 'Your Posted Products & Samples';
+    var html = '<h3 style="margin:24px 0 12px;color:#0b1f3a;">' + title + '</h3>';
+    if (!state.listings.length) {
+      return html + '<div class="db-card"><div class="db-empty">Nothing uploaded yet. Use the form or click "Upload Sample" above.</div></div>';
+    }
+    html += '<div class="listing-grid">';
+    state.listings.forEach(function (it) {
+      var mediaHtml = it.media_type === 'video'
+        ? '<video src="' + esc(it.image_url) + '" controls preload="metadata"></video>'
+        : '<img src="' + esc(it.image_url || 'assets/logo-square.png') + '" alt="' + esc(it.title) + '" onerror="this.src=\'assets/logo-square.png\'">';
+      html += '<article class="listing-card">' +
+        '<div class="listing-media">' + mediaHtml + '</div>' +
+        '<div class="listing-body">' +
+        (role === 'architect' ? '<span class="with-mat-label" style="align-self:flex-start;">with material</span>' : '') +
+        (role === 'partner' ? '<span style="font-size:0.72rem;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:6px;align-self:flex-start;">Private · Admin Only</span>' : '') +
+        '<h4>' + esc(it.title) + '</h4>' +
+        '<div class="listing-meta">' + esc(it.category) + (it.sub_category ? ' → ' + esc(it.sub_category) : '') + '</div>' +
+        (it.description ? '<div class="listing-meta">' + esc(it.description) + '</div>' : '') +
+        (it.rate_per_unit > 0 ? '<div class="listing-price">₹' + Number(it.rate_per_unit).toLocaleString('en-IN') + ' / ' + esc(it.unit || 'sqft') + '</div>' : '') +
+        '<button type="button" class="listing-del" data-del-id="' + esc(it.id) + '">Delete</button>' +
+        '</div></article>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function wireListingDeletes() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-del-id]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-del-id');
+        btn.disabled = true;
+        if (isLocalTest) {
+          var next = loadLocalFallback().filter(function (x) { return x.id !== id; });
+          saveLocalFallback(next); state.listings = next; updateTopBar(); showPage(state.activePage);
+          return;
+        }
+        api('/users/' + session.uuid + '/listings/' + id, { method: 'DELETE' }).then(function () {
+          return fetchListings();
+        }).then(function () { showPage(state.activePage); }).catch(function (err) { showToast(err.message || 'Delete failed', true); btn.disabled = false; });
+      });
+    });
   }
 
   pages.orders = function () {
-    $('db-page-title').textContent = role === 'admin' ? 'All Orders' : (role === 'partner' ? 'Assigned Orders' : (role === 'supplier' ? 'Material Orders' : 'My Orders'));
-    $('db-page-sub').textContent = 'Track and manage your orders.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No orders yet. Orders will appear here once placed.</div></div>';
-  };
-
-  pages.carts = function () {
-    $('db-page-title').textContent = 'My Carts';
-    $('db-page-sub').textContent = 'Your saved carts and items.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No carts yet. Browse services and add items to your cart.</div></div>';
-  };
-
-  // ---- supplier: product listing engine with dynamic calculation ----
-  var UNITS = ['sqfit', 'runningfit', 'inch', 'pcs', 'bundle', 'combo', 'fit'];
-  var UNIT_LABELS = { sqfit: 'Square Feet', runningfit: 'Running Feet', inch: 'Inches', pcs: 'Pieces', bundle: 'Bundle', combo: 'Combo', fit: 'Fit' };
-  function calcForm() {
-    return '<div class="db-card">' +
-      '<h3 style="margin:0 0 14px;color:#0b1f3a">Create a listing</h3>' +
-      '<div class="db-form">' +
-      '<div class="db-field"><label>Product name</label><input id="p-name" type="text" placeholder="e.g. Modular Kitchen" maxlength="80"></div>' +
-      '<div class="db-row">' +
-      '<div class="db-field"><label>Measurement type</label><select id="p-unit">' + UNITS.map(function (u) { return '<option value="' + u + '">' + UNIT_LABELS[u] + '</option>'; }).join('') + '</select></div>' +
-      '<div class="db-field"><label>Rate per unit (&#8377;)</label><input id="p-rate" type="number" min="0" step="0.01" placeholder="0"></div>' +
-      '<div class="db-field"><label>Quantity</label><input id="p-qty" type="number" min="0" step="1" value="1"></div>' +
-      '</div>' +
-      '<div class="db-total">Total: <strong id="p-total">&#8377;0</strong> <span id="p-formula"></span></div>' +
-      '<button type="button" class="btn btn-primary" id="p-post">Post</button>' +
-      '</div>' +
-      '</div>';
-  }
-  function wireCalc(root) {
-    function recalc() {
-      var rate = parseFloat(($('p-rate') || {}).value || '0') || 0;
-      var qty = parseFloat(($('p-qty') || {}).value || '1') || 0;
-      var unit = ($('p-unit') || {}).value || 'sqfit';
-      var total = rate * qty;
-      var el = $('p-total'); if (el) el.textContent = '\u20B9' + total.toLocaleString();
-      var f = $('p-formula'); if (f) f.textContent = ' = \u20B9' + rate + ' x ' + qty + ' ' + UNIT_LABELS[unit];
-    }
-    ['p-rate', 'p-qty', 'p-unit'].forEach(function (id) {
-      var n = $(id); if (n) n.addEventListener('input', recalc);
-    });
-    recalc();
-  }
-  function productCards(items) {
-    if (!items.length) return '<div class="db-card"><div class="db-empty">No listings yet. Add your first product above.</div></div>';
-    return '<div class="db-section-title">Your listings</div><div class="db-prod-grid">' + items.map(function (it) {
-      return '<article class="db-prod-card" data-id="' + it.id + '">' +
-        '<div class="db-prod-img"><img src="' + (it.img || '') + '" alt="" onerror="this.style.display=\'none\'"></div>' +
-        '<div class="db-prod-body"><h4>' + it.name + '</h4>' +
-        '<p class="db-prod-meta">' + UNIT_LABELS[it.unit] + ' &#183; \u20B9' + it.rate + ' / unit</p>' +
-        '<p class="db-prod-price">\u20B9' + (it.rate * it.qty).toLocaleString() + '</p></div>' +
-        '</article>';
-    }).join('') + '</div>';
-  }
-  function getStore(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
-  function setStore(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
-  pages.products = function () {
-    $('db-page-title').textContent = 'My Products';
-    $('db-page-sub').textContent = 'Create product listings and manage your catalog.';
-    var items = getStore('ig_products');
-    $('db-content').innerHTML = calcForm() + productCards(items);
-    wireCalc();
-    function onPost() {
-      var name = ($('p-name') || {}).value || '';
-      if (name.trim().length < 2) { $('p-name').focus(); return; }
-      items.push({ id: Date.now(), name: name.trim(), unit: $('p-unit').value, rate: parseFloat($('p-rate').value || '0') || 0, qty: parseFloat($('p-qty').value || '1') || 1, img: '' });
-      setStore('ig_products', items);
-      $('db-content').innerHTML = calcForm() + productCards(items);
-      wireCalc();
-      $('p-post').addEventListener('click', onPost);
-    }
-    $('p-post').addEventListener('click', onPost);
-  };
-
-  // ---- architect: post creation with calculation engine + "with material" tag ----
-  pages.posts = function () {
-    $('db-page-title').textContent = 'My Posts';
-    $('db-page-sub').textContent = 'Create posts with measurement and calculation.';
-    var items = getStore('ig_posts');
-    var html = '<div class="db-card">' +
-      '<h3 style="margin:0 0 14px;color:#0b1f3a">Create a post</h3>' +
-      '<div class="db-form">' +
-      '<div class="db-field"><label>Category</label><select id="a-cat"><option>Kitchen</option><option>Wardrobe</option><option>Bedroom</option><option>Living Room</option><option>Office</option></select></div>' +
-      '<div class="db-field"><label>Description</label><textarea id="a-desc" maxlength="300" placeholder="Describe the work..."></textarea></div>' +
-      '<div class="db-row">' +
-      '<div class="db-field"><label>Measurement type</label><select id="p-unit">' + UNITS.map(function (u) { return '<option value="' + u + '">' + UNIT_LABELS[u] + '</option>'; }).join('') + '</select></div>' +
-      '<div class="db-field"><label>Rate per unit (&#8377;)</label><input id="p-rate" type="number" min="0" step="0.01" placeholder="0"></div>' +
-      '<div class="db-field"><label>Quantity</label><input id="p-qty" type="number" min="0" step="1" value="1"></div>' +
-      '</div>' +
-      '<div class="db-total">Total: <strong id="p-total">&#8377;0</strong> <span id="p-formula"></span> <span class="with-material">with material</span></div>' +
-      '<button type="button" class="btn btn-primary" id="p-post">Post</button>' +
+    $('db-page-title').textContent = 'Completed & Assigned Orders';
+    $('db-page-sub').textContent = 'Orders assigned to you by Interagood Admin appear here once you toggle Online.';
+    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">' +
+      'No completed orders yet. Keep your <strong>Online</strong> toggle switched on in the top control bar so Admins can assign nearby projects to you.' +
       '</div></div>';
-    var cards = items.length ? '<div class="db-section-title">Your posts</div><div class="db-prod-grid">' + items.map(function (it) {
-      return '<article class="db-prod-card"><div class="db-prod-body"><h4>' + it.cat + '</h4><p>' + it.desc + '</p><p class="db-prod-meta">' + UNIT_LABELS[it.unit] + ' &#183; \u20B9' + it.rate + '</p><p class="db-prod-price">\u20B9' + (it.rate * it.qty).toLocaleString() + '</p><span class="with-material">with material</span></div></article>';
-    }).join('') + '</div>' : '<div class="db-card"><div class="db-empty">No posts yet.</div></div>';
-    $('db-content').innerHTML = html + cards;
-    wireCalc();
-    $('p-post').addEventListener('click', function () {
-      items.push({ id: Date.now(), cat: $('a-cat').value, desc: $('a-desc').value || '', unit: $('p-unit').value, rate: parseFloat($('p-rate').value || '0') || 0, qty: parseFloat($('p-qty').value || '1') || 1 });
-      setStore('ig_posts', items);
-      location.reload();
-    });
-  };
-
-  // ---- partner: private sample uploads (admin only) ----
-  pages.samples = function () {
-    $('db-page-title').textContent = 'My Samples';
-    $('db-page-sub').textContent = 'Upload work samples for admin evaluation. These are never shown to clients.';
-    $('db-content').innerHTML = '<div class="db-card"><p>Partners upload sample images solely for admin evaluation. They are private and never displayed to clients.</p></div>';
   };
 
   pages.earnings = function () {
-    $('db-page-title').textContent = 'Earnings';
-    $('db-page-sub').textContent = 'Your earnings and payment history.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">No earnings yet. Complete orders to start earning.</div></div>';
-  };
-
-  pages.users = function () {
-    $('db-page-title').textContent = 'Users';
-    $('db-page-sub').textContent = 'Manage all platform users.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">User list will appear here.</div></div>';
-  };
-
-  pages.stats = function () {
-    $('db-page-title').textContent = 'Statistics';
-    $('db-page-sub').textContent = 'Platform performance and analytics.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">Statistics will appear here.</div></div>';
+    var u = state.user || {};
+    var amt = PLAN_AMOUNTS[role] || 199;
+    $('db-page-title').textContent = 'Billing & PayU Payment Cycle';
+    $('db-page-sub').textContent = 'Modular PayU payment gateway hooks are ready for sandbox testing and live key activation.';
+    $('db-content').innerHTML = '<div class="db-card" style="max-width:540px;">' +
+      '<h3 style="margin:0 0 8px;color:#0b1f3a;">' + role.charAt(0).toUpperCase() + role.slice(1) + ' Monthly Membership</h3>' +
+      '<p style="color:#64748b;margin:0 0 16px;">Status: <strong>' + esc(u.payment_status === 'paid' ? 'Paid & Active' : 'Pending Activation (Sandbox Ready)') + '</strong> · Plan: <strong>₹' + amt + ' / month</strong></p>' +
+      '<button type="button" class="tcb-btn green" id="earn-payu">Pay ₹' + amt + ' via PayU</button>' +
+      '</div>';
+    $('earn-payu').addEventListener('click', triggerPayU);
   };
 
   pages.profile = function () {
     $('db-page-title').textContent = 'Profile';
-    $('db-page-sub').textContent = 'Your account details.';
-    var AVATAR_PH = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#e9eef6"/><circle cx="60" cy="46" r="22" fill="#c3cede"/><path d="M18 120c0-24 19-38 42-38s42 14 42 38z" fill="#c3cede"/></svg>');
-    var BANNER_PH = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" preserveAspectRatio="none"><rect width="600" height="200" fill="#0a192f"/></svg>');
-    api('/users/' + session.uuid).then(function (d) {
-      var u = (d && d.data) || {};
-      var p = u.profile || u || {};
-      var avatar = p.profile_photo_url || AVATAR_PH;
-      var banner = p.banner_url || BANNER_PH;
-      var html = '<div class="db-profile-hero">';
-      html += '<div class="db-profile-banner"><img src="' + banner + '" alt="" onerror="this.src=\'' + BANNER_PH + '\'"></div>';
-      html += '<div class="db-profile-avatar"><img src="' + avatar + '" alt="" onerror="this.src=\'' + AVATAR_PH + '\'"></div>';
-      html += '</div>';
-      html += '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">';
-      html += '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a">Account</h3>';
-      html += '<p><strong>Username:</strong> ' + (u.username || '-') + '</p>';
-      html += '<p><strong>Phone:</strong> +91 ' + (u.phone || '-') + '</p>';
-      html += '<p><strong>Role:</strong> ' + (role.charAt(0).toUpperCase() + role.slice(1)) + '</p>';
-      if (u.ig_id) html += '<p><strong>IG ID:</strong> ' + u.ig_id + '</p>';
-      html += '</div>';
-      html += '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a">Profile</h3>';
-      html += '<p><strong>Name:</strong> ' + (p.full_name || '-') + '</p>';
-      if (p.business_name) html += '<p><strong>Business:</strong> ' + p.business_name + '</p>';
-      if (p.address) html += '<p><strong>Address:</strong> ' + p.address + '</p>';
-      if (p.city) html += '<p><strong>City:</strong> ' + p.city + (p.state ? ', ' + p.state : '') + '</p>';
-      html += '</div>';
-      html += '</div>';
-      $('db-content').innerHTML = html;
-    }).catch(function () {
-      $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">Could not load profile. Please refresh.</div></div>';
-    });
+    $('db-page-sub').textContent = 'Registered business and Aadhaar KYC details.';
+    var u = state.user || session.profile || {};
+    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">' +
+      '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a;">Account</h3>' +
+      '<p><strong>Username:</strong> ' + esc(u.username || session.username || '-') + '</p>' +
+      '<p><strong>Role:</strong> ' + esc(role.charAt(0).toUpperCase() + role.slice(1)) + '</p>' +
+      (u.ig_id ? '<p><strong>IG ID:</strong> ' + esc(u.ig_id) + '</p>' : '') +
+      (u.skill_level ? '<p><strong>Skill Level:</strong> ' + esc(u.skill_level) + '</p>' : '') +
+      '</div>' +
+      '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a;">Business Details</h3>' +
+      '<p><strong>Full Name (Aadhaar):</strong> ' + esc(u.full_name || '-') + '</p>' +
+      '<p><strong>Business Name:</strong> ' + esc(u.business_name || '-') + '</p>' +
+      '<p><strong>Category:</strong> ' + esc(u.category_name || '-') + '</p>' +
+      (u.education ? '<p><strong>Courses Completed:</strong> ' + esc(u.education) + '</p>' : '') +
+      (u.design_software ? '<p><strong>Design Software:</strong> ' + esc(u.design_software) + '</p>' : '') +
+      (u.shop_years != null ? '<p><strong>Shop History:</strong> ' + esc(u.shop_years) + ' years</p>' : '') +
+      '<p><strong>Address:</strong> ' + esc([u.address, u.city, u.state, u.pincode].filter(Boolean).join(', ') || '-') + '</p>' +
+      '</div></div>';
+    $('db-content').innerHTML = html;
   };
 
   function showPage(id) {
-    var fn = pages[id];
-    if (fn) fn();
+    state.activePage = id;
+    setActiveNav(id);
+    if (pages[id]) pages[id]();
   }
 
-  // ---- logout ----
   $('db-logout-btn').addEventListener('click', function () {
     sessionStorage.removeItem('ig_session');
     location.replace('index.html');
   });
-
-  // ---- mobile menu ----
   $('db-menu').addEventListener('click', function () {
     $('db-side').classList.toggle('open');
   });
 
-  // ---- init ----
+  // ---- Init ----
   $('db-username').textContent = session.username || 'User';
-  $('db-role').textContent = (role.charAt(0).toUpperCase() + role.slice(1));
+  $('db-role').textContent = role.charAt(0).toUpperCase() + role.slice(1);
   renderNav();
-  populateTopbar();
-  showPage('overview');
+
+  Promise.all([
+    api('/users/' + session.uuid).then(function (d) {
+      if (d && d.data && !Array.isArray(d.data)) {
+        state.user = d.data;
+        state.isOnline = d.data.is_online !== false;
+        $('db-username').textContent = d.data.business_name || d.data.username || session.username || 'User';
+      } else {
+        state.user = session.profile || {};
+      }
+    }).catch(function () { state.user = session.profile || {}; }),
+    fetchListings()
+  ]).then(function () {
+    updateTopBar();
+    showPage('overview');
+  });
 })();

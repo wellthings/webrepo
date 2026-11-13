@@ -294,6 +294,24 @@
     });
     box.appendChild(msg);
     box.appendChild(go);
+    var payuGo = el('button', 'btn-alt', 'Pay Site Visit Booking (₹99 via PayU)');
+    payuGo.type = 'button';
+    payuGo.style.width = '100%';
+    payuGo.addEventListener('click', function () {
+      if (window.InteragoodPayU) {
+        window.InteragoodPayU.initiatePayment({
+          amount: 99,
+          productInfo: 'Interagood Site Visit Priority Booking',
+          firstName: c.name || 'Client',
+          email: 'client@interagood.in',
+          phone: c.phone || '9999999999',
+          onSuccess: function () { go.click(); }
+        });
+      } else {
+        go.click();
+      }
+    });
+    box.appendChild(payuGo);
   }
 
   function renderDone() {

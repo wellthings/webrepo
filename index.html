@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interagood | Thoughtful interiors, made for you</title>
-  <meta name="description" content="Plan your interior with full control, a clear budget and no brokerage. Find verified home-service partners and suppliers with Interagood.">
-  <meta property="og:title" content="Interagood | Thoughtful interiors, made for you">
-  <meta property="og:description" content="Your space, your choices. Custom interiors with transparent budgets and no brokerage.">
+  <title>Interagood | Custom Interior Planning, Verified Partners &amp; Suppliers</title>
+  <meta name="description" content="Custom interior planning, verified home-service partners, and supplier catalog by Wellthings.">
+  <meta property="og:title" content="Interagood | Custom Interior Planning, Verified Partners &amp; Suppliers">
+  <meta property="og:description" content="Custom interior planning, verified home-service partners, and supplier catalog by Wellthings.">
   <meta property="og:image" content="assets/logo-square.png">
-  <meta name="theme-color" content="#0a192f">
+  <meta name="theme-color" content="#0b1f3a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261111-a">
-  <link rel="stylesheet" href="shop.css?v=9">
+  <link rel="stylesheet" href="shop.css?v=20261113">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -70,6 +71,39 @@
           <p>Pick a service, see verified partners near you and start your project.</p>
         </div>
         <div class="service-grid" id="service-grid"></div>
+      </div>
+    </section>
+
+    <section id="marketplace" class="mkt-section">
+      <div class="container">
+        <div class="section-head" style="margin-bottom:24px;">
+          <span class="eyebrow">Live Marketplace</span>
+          <h2>Supplier Products &amp; Architect Designs</h2>
+          <p>Tap any product card for full pricing &amp; privacy-safe Call/Chat, or open any Architect design to calculate your exact budget.</p>
+        </div>
+
+        <div class="mkt-tabs" role="tablist" aria-label="Marketplace view">
+          <button type="button" class="mkt-tab active" data-mkt-tab="products" role="tab" aria-selected="true">Supplier Products</button>
+          <button type="button" class="mkt-tab" data-mkt-tab="architects" role="tab" aria-selected="false">Architect Designs</button>
+          <button type="button" class="mkt-tab" data-mkt-tab="catalog" role="tab" aria-selected="false">Work Modules</button>
+        </div>
+
+        <div id="mkt-panel-products" class="mkt-panel">
+          <div class="amz-grid" id="amz-products-grid"></div>
+        </div>
+
+        <div id="mkt-panel-architects" class="mkt-panel" hidden>
+          <div class="arch-grid" id="arch-posts-grid"></div>
+        </div>
+
+        <div id="mkt-panel-catalog" class="mkt-panel" hidden>
+          <div class="browse-head">
+            <div><h3 id="browse-title" style="margin:0;">Popular interior work</h3><p id="browse-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Choose New or Repairing and add to your cart.</p></div>
+            <div class="swiper-nav"><button type="button" data-swipe="prev" aria-label="Previous">&#8249;</button><button type="button" data-swipe="next" aria-label="Next">&#8250;</button></div>
+          </div>
+          <div class="swiper" id="browse-strip"></div>
+          <p class="browse-empty" id="browse-empty" hidden>No matching work found.</p>
+        </div>
       </div>
     </section>
 
@@ -201,12 +235,13 @@
     </div>
   </footer>
 
-  <script src="config.js?v=20261102c"></script>
+  <script src="config.js?v=20261104d"></script>
   <script src="catalog.js?v=1"></script>
   <script src="geo.js?v=2"></script>
-  <script src="cart.js?v=10"></script>
+  <script src="pwa.js?v=20261113"></script>
+  <script src="cart.js?v=20261113"></script>
   <script src="app.js?v=20261106-a"></script>
-  <script src="browse.js?v=1"></script>
+  <script src="browse.js?v=20261113"></script>
   <script src="gallery.js?v=1"></script>
 </body>
 </html>

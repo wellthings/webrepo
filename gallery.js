@@ -8,8 +8,8 @@ async function loadCategoryBanner() {
   if (!track) return;
   try {
     const [pRes, sRes] = await Promise.all([
-      fetch(`${API}/api/categories/partner`),
-      fetch(`${API}/api/categories/supplier`),
+      fetch(`${API}/categories/partner`),
+      fetch(`${API}/categories/supplier`),
     ]);
     const pData = await pRes.json();
     const sData = await sRes.json();
@@ -44,7 +44,7 @@ async function loadGallery() {
 
   let images = [];
   try {
-    const res = await fetch(`${API}/api/site-images`);
+    const res = await fetch(`${API}/site-images`);
     const data = await res.json();
     images = (data.data || []).map((img, i) => ({
       id: i,
