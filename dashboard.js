@@ -103,18 +103,32 @@
     });
   }
 
+  function inferMime(file) {
+    var t = (file && file.type ? String(file.type).toLowerCase() : '');
+    if (t === 'image/jpg') return 'image/jpeg';
+    if (t && t !== 'application/octet-stream') return t;
+    var n = (file && file.name ? file.name.toLowerCase() : '');
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.webp')) return 'image/webp';
+    if (n.endsWith('.mp4')) return 'video/mp4';
+    if (n.endsWith('.mov')) return 'video/quicktime';
+    if (n.endsWith('.webm')) return 'video/webm';
+    return 'image/jpeg';
+  }
+
   function uploadFile(kind, file) {
     if (isLocalTest) return Promise.resolve(URL.createObjectURL(file));
+    var cType = inferMime(file);
     return fetch(API + '/users/' + session.uuid + '/upload?kind=' + encodeURIComponent(kind), {
       method: 'POST',
       headers: {
-        'Content-Type': file.type || 'image/jpeg',
+        'Content-Type': cType,
         Authorization: 'Bearer ' + session.accessToken
       },
       body: file
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok) throw new Error(d.message || 'Upload failed');
+        if (!r.ok) throw new Error(d.message || d.error || 'Upload failed');
         return d.url;
       });
     });
@@ -226,11 +240,12 @@
       updateTopBar();
       return Promise.resolve();
     }
+    var gotDedicatedSamples = false;
     return Promise.all([
       api('/users/' + session.uuid).then(function (d) {
         if (d && d.data && !Array.isArray(d.data)) {
           state.user = d.data;
-          state.samples = d.data.samples || [];
+          if (!gotDedicatedSamples && Array.isArray(d.data.samples)) state.samples = d.data.samples;
           state.isOnline = d.data.is_online !== false;
           if (d.data.payment_status && d.data.payment_status !== 'paid') {
             session.payment_status = d.data.payment_status;
@@ -238,15 +253,28 @@
             location.replace('partner-program.html#onboarding-pay');
           }
         }
-      }).catch(function () {}),
-      api('/users/' + session.uuid + '/listings').then(function (d) {
-        state.products = d.data || [];
-        if (d.quota && d.quota.samples) {
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Could not sync profile.', true);
+      }),
+      api('/users/' + session.uuid + '/samples').then(function (d) {
+        if (d && Array.isArray(d.data)) {
+          gotDedicatedSamples = true;
+          state.samples = d.data;
+        }
+        if (d && d.quota && d.quota.samples) {
           state.quota = d.quota;
         }
       }).catch(function () {}),
+      api('/users/' + session.uuid + '/listings').then(function (d) {
+        state.products = (d && Array.isArray(d.data)) ? d.data : [];
+        if (d && d.quota && d.quota.samples) {
+          state.quota = d.quota;
+        }
+      }).catch(function (err) {
+        showToast((err && err.message) || 'Could not load products.', true);
+      }),
       api('/users/' + session.uuid + '/orders').then(function (d) {
-        state.orders = d.data || [];
+        state.orders = (d && Array.isArray(d.data)) ? d.data : [];
       }).catch(function () {})
     ]).then(function () {
       if (!state.quota.products) recomputeLocalQuotas();
@@ -282,6 +310,11 @@
     var u = state.user || {};
     var defaultCat = u.category_name || (role === 'architect' ? 'Full Interior Contract' : role === 'supplier' ? 'Hardware & Materials' : 'Site Work');
 
+    var isArchitect = role === 'architect';
+    var matHtml = isArchitect
+      ? '<div class="mat-toggle locked"><label for="lp-with-mat">with material <span style="font-weight:600;font-size:0.76rem;color:#166534;">(Locked for Architect)</span></label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
+      : '';
+
     var html =
       '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(g.hint) + '</p>' +
       '<form id="app-prod-form">' +
@@ -294,7 +327,7 @@
       '</div>' +
       '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
       '<div class="f-group"><label for="lp-desc">Product Description (Free Write)</label><textarea id="lp-desc" placeholder="Describe specs, fittings, finish, or work scope..."></textarea></div>' +
-      '<div class="mat-toggle"><label for="lp-with-mat">with material</label><input id="lp-with-mat" type="checkbox" checked style="width:20px;height:20px;accent-color:#15803d;"></div>' +
+      matHtml +
       '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
       '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
       '</form>';
@@ -328,7 +361,8 @@
       var file = $('lp-img').files[0];
       btn.disabled = true; btn.textContent = 'Posting product...'; msg.textContent = '';
 
-      var up = file ? uploadFile('supplier_product', file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
+      var prodKind = isArchitect ? 'architect_post' : 'supplier_product';
+      var up = file ? uploadFile(prodKind, file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
       up.then(function (imgUrl) {
         var payload = {
           title: $('lp-title').value.trim(),
@@ -338,7 +372,7 @@
           rate_per_unit: Number(rateEl.value) || 0,
           quantity: 1,
           expected_amount: Number(expEl.value) || Number(rateEl.value) || 0,
-          with_material: !!$('lp-with-mat').checked,
+          with_material: isArchitect,
           image_url: imgUrl,
           media_type: 'image',
           is_private: false
@@ -354,7 +388,11 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).then(fetchAllData);
+        }).then(function (res) {
+          if (res && res.data) state.products.unshift(res.data);
+          if (res && res.quota && res.quota.samples) state.quota = res.quota;
+          return fetchAllData();
+        });
       }).then(function () {
         closeSheet();
         render();
@@ -436,7 +474,11 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).then(fetchAllData);
+        }).then(function (res) {
+          if (res && res.data) state.samples.unshift(res.data);
+          if (res && res.quota && res.quota.samples) state.quota = res.quota;
+          return fetchAllData();
+        });
       }).then(function () {
         closeSheet();
         render();
@@ -454,6 +496,9 @@
     var nextDue = u.next_due_at || u.payment_due_date || new Date(Date.now() + 30 * 86400000).toISOString();
     var dt = new Date(nextDue);
     var nextStr = !isNaN(dt) ? dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : String(nextDue);
+    var isPaymentDue = (session.payment_status !== 'paid') ||
+      (u.payment_status && u.payment_status !== 'paid') ||
+      (u.next_due_at && !isNaN(new Date(u.next_due_at)) && new Date(u.next_due_at).getTime() <= Date.now());
 
     var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 6, maxImages: 3, maxVideos: 3 };
     var pq = state.quota.products || { totalUsed: 0, maxTotal: 4 };
@@ -462,16 +507,21 @@
     var sPct = Math.min(100, Math.round((sq.totalUsed / sq.maxTotal) * 100));
     var pPct = Math.min(100, Math.round((pq.totalUsed / pq.maxTotal) * 100));
 
-    var activeBillHtml = state.isOnline
-      ? '<button type="button" class="bill-action-btn is-active" id="bill-state-btn">● Active</button>'
-      : '<button type="button" class="bill-action-btn is-pay-live" id="bill-state-btn">Pay &amp; Live</button>';
+    // Billing card button depends strictly on payment status, NOT manual Online/Offline toggle
+    var activeBillHtml = isPaymentDue
+      ? '<button type="button" class="bill-action-btn is-pay-live" id="bill-state-btn">Pay &amp; Live</button>'
+      : '<button type="button" class="bill-action-btn is-active" id="bill-state-btn">● Active</button>';
+
+    var billHeading = isPaymentDue
+      ? 'Payment Required'
+      : ('Profile Active' + (state.isOnline ? '' : ' · Paused (Offline)'));
 
     var html =
       // Billing Card
       '<section class="bill-card" aria-label="Billing Card">' +
       '<div class="bill-info">' +
       '<div class="bill-title-row"><span>Profile Billing</span><span>·</span><span>₹' + (PLAN_FEES[role] || 109) + '/month</span></div>' +
-      '<div class="bill-status-main">' + (state.isOnline ? 'Profile Active' : 'Currently Offline') + '</div>' +
+      '<div class="bill-status-main">' + esc(billHeading) + '</div>' +
       '<div class="bill-next-date">Next billing date: ' + esc(nextStr) + '</div>' +
       '</div>' +
       activeBillHtml +
@@ -508,7 +558,7 @@
         html += '<article class="app-item-card">' +
           '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
           '<div class="app-item-body">' +
-          (p.with_material !== false ? '<span class="with-mat-tag">with material</span>' : '') +
+          (p.with_material === true ? '<span class="with-mat-tag">with material</span>' : '') +
           '<h3 class="app-item-title">' + esc(p.title) + '</h3>' +
           (p.description ? '<div class="app-item-desc">' + esc(p.description) + '</div>' : '') +
           '<div class="app-item-price">₹' + Number(p.rate_per_unit || 0).toLocaleString('en-IN') + ' / ' + esc(p.unit || 'sqfit') +
@@ -545,8 +595,8 @@
     $('app-content').innerHTML = html;
 
     $('bill-state-btn').addEventListener('click', function () {
-      if (!state.isOnline) triggerPayAndLive();
-      else showToast('Your profile is Active and Online!', false);
+      if (isPaymentDue) triggerPayAndLive();
+      else showToast(state.isOnline ? 'Subscription Active & Online!' : 'Subscription Active (Availability paused Offline by you).', false);
     });
     $('btn-list-product').addEventListener('click', openListProductSheet);
     $('btn-upload-sample').addEventListener('click', openUploadSampleSheet);
@@ -694,7 +744,7 @@
       '<div class="bc-avatar">' + avatarHtml + '</div>' +
       '<div class="bc-who">' +
       '<h3 class="bc-name"><span>' + esc(bName) + '</span>' +
-      '<svg class="bc-tick" viewBox="0 0 24 24" aria-label="Verified Blue Tick"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<svg class="bc-tick" viewBox="0 0 24 24" aria-label="Verified Blue Tick"><path fill="#1d9bf0" d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484z"/><path d="M8.5 12.5l2.3 2.3 4.9-5.1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '</h3>' +
       '<p class="bc-user">@' + esc(uName) + ' · Verified</p>' +
       '</div>' +

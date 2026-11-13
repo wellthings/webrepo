@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="style.css?v=20261111-a">
-  <link rel="stylesheet" href="partner.css?v=20261113b">
+  <link rel="stylesheet" href="partner.css?v=20261113c">
   <style>
     :root { --app-bg: #f3f5f8; --app-card: #ffffff; --app-line: #e2e8f0; --app-navy: #0b1f3a; --app-orange: #f58220; --app-green: #1f9d55; }
     * { box-sizing: border-box; }
@@ -120,6 +120,7 @@
     .pick-box img, .pick-box video { max-height: 140px; max-width: 100%; border-radius: 8px; margin-top: 8px; }
     .mat-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1.5px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; margin-bottom: 14px; }
     .mat-toggle label { margin: 0; color: #15803d; font-weight: 800; font-size: 0.88rem; }
+    .mat-toggle.locked input[disabled] { opacity: 0.9; cursor: not-allowed; }
 
     /* Fixed App Bottom Navigation Bar (4 Tabs: Home, Order, Profile, Card) */
     .app-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--app-line); }
@@ -191,7 +192,7 @@
 
   <script src="config.js?v=20261104d"></script>
   <script src="catalog.js?v=1"></script>
-  <script src="pwa.js?v=20261113b"></script>
-  <script src="dashboard.js?v=20261113b"></script>
+  <script src="pwa.js?v=20261113c"></script>
+  <script src="dashboard.js?v=20261113c"></script>
 </body>
 </html>
