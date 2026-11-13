@@ -19,6 +19,7 @@
     ['knows_work_completely', 'Do you have complete knowledge of your work, pricing, calculation, and client dealing?']
   ];
 
+  var PLAN_FEES = { partner: 109, supplier: 219, architect: 310 };
   var session = null, role = null, built = false, toggles = {}, files = {}, urls = {}, skill = 'intermediate';
   var el = { fields: $('biz-fields'), form: $('biz-form'), save: $('biz-save'), error: $('biz-error') };
 
@@ -399,20 +400,149 @@
         });
 
     req.then(function (d) {
+      var cardData = Object.assign({}, body, (d && d.card) || {}, {
+        username: (d && d.card && d.card.username) || session.username || 'member',
+        role: role,
+        category_name: (d && d.card && d.card.category_name) || ($('category_id') && $('category_id').selectedIndex >= 0 ? $('category_id').options[$('category_id').selectedIndex].text : ''),
+        ig_id: (d && d.card && d.card.ig_id) || session.ig_id || ('IG-' + String(session.uuid).slice(-6).toUpperCase()),
+        payment_status: (d && d.card && d.card.payment_status) || session.payment_status || 'unpaid'
+      });
       try {
-        session.profile = Object.assign({}, body, {
-          category_name: (d && d.card && d.card.category_name) || ($('category_id') ? $('category_id').options[$('category_id').selectedIndex].text : ''),
-          ig_id: d && d.card && d.card.ig_id
-        });
+        session.profile = cardData;
+        session.payment_status = cardData.payment_status;
         sessionStorage.setItem('ig_session', JSON.stringify(session));
       } catch (err) {}
-      window.location.href = 'dashboard.html';
+      showOnboardingCard(cardData);
     }).catch(function (err) {
       submitting = false;
       el.error.textContent = err.message; el.error.hidden = false;
-      el.save.textContent = 'Submit'; refresh();
+      el.save.textContent = 'Submit & Continue to Onboarding'; refresh();
     });
   });
+
+  function showOnboardingCard(card) {
+      var stepBiz = $('step-business'), stepCard = $('step-card'), stepDone = $('step-done');
+      if (stepBiz) stepBiz.hidden = true;
+      if (stepDone) stepDone.hidden = true;
+      if (!stepCard) { window.location.href = 'dashboard.html'; return; }
+
+      var r = card.role || role || (session && session.role) || 'partner';
+      var bName = card.business_name || card.full_name || 'Your Business';
+      var uName = card.username || (session && session.username) || 'user';
+      var addr = [card.address, card.city, card.state, card.pincode].filter(Boolean).join(', ') || '-';
+      var fee = PLAN_FEES[r] || 109;
+
+      if ($('bc-name')) $('bc-name').textContent = bName;
+      if ($('bc-user')) $('bc-user').textContent = '@' + uName;
+      if ($('bc-initial')) $('bc-initial').textContent = bName.charAt(0).toUpperCase();
+      if ($('bc-igid')) $('bc-igid').textContent = card.ig_id || ('IG-' + String((session && session.uuid) || '000').slice(-6).toUpperCase());
+      if ($('bc-role')) $('bc-role').textContent = r.charAt(0).toUpperCase() + r.slice(1);
+      if ($('bc-category')) $('bc-category').textContent = card.category_name || (r.charAt(0).toUpperCase() + r.slice(1));
+      if ($('bc-address')) $('bc-address').textContent = addr;
+
+      if ($('bc-banner') && card.banner_url) { $('bc-banner').src = card.banner_url; $('bc-banner').hidden = false; }
+      if ($('bc-avatar') && card.profile_photo_url) {
+        $('bc-avatar').src = card.profile_photo_url;
+        $('bc-avatar').hidden = false;
+        if ($('bc-initial')) $('bc-initial').hidden = true;
+      }
+
+      var isPaid = card.payment_status === 'paid' || (session && session.payment_status === 'paid');
+      if ($('bc-state')) {
+        $('bc-state').textContent = isPaid ? 'Active · Paid' : 'Payment Pending';
+        $('bc-state').classList.toggle('on', isPaid);
+      }
+      if ($('bc-online')) $('bc-online').setAttribute('aria-checked', isPaid ? 'true' : 'false');
+      if ($('bc-online-label')) $('bc-online-label').textContent = isPaid ? 'Online' : 'Offline';
+
+      var payBtn = $('pay-btn');
+      if (payBtn) {
+        payBtn.textContent = isPaid ? 'Go to App Dashboard' : 'Pay ₹' + fee + ' & Activate Dashboard';
+        payBtn.disabled = false;
+      }
+      stepCard.hidden = false;
+      stepCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    var payBtnEl = $('pay-btn');
+    if (payBtnEl && !payBtnEl.getAttribute('data-wired')) {
+      payBtnEl.setAttribute('data-wired', '1');
+      payBtnEl.addEventListener('click', function () {
+        try { session = JSON.parse(sessionStorage.getItem('ig_session')); } catch (err) {}
+        if (!session) return;
+        var r = session.role || role || 'partner';
+        var fee = PLAN_FEES[r] || 109;
+        var p = session.profile || {};
+        var errEl = $('pay-error');
+        if (errEl) errEl.hidden = true;
+
+        if (session.payment_status === 'paid') {
+          window.location.href = 'dashboard.html';
+          return;
+        }
+        if (!window.InteragoodPayU) {
+          if (errEl) { errEl.textContent = 'Payment engine unavailable. Please reload.'; errEl.hidden = false; }
+          return;
+        }
+        payBtnEl.disabled = true;
+        window.InteragoodPayU.initiatePayment({
+          amount: fee,
+          productInfo: 'Interagood ' + r.charAt(0).toUpperCase() + r.slice(1) + ' Onboarding',
+          firstName: p.full_name || session.username || 'Member',
+          email: p.email || 'onboarding@interagood.in',
+          phone: session.phone || p.phone || '9999999999',
+          onSuccess: function (res) {
+            var isLocal = String(session.uuid || '').indexOf('test_') === 0;
+            var actReq = isLocal
+              ? Promise.resolve({ payment_status: 'paid', next_due_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+              : fetch(API + '/payments/payu/sandbox-activate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken },
+                  body: JSON.stringify({ txnid: res.txnid })
+                }).then(function (resp) {
+                  return resp.json().catch(function () { return {}; }).then(function (dd) {
+                    if (!resp.ok) throw new Error(dd.message || 'Activation failed');
+                    return dd;
+                  });
+                });
+
+            actReq.then(function (dd) {
+              session.payment_status = dd.payment_status || 'paid';
+              session.is_online = true;
+              session.profile = Object.assign({}, session.profile || {}, {
+                payment_status: 'paid',
+                is_online: true,
+                next_due_at: dd.next_due_at || new Date(Date.now() + 30 * 86400000).toISOString()
+              });
+              sessionStorage.setItem('ig_session', JSON.stringify(session));
+              if ($('bc-state')) { $('bc-state').textContent = 'Active · Paid'; $('bc-state').classList.add('on'); }
+              if ($('bc-online')) $('bc-online').setAttribute('aria-checked', 'true');
+              if ($('bc-online-label')) $('bc-online-label').textContent = 'Online';
+              payBtnEl.textContent = 'Activated! Opening Dashboard...';
+              setTimeout(function () { window.location.href = 'dashboard.html'; }, 550);
+            }).catch(function (e2) {
+              payBtnEl.disabled = false;
+              if (errEl) { errEl.textContent = e2.message || 'Payment verification failed.'; errEl.hidden = false; }
+            });
+          },
+          onFailure: function (failRes) {
+            payBtnEl.disabled = false;
+            if (errEl) {
+              errEl.textContent = (failRes && failRes.message) || 'Payment cancelled. Complete payment to unlock your Dashboard.';
+              errEl.hidden = false;
+            }
+          }
+        });
+      });
+    }
+
+    document.addEventListener('ig:show-onboarding-card', function (ev) {
+      try { session = JSON.parse(sessionStorage.getItem('ig_session')); } catch (err) {}
+      if (!session) return;
+      role = session.role || role;
+      var cardObj = (ev && ev.detail && ev.detail.card) || session.profile || {};
+      showOnboardingCard(cardObj);
+    });
 
   document.addEventListener('ig:account', function (e) {
     try { session = JSON.parse(sessionStorage.getItem('ig_session')); } catch (err) { session = null; }

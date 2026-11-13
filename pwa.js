@@ -48,23 +48,27 @@
   }
 
   function renderInstallButton() {
-    if (isStandalone() || document.getElementById('pwa-install-banner')) return;
+    if (isStandalone() || document.getElementById('pwa-install-banner') || sessionStorage.getItem('ig_pwa_dismissed') === '1') return;
+
+    var hasAppBottomNav = !!document.querySelector('.app-bottom-nav');
+    var bottomPx = hasAppBottomNav ? '78px' : '20px';
 
     var container = document.createElement('div');
     container.id = 'pwa-install-banner';
-    container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:999;background:#0b1f3a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 8px 24px rgba(11,31,58,0.25);display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.15);animation:fadeIn 0.3s ease;';
+    container.style.cssText = 'position:fixed;bottom:' + bottomPx + ';right:16px;z-index:45;background:#0b1f3a;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(11,31,58,0.25);display:flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,0.15);animation:fadeIn 0.3s ease;max-width:calc(100vw - 32px);';
 
     container.innerHTML = 
       '<div style="display:flex;flex-direction:column;">' +
-      '<strong style="font-size:0.9rem;">Install Interagood App</strong>' +
-      '<span style="font-size:0.75rem;color:#a0aec0;">Faster access to your dashboard</span>' +
+      '<strong style="font-size:0.86rem;">Install Interagood App</strong>' +
+      '<span style="font-size:0.72rem;color:#a0aec0;">Faster access to your dashboard</span>' +
       '</div>' +
-      '<button id="pwa-install-btn" style="background:#f58220;color:#fff;border:0;padding:8px 14px;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;">Install</button>' +
-      '<button id="pwa-dismiss-btn" style="background:transparent;border:0;color:#a0aec0;font-size:1.1rem;cursor:pointer;padding:0 4px;" aria-label="Dismiss">&times;</button>';
+      '<button id="pwa-install-btn" style="background:#f58220;color:#fff;border:0;padding:8px 12px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:36px;">Install</button>' +
+      '<button id="pwa-dismiss-btn" style="background:transparent;border:0;color:#a0aec0;font-size:1.15rem;cursor:pointer;padding:0 6px;min-width:32px;min-height:32px;" aria-label="Dismiss">&times;</button>';
 
     document.body.appendChild(container);
 
     document.getElementById('pwa-dismiss-btn').addEventListener('click', function () {
+      try { sessionStorage.setItem('ig_pwa_dismissed', '1'); } catch (e) {}
       container.remove();
     });
 

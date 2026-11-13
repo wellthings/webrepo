@@ -6,7 +6,8 @@
 
   var state = { role: null, phoneOk: false, verified: true, otpToken: 'test_token', usernameOk: false, passwordOk: false };
   var el = {
-    stepRole: $('step-role'), stepSignup: $('step-signup'), stepDone: $('step-done'),
+    stepRole: $('step-role'), stepKyc: $('step-kyc-guide'), stepSignup: $('step-signup'), stepDone: $('step-done'),
+    kycRole: $('kyc-guide-role'), kycProceed: $('kyc-proceed-btn'), kycBack: $('kyc-back-btn'),
     chosen: $('chosen-role'), phone: $('phone'), phoneHint: $('phone-hint'), send: $('send-otp'),
     otpField: $('otp-field'), otp: $('otp'), otpHint: $('otp-hint'), verify: $('verify-otp'), resend: $('resend-otp'),
     username: $('username'), usernameHint: $('username-hint'), password: $('password'), passwordHint: $('password-hint'),
@@ -37,7 +38,7 @@
     return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); };
   }
 
-  // role selection
+  // role selection -> opens Video Call KYC Guide before Signup
   var cards = Array.prototype.slice.call(document.querySelectorAll('.role-card'));
   cards.forEach(function (card) {
     card.addEventListener('click', function () {
@@ -46,11 +47,32 @@
       state.role = role;
       cards.forEach(function (c) { c.setAttribute('aria-checked', c === card ? 'true' : 'false'); });
       el.chosen.textContent = ROLE_LABELS[role] || role;
+      if (el.kycRole) el.kycRole.textContent = (ROLE_LABELS[role] || role) + ' Onboarding Guide';
+      el.stepSignup.hidden = true;
+      if (el.stepKyc) {
+        el.stepKyc.hidden = false;
+        el.stepKyc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        el.stepSignup.hidden = false;
+        el.stepSignup.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+  if (el.kycProceed) {
+    el.kycProceed.addEventListener('click', function () {
+      el.stepKyc.hidden = true;
       el.stepSignup.hidden = false;
       el.stepSignup.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  });
+  }
+  if (el.kycBack) {
+    el.kycBack.addEventListener('click', function () {
+      el.stepKyc.hidden = true;
+      el.stepRole.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
   $('change-role').addEventListener('click', function () {
+    el.stepSignup.hidden = true;
     el.stepRole.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
@@ -165,16 +187,20 @@
     el.error.hidden = true;
 
     function proceedToBusiness(d) {
+      var ph = el.phone.value, un = el.username.value.trim();
       try {
         sessionStorage.setItem('ig_session', JSON.stringify({
           uuid: d.uuid || ('usr_' + Date.now().toString(36)),
           role: d.role || state.role,
+          username: d.username || un,
+          phone: ph,
+          payment_status: 'unpaid',
           accessToken: d.accessToken || 'test_token',
           refreshToken: d.refreshToken || 'test_refresh'
         }));
       } catch (err) { /* storage unavailable */ }
       el.stepRole.hidden = el.stepSignup.hidden = true;
-      var ph = el.phone.value, un = el.username.value.trim();
+      if (el.stepKyc) el.stepKyc.hidden = true;
       $('done-summary').textContent = (ROLE_LABELS[state.role] || state.role) + ' - +91 ' + ph.slice(0, 3) + 'XXXXXXX - ' + un.slice(0, 2) + 'XXXX';
       el.stepDone.hidden = false;
       $('step-business').hidden = false;
@@ -210,8 +236,30 @@
       uBtn.textContent = 'Logging in...';
       post('/login', { identifier: uId.value.trim(), password: uPass.value })
         .then(function (d) {
-          sessionStorage.setItem('ig_session', JSON.stringify({ uuid: d.uuid, role: d.role, username: d.username, accessToken: d.accessToken, refreshToken: d.refreshToken }));
-          location.href = 'dashboard.html';
+          var isPaid = d.payment_status === 'paid';
+          sessionStorage.setItem('ig_session', JSON.stringify({
+            uuid: d.uuid,
+            role: d.role,
+            username: d.username,
+            payment_status: d.payment_status || 'unpaid',
+            is_online: !!d.is_online,
+            profile: d.profile || null,
+            accessToken: d.accessToken,
+            refreshToken: d.refreshToken
+          }));
+          if (isPaid && d.profile_completed) {
+            location.href = 'dashboard.html';
+            return;
+          }
+          ulogin.hidden = true;
+          $('step-role').hidden = true;
+          if (!d.profile_completed) {
+            $('step-business').hidden = false;
+            document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
+            $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: d.profile } }));
+          }
         })
         .catch(function (err) {
           uErr.textContent = err.message;
@@ -222,6 +270,22 @@
     });
     $('ulogin-back').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
     $('ulogin-signup').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
+  }
+
+  // Resume unpaid onboarding payment step if redirected from dashboard guard
+  if (location.hash === '#onboarding-pay') {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem('ig_session') || 'null');
+      if (saved && saved.uuid) {
+        if (el.stepRole) el.stepRole.hidden = true;
+        if (saved.profile && saved.profile.business_name) {
+          setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: saved.profile } })); }, 30);
+        } else {
+          $('step-business').hidden = false;
+          setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: saved.role || 'partner' } })); }, 30);
+        }
+      }
+    } catch (e) {}
   }
 
   // terms and privacy, fetched from the backend (stored in the admin_uploads bucket)

@@ -192,3 +192,14 @@ body.pp.logging-in .pp-wrap > section:not(#step-login) { display: none; }
 .mandatory-check span { font-size: 0.9rem; line-height: 1.4; color: var(--ink); font-weight: 600; }
 @media (max-width: 480px) { .skill-grid { grid-template-columns: 1fr; } }
 
+/* Video Call KYC Guide step (shown right after role selection) */
+.kyc-guide-card { text-align: center; border-color: #dbe4f0; }
+.kyc-guide-head { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.kyc-phone-graphic { margin: 4px 0 6px; filter: drop-shadow(0 8px 18px rgba(11, 31, 58, 0.14)); }
+.kyc-role-tag { font-size: 0.8rem; font-weight: 700; color: var(--orange-dark); letter-spacing: 0.04em; text-transform: uppercase; }
+.kyc-guide-card h2 { margin: 0; font-size: 1.45rem; color: var(--navy); }
+.kyc-guide-text { max-width: 52ch; margin: 4px auto 18px; color: #334155; font-size: 0.98rem; line-height: 1.65; }
+.kyc-guide-actions { display: grid; gap: 10px; max-width: 360px; margin: 0 auto; }
+.kyc-back-btn { font-size: 0.88rem; }
+.onboard-pay-note { margin-top: 14px; padding: 11px 14px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; font-size: 0.86rem; line-height: 1.45; }
+

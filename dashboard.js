@@ -2,60 +2,70 @@
   'use strict';
   var API = (window.SITE && window.SITE.apiBase) || '';
   var $ = function (id) { return document.getElementById(id); };
-  var ICONS = {
-    home: '<path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/>',
-    orders: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
-    products: '<path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6"/>',
-    upload: '<path d="M12 16V4m0 0l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
-    earnings: '<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2"/>',
-    profile: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/>'
-  };
 
-  var SUB_CATEGORIES = {
-    Carpentry: ['Modular Kitchen', 'Wardrobe', 'TV Unit', 'Pooja Unit', 'Study Table', 'Door & Frames'],
-    'Modular Kitchen': ['L-Shape Kitchen', 'U-Shape Kitchen', 'Parallel Kitchen', 'Island Kitchen'],
-    'Ceiling & POP': ['Gypsum False Ceiling', 'POP Design', 'Cove Lighting', 'Wooden Ceiling'],
-    'Paint & Polish': ['Interior Emulsion', 'Texture Paint', 'PU Wood Polish', 'Waterproofing'],
-    'Tiles & Stone': ['Living Room Flooring', 'Kitchen Countertop', 'Bathroom Wall Tiles', 'Italian Marble'],
-    'Full Interior': ['1 BHK Turnkey', '2 BHK Turnkey', '3 BHK Turnkey', 'Office Renovation']
-  };
-
-  var SUPPLIER_UNITS = [
-    ['sqft', 'Square Feet (Sq.ft)'],
-    ['pieces', 'Pieces / Pcs'],
-    ['rft', 'Running Feet (Rft)'],
-    ['feet', 'Feet'],
-    ['inches', 'Inches'],
-    ['liters', 'Liters'],
-    ['bundles', 'Bundles']
+  var MEASUREMENTS = [
+    { id: 'sqfit', label: 'Square Feet (sq.ft)', perText: 'per sq.ft' },
+    { id: 'fit', label: 'Feet (ft)', perText: 'per ft' },
+    { id: 'runningfit', label: 'Running Feet (rft)', perText: 'per running ft' },
+    { id: 'inch', label: 'Inch (in)', perText: 'per inch' },
+    { id: 'pcs', label: 'Piece / Unit (pcs)', perText: 'per piece' },
+    { id: 'meter', label: 'Meter (m)', perText: 'per meter' },
+    { id: 'kg', label: 'Kilogram (kg)', perText: 'per kg' },
+    { id: 'liter', label: 'Liter (L)', perText: 'per liter' },
+    { id: 'bundle', label: 'Bundle / Set', perText: 'per bundle' },
+    { id: 'contract', label: 'Full Contract (Lump Sum)', perText: 'per contract' }
   ];
 
-  var ARCHITECT_UNITS = [
-    ['sqft', 'Square Feet (Sq.ft)'],
-    ['rft', 'Running Feet (Rft)'],
-    ['feet', 'Feet'],
-    ['inches', 'Inches'],
-    ['pieces', 'Per Unit / Piece']
-  ];
+  var ROLE_PRODUCT_GUIDES = {
+    partner: {
+      heading: 'List Your Service Work Product',
+      hint: 'Partner can list specific small task works in your category (e.g., Lock fitting, Hinges change, Handle lock install, Switchboard repair).',
+      placeholder: 'e.g., Door Handle & Lock Fitting, Hydraulic Hinges Change'
+    },
+    architect: {
+      heading: 'List Full Contract Design / Work',
+      hint: 'Architect can list full contract packages (e.g., Modular Kitchen Contract, Complete Plumbing Contract, Full Interior Painting).',
+      placeholder: 'e.g., Full Modular Kitchen Contract, Complete Home Painting'
+    },
+    supplier: {
+      heading: 'List Store Material Product',
+      hint: 'Supplier can sell category items & fittings (e.g., Brass Door Lock, Soft-Close Hinges, Screw Fittings Pack, Plywood Sheet).',
+      placeholder: 'e.g., Brass Mortise Lock Set, Hydraulic Hinges Pair, Screw Box'
+    }
+  };
 
-  var PLAN_AMOUNTS = { partner: 109, supplier: 219, architect: 310 };
+  var PLAN_FEES = { partner: 109, supplier: 219, architect: 310 };
+  var SAMPLE_LIMIT_TOTAL = 6;
+  var SAMPLE_LIMIT_IMG = 3;
+  var SAMPLE_LIMIT_VID = 3;
+  var PRODUCT_LIMIT_TOTAL = 4;
 
-  // ---- session ----
+  // ---- Auth & Onboarding Payment Guard ----
   var session = null;
   try { session = JSON.parse(sessionStorage.getItem('ig_session')); } catch (e) { session = null; }
   if (!session || !session.accessToken || !session.uuid) {
     location.replace('partner-program.html#login');
     return;
   }
+  if (session.payment_status !== 'paid') {
+    location.replace('partner-program.html#onboarding-pay');
+    return;
+  }
 
   var role = session.role || 'partner';
   var isLocalTest = String(session.uuid).indexOf('test_') === 0;
   var state = {
-    user: null,
-    listings: [],
-    quota: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 4, maxImages: 2, maxVideos: 2 },
-    isOnline: true,
-    activePage: 'overview'
+    user: session.profile || {},
+    products: [],
+    samples: [],
+    orders: [],
+    orderFilter: 'pending',
+    quota: {
+      samples: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMIT_TOTAL, maxImages: SAMPLE_LIMIT_IMG, maxVideos: SAMPLE_LIMIT_VID },
+      products: { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL }
+    },
+    isOnline: session.is_online !== false,
+    activeTab: 'home'
   };
 
   function esc(s) {
@@ -63,18 +73,18 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
   function showToast(msg, isError) {
-    var existing = $('ig-dash-toast');
-    if (existing) existing.remove();
+    var old = $('ig-app-toast');
+    if (old) old.remove();
     var el = document.createElement('div');
-    el.id = 'ig-dash-toast';
+    el.id = 'ig-app-toast';
     el.setAttribute('role', 'status');
-    el.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);max-width:340px;color:#fff;background:' + (isError ? '#dc2626' : '#0b1f3a') + ';';
+    el.style.cssText = 'position:fixed;bottom:78px;left:50%;transform:translateX(-50%);z-index:9999;padding:11px 18px;border-radius:10px;font-size:0.86rem;font-weight:700;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.22);max-width:90%;background:' + (isError ? '#dc2626' : '#0b1f3a') + ';';
     el.textContent = msg;
     document.body.appendChild(el);
-    setTimeout(function () { if (el.parentNode) el.remove(); }, 3800);
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 3600);
   }
-  function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || ICONS.home) + '</svg>'; }
 
   function api(path, options) {
     if (isLocalTest) return Promise.resolve({ success: true, data: session.profile || null });
@@ -91,156 +101,6 @@
         return d;
       });
     });
-  }
-
-  // ---- Navigation ----
-  var NAV = {
-    partner: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'upload', label: 'Private Sample Upload', icon: 'upload' },
-      { id: 'orders', label: 'Completed & Assigned Orders', icon: 'orders' },
-      { id: 'earnings', label: 'Billing & Plan', icon: 'earnings' },
-      { id: 'profile', label: 'Profile', icon: 'profile' }
-    ],
-    supplier: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'upload', label: 'Product & Sample Engine', icon: 'products' },
-      { id: 'orders', label: 'Completed Orders', icon: 'orders' },
-      { id: 'earnings', label: 'Billing & PayU', icon: 'earnings' },
-      { id: 'profile', label: 'Profile', icon: 'profile' }
-    ],
-    architect: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'upload', label: 'Create Design Post', icon: 'products' },
-      { id: 'orders', label: 'Completed Projects', icon: 'orders' },
-      { id: 'earnings', label: 'Billing & PayU', icon: 'earnings' },
-      { id: 'profile', label: 'Profile', icon: 'profile' }
-    ]
-  };
-
-  function setActiveNav(id) {
-    Array.prototype.forEach.call($('db-nav').querySelectorAll('a'), function (a) {
-      a.classList.toggle('active', a.getAttribute('data-page') === id);
-    });
-  }
-
-  function renderNav() {
-    var items = NAV[role] || NAV.partner;
-    var nav = $('db-nav');
-    nav.innerHTML = items.map(function (it) {
-      return '<a data-page="' + it.id + '">' + svg(it.icon) + '<span>' + it.label + '</span></a>';
-    }).join('');
-    nav.addEventListener('click', function (e) {
-      var link = e.target.closest('[data-page]');
-      if (!link) return;
-      var pageId = link.getAttribute('data-page');
-      $('db-side').classList.remove('open');
-      showPage(pageId);
-    });
-  }
-
-  // ---- Top Control Bar Updates ----
-  function updateTopBar() {
-    var u = state.user || session.profile || {};
-    var addrParts = [u.address, u.city, u.state, u.pincode].filter(Boolean);
-    $('tcb-address').textContent = addrParts.length ? addrParts.join(', ') : 'Address pending — complete profile';
-    $('tcb-igid').textContent = u.ig_id ? 'IG ID: ' + u.ig_id + (u.category_name ? ' · ' + u.category_name : '') : (u.category_name || (role.toUpperCase() + ' Account'));
-
-    var isPaid = u.payment_status === 'paid';
-    $('tcb-billing').textContent = isPaid ? 'Active · Monthly Cycle' : 'Trial / PayU Ready';
-    var nextDue = u.next_due_at || u.payment_due_date;
-    if (nextDue) {
-      var dt = new Date(nextDue);
-      $('tcb-next-bill').textContent = 'Next billing: ' + (!isNaN(dt) ? dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : nextDue);
-    } else {
-      var est = new Date(Date.now() + 30 * 86400000);
-      $('tcb-next-bill').textContent = 'Next billing: ' + est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + ' (30-day cycle)';
-    }
-
-    var q = state.quota;
-    if (role === 'supplier') {
-      $('tcb-quota-label').textContent = 'Daily Quota (2 Img + 2 Vid)';
-      $('tcb-quota-val').textContent = q.totalUsed + ' / ' + q.maxTotal + ' today (' + q.imagesUsed + '/2 Img · ' + q.videosUsed + '/2 Vid)';
-      var pct = Math.min(100, Math.round((q.totalUsed / q.maxTotal) * 100));
-      var fill = $('tcb-quota-fill');
-      fill.style.width = pct + '%';
-      fill.classList.toggle('full', q.totalUsed >= q.maxTotal);
-    } else if (role === 'architect') {
-      $('tcb-quota-label').textContent = 'Published Design Posts';
-      $('tcb-quota-val').textContent = state.listings.length + ' active posts (with material)';
-      $('tcb-quota-fill').style.width = Math.min(100, state.listings.length * 10) + '%';
-    } else {
-      $('tcb-quota-label').textContent = 'Private Skill Samples';
-      $('tcb-quota-val').textContent = state.listings.length + ' admin evaluation sample(s)';
-      $('tcb-quota-fill').style.width = Math.min(100, state.listings.length * 20) + '%';
-    }
-
-    var sw = $('tcb-online-switch');
-    sw.setAttribute('aria-checked', state.isOnline ? 'true' : 'false');
-    sw.classList.toggle('on', state.isOnline);
-    var lbl = $('tcb-online-label');
-    lbl.textContent = state.isOnline ? 'Online' : 'Offline';
-    lbl.className = 'tcb-status-txt ' + (state.isOnline ? 'on' : 'off');
-    $('tcb-online-hint').textContent = state.isOnline ? 'Visible in admin assignment filters' : 'Hidden from admin assignment filters';
-  }
-
-  $('tcb-online-switch').addEventListener('click', function () {
-    var next = !state.isOnline;
-    state.isOnline = next;
-    updateTopBar();
-    api('/users/' + session.uuid + '/status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_online: next })
-    }).catch(function (err) {
-      state.isOnline = !next;
-      updateTopBar();
-      showToast(err.message || 'Status update failed', true);
-    });
-  });
-
-  $('tcb-upload-btn').addEventListener('click', function () { showPage('upload'); });
-  $('tcb-completed-btn').addEventListener('click', function () { showPage('orders'); });
-  $('tcb-payu-btn').addEventListener('click', triggerPayU);
-
-  function triggerPayU() {
-    if (!window.InteragoodPayU) return;
-    var u = state.user || session.profile || {};
-    var amt = PLAN_AMOUNTS[role] || 199;
-    window.InteragoodPayU.initiatePayment({
-      amount: amt,
-      productInfo: 'Interagood ' + role.charAt(0).toUpperCase() + role.slice(1) + ' Monthly Plan',
-      firstName: u.full_name || session.username || 'Member',
-      email: u.email || 'billing@interagood.in',
-      phone: u.phone || '9999999999',
-      onSuccess: function (res) {
-        api('/payments/payu/sandbox-activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ txnid: res.txnid })
-        }).then(function (d) {
-          if (state.user) {
-            state.user.payment_status = d.payment_status || 'paid';
-            state.user.next_due_at = d.next_due_at;
-          }
-          state.isOnline = true;
-          updateTopBar();
-          if (state.activePage === 'earnings' || state.activePage === 'overview') showPage(state.activePage);
-        }).catch(function () {
-          state.isOnline = true;
-          updateTopBar();
-        });
-      }
-    });
-  }
-
-  // ---- Calculator & Media Upload Helper ----
-  function calcTotals(rate, qty) {
-    var r = Math.max(0, Number(rate) || 0);
-    var q = Math.max(0, Number(qty) || 0);
-    var subtotal = Math.round(r * q * 100) / 100;
-    var gst = Math.round(subtotal * 0.18 * 100) / 100;
-    return { subtotal: subtotal, gst: gst, total: Math.round((subtotal + gst) * 100) / 100 };
   }
 
   function uploadFile(kind, file) {
@@ -260,458 +120,615 @@
     });
   }
 
-  function loadLocalFallback() {
-    try { return JSON.parse(localStorage.getItem('ig_local_listings_' + session.uuid)) || []; } catch (e) { return []; }
-  }
-  function saveLocalFallback(list) {
-    try { localStorage.setItem('ig_local_listings_' + session.uuid, JSON.stringify(list)); } catch (e) {}
+  function localKey(name) { return 'ig_app_' + name + '_' + session.uuid; }
+  function loadLocal(name) { try { return JSON.parse(localStorage.getItem(localKey(name))) || []; } catch (e) { return []; } }
+  function saveLocal(name, arr) { try { localStorage.setItem(localKey(name), JSON.stringify(arr)); } catch (e) {} }
+
+  function updateTopBar() {
+    var u = state.user || {};
+    var addrParts = [u.address, u.city, u.state, u.pincode].filter(Boolean);
+    $('top-address').textContent = addrParts.length ? addrParts.join(', ') : 'Address pending';
+    $('top-role-label').textContent = (role.charAt(0).toUpperCase() + role.slice(1)) + (u.category_name ? ' · ' + u.category_name : '');
+
+    var sw = $('top-online-switch');
+    sw.setAttribute('aria-checked', state.isOnline ? 'true' : 'false');
+    var lbl = $('top-online-label');
+    lbl.textContent = state.isOnline ? 'Online' : 'Offline';
+    lbl.className = 'app-online-txt ' + (state.isOnline ? 'on' : 'off');
   }
 
-  function fetchListings() {
+  function setOnlineState(next) {
+    var prev = state.isOnline;
+    state.isOnline = next;
+    session.is_online = next;
+    try { sessionStorage.setItem('ig_session', JSON.stringify(session)); } catch (e) {}
+    updateTopBar();
+    render();
+    if (isLocalTest) return Promise.resolve();
+    return api('/users/' + session.uuid + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_online: next })
+    }).catch(function (err) {
+      state.isOnline = prev;
+      session.is_online = prev;
+      updateTopBar();
+      render();
+      showToast(err.message || 'Could not update online status', true);
+    });
+  }
+
+  $('top-online-switch').addEventListener('click', function () {
+    setOnlineState(!state.isOnline);
+  });
+
+  function triggerPayAndLive() {
+    var u = state.user || {};
+    var amt = PLAN_FEES[role] || 109;
+    if (!window.InteragoodPayU) {
+      setOnlineState(true);
+      return;
+    }
+    window.InteragoodPayU.initiatePayment({
+      amount: amt,
+      productInfo: 'Interagood ' + role.charAt(0).toUpperCase() + role.slice(1) + ' Active Cycle',
+      firstName: u.full_name || session.username || 'Member',
+      email: u.email || 'billing@interagood.in',
+      phone: u.phone || session.phone || '9999999999',
+      onSuccess: function (res) {
+        var req = isLocalTest
+          ? Promise.resolve({ payment_status: 'paid', next_due_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+          : api('/payments/payu/sandbox-activate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ txnid: res.txnid })
+            });
+        req.then(function (d) {
+          state.user.payment_status = d.payment_status || 'paid';
+          state.user.next_due_at = d.next_due_at || state.user.next_due_at;
+          session.payment_status = 'paid';
+          sessionStorage.setItem('ig_session', JSON.stringify(session));
+          setOnlineState(true);
+          showToast('Profile Active & Live!', false);
+        }).catch(function () {
+          setOnlineState(true);
+        });
+      }
+    });
+  }
+
+  function recomputeLocalQuotas() {
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var sToday = state.samples.filter(function (s) { return !s.created_at || String(s.created_at).slice(0, 10) === todayStr; });
+    var pToday = state.products.filter(function (p) { return !p.created_at || String(p.created_at).slice(0, 10) === todayStr; });
+    state.quota = {
+      samples: {
+        totalUsed: sToday.length,
+        imagesUsed: sToday.filter(function (x) { return x.media_type !== 'video'; }).length,
+        videosUsed: sToday.filter(function (x) { return x.media_type === 'video'; }).length,
+        maxTotal: SAMPLE_LIMIT_TOTAL,
+        maxImages: SAMPLE_LIMIT_IMG,
+        maxVideos: SAMPLE_LIMIT_VID
+      },
+      products: {
+        totalUsed: pToday.length,
+        maxTotal: PRODUCT_LIMIT_TOTAL
+      }
+    };
+  }
+
+  function fetchAllData() {
     if (isLocalTest) {
-      state.listings = loadLocalFallback();
+      state.products = loadLocal('products');
+      state.samples = loadLocal('samples');
+      state.orders = loadLocal('orders');
+      recomputeLocalQuotas();
       updateTopBar();
       return Promise.resolve();
     }
-    return api('/users/' + session.uuid + '/listings').then(function (d) {
-      state.listings = d.data || [];
-      if (d.quota) state.quota = d.quota;
-      updateTopBar();
-    }).catch(function () {
-      state.listings = loadLocalFallback();
-      updateTopBar();
-    });
-  }
-
-  // ---- Pages ----
-  var pages = {};
-
-  pages.overview = function () {
-    $('db-page-title').textContent = (role.charAt(0).toUpperCase() + role.slice(1)) + ' Overview';
-    $('db-page-sub').textContent = 'Manage your daily uploads, availability status, and client engagements.';
-
-    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:22px;">';
-    if (role === 'supplier') {
-      html += statCard('#fff3e0', '#e65100', 'products', String(state.listings.length), 'Listed Products & Samples');
-      html += statCard('#e8f5e9', '#1f9d55', 'upload', state.quota.totalUsed + ' / 4', 'Daily Quota Used (2 Img · 2 Vid)');
-      html += statCard('#e3f2fd', '#1565c0', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Shop Availability');
-    } else if (role === 'architect') {
-      html += statCard('#fff3e0', '#e65100', 'products', String(state.listings.length), 'Design Posts (with material)');
-      html += statCard('#e8f5e9', '#1f9d55', 'profile', 'Verified', 'Architect Business Card');
-      html += statCard('#e3f2fd', '#1565c0', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Client Consultation Status');
-    } else {
-      html += statCard('#fff3e0', '#e65100', 'upload', String(state.listings.length), 'Private Samples for Admin Review');
-      html += statCard('#e8f5e9', '#1f9d55', 'orders', state.isOnline ? 'ONLINE' : 'OFFLINE', 'Admin Assignment Pool');
-      html += statCard('#e3f2fd', '#1565c0', 'earnings', '₹' + PLAN_AMOUNTS.partner + '/mo', 'Partner Cycle Plan');
-    }
-    html += '</div>';
-
-    if (role === 'partner') {
-      html += '<div class="private-notice"><strong>Private Sample Evaluation Mode:</strong> Partner sample uploads are strictly private and visible ONLY to Interagood Admins for skill verification &amp; project assignment.</div>';
-    }
-
-    html += '<div class="db-card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;">' +
-      '<div><h3 style="margin:0 0 4px;color:#0b1f3a;">' +
-      (role === 'supplier' ? 'Add Products or Daily Work Samples' : role === 'architect' ? 'Publish New Architecture Post & Rate Calculator' : 'Upload Private Work Sample for Admin Skill Review') +
-      '</h3><p style="margin:0;color:#64748b;font-size:0.88rem;">' +
-      (role === 'supplier' ? 'Supports independent hardware/material products (Locks, Hinges, Paint) and daily rate calculations.' : role === 'architect' ? 'Includes category, sub-category, measurement calculator, and mandatory green "with material" tag.' : 'Showcase past interior work securely to receive matching site assignments.') +
-      '</p></div>' +
-      '<button type="button" class="tcb-btn primary" id="ov-go-upload">' +
-      (role === 'supplier' ? '+ Post Product / Sample' : role === 'architect' ? '+ Create Architect Post' : '+ Upload Private Sample') +
-      '</button></div>';
-
-    html += renderListingsSection();
-    $('db-content').innerHTML = html;
-    $('ov-go-upload').addEventListener('click', function () { showPage('upload'); });
-    wireListingDeletes();
-  };
-
-  function statCard(bg, color, icon, value, label) {
-    return '<div class="db-card db-stat"><div class="db-stat-ic" style="background:' + bg + ';color:' + color + '">' + svg(icon) + '</div><div><h3>' + esc(value) + '</h3><span>' + esc(label) + '</span></div></div>';
-  }
-
-  pages.upload = function () {
-    if (role === 'supplier') renderSupplierEngine();
-    else if (role === 'architect') renderArchitectEngine();
-    else renderPartnerPrivateUploader();
-  };
-
-  function renderSupplierEngine() {
-    $('db-page-title').textContent = 'Supplier Product & Sample Listing Engine';
-    $('db-page-sub').textContent = 'Daily cap: strictly max 4 samples per day (2 Images + 2 Videos). Independent items appear as clickable product cards.';
-
-    var q = state.quota;
-    var capReached = q.totalUsed >= 4;
-    var catOpts = ['Hardware (Locks, Hinges)', 'Paint & Chemicals', 'Plywood & Timber', 'Laminates & Panels', 'Tiles & Stone', 'Electrical & Lighting', 'Plumbing & Bath', 'Glass & Mirrors']
-      .map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
-    var unitOpts = SUPPLIER_UNITS.map(function (u) { return '<option value="' + u[0] + '">' + u[1] + '</option>'; }).join('');
-
-    var html = '<div class="calc-panel">' +
-      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;">' +
-      '<strong style="color:#0b1f3a;font-size:1.05rem;">Post Product or Sample</strong>' +
-      '<span style="font-size:0.84rem;font-weight:700;color:' + (capReached ? '#dc2626' : '#1f9d55') + ';font-variant-numeric:tabular-nums;">' +
-      'Today: ' + q.totalUsed + '/4 total · ' + q.imagesUsed + '/2 images · ' + q.videosUsed + '/2 videos</span></div>' +
-      '<form id="sup-post-form">' +
-      '<div class="calc-grid">' +
-      '<div class="calc-field"><label for="sp-title">Sample / Product Name</label><input id="sp-title" type="text" required placeholder="e.g., Brass Door Lock Set, Marine Ply 18mm"></div>' +
-      '<div class="calc-field"><label for="sp-cat">Product Category</label><select id="sp-cat">' + catOpts + '</select></div>' +
-      '<div class="calc-field"><label for="sp-unit">Measurement Type</label><select id="sp-unit">' + unitOpts + '</select></div>' +
-      '<div class="calc-field"><label for="sp-rate">Rate per Unit (₹ / sq.ft or piece)</label><input id="sp-rate" type="number" min="1" step="0.01" value="150" required></div>' +
-      '<div class="calc-field"><label for="sp-qty">Default Quantity / Pieces</label><input id="sp-qty" type="number" min="1" step="0.5" value="1" required></div>' +
-      '<div class="calc-field"><label for="sp-media">Upload Image or Video (Max 2 Img / 2 Vid daily)</label><input id="sp-media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"></div>' +
-      '</div>' +
-      '<div class="calc-field" style="margin-top:12px;"><label for="sp-desc">Product Description &amp; Specs</label><textarea id="sp-desc" placeholder="Brand, finish, thickness, pieces per box, delivery details..."></textarea></div>' +
-      '<div class="calc-preview">' +
-      '<div><div class="tcb-label">Auto-Calculated Total (incl. 18% GST)</div><div class="calc-total" id="sp-calc-total">₹177</div><div class="tcb-sub" id="sp-calc-sub">Base: ₹150 + GST (18%): ₹27</div></div>' +
-      '<button type="submit" class="tcb-btn primary" id="sp-submit" ' + (capReached ? 'disabled' : '') + '>' + (capReached ? 'Daily Limit (4/4) Reached' : 'Post Listing') + '</button>' +
-      '</div>' +
-      '<p class="hint" id="sp-msg" style="margin-top:10px;"></p>' +
-      '</form></div>' + renderListingsSection();
-
-    $('db-content').innerHTML = html;
-
-    function recalc() {
-      var res = calcTotals($('sp-rate').value, $('sp-qty').value);
-      $('sp-calc-total').textContent = '₹' + res.total.toLocaleString('en-IN');
-      $('sp-calc-sub').textContent = 'Base: ₹' + res.subtotal.toLocaleString('en-IN') + ' + GST (18%): ₹' + res.gst.toLocaleString('en-IN');
-    }
-    $('sp-rate').addEventListener('input', recalc);
-    $('sp-qty').addEventListener('input', recalc);
-    recalc();
-
-    $('sup-post-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var file = $('sp-media').files[0];
-      var isVid = file && /^video\//.test(file.type);
-      var mediaType = isVid ? 'video' : 'image';
-      var msg = $('sp-msg'), btn = $('sp-submit');
-
-      if (q.totalUsed >= 4) { msg.textContent = 'Daily limit of 4 uploads reached.'; msg.style.color = '#dc2626'; return; }
-      if (!isVid && q.imagesUsed >= 2) { msg.textContent = 'Max 2 images per day reached. Try uploading a video (max 2) tomorrow or use video slot.'; msg.style.color = '#dc2626'; return; }
-      if (isVid && q.videosUsed >= 2) { msg.textContent = 'Max 2 videos per day reached.'; msg.style.color = '#dc2626'; return; }
-
-      btn.disabled = true; btn.textContent = 'Posting...'; msg.textContent = '';
-      var upPromise = file ? uploadFile('supplier_product', file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
-
-      upPromise.then(function (imgUrl) {
-        var payload = {
-          title: $('sp-title').value.trim(),
-          category: $('sp-cat').value,
-          description: $('sp-desc').value.trim(),
-          unit: $('sp-unit').value,
-          rate_per_unit: Number($('sp-rate').value) || 0,
-          quantity: Number($('sp-qty').value) || 1,
-          image_url: imgUrl,
-          media_type: mediaType,
-          with_material: true,
-          is_private: false
-        };
-        if (isLocalTest) {
-          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString(), total_amount: calcTotals(payload.rate_per_unit, payload.quantity).subtotal }, payload);
-          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
-          state.listings = list;
-          state.quota.totalUsed += 1;
-          if (mediaType === 'video') state.quota.videosUsed += 1; else state.quota.imagesUsed += 1;
-          return { success: true };
+    return Promise.all([
+      api('/users/' + session.uuid).then(function (d) {
+        if (d && d.data && !Array.isArray(d.data)) {
+          state.user = d.data;
+          state.samples = d.data.samples || [];
+          state.isOnline = d.data.is_online !== false;
+          if (d.data.payment_status && d.data.payment_status !== 'paid') {
+            session.payment_status = d.data.payment_status;
+            sessionStorage.setItem('ig_session', JSON.stringify(session));
+            location.replace('partner-program.html#onboarding-pay');
+          }
         }
-        return api('/users/' + session.uuid + '/listings', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        }).then(function (d) {
-          if (d.quota) state.quota = d.quota;
-          return fetchListings();
-        });
-      }).then(function () {
-        updateTopBar();
-        renderSupplierEngine();
-      }).catch(function (err) {
-        btn.disabled = false; btn.textContent = 'Post Listing';
-        msg.textContent = err.message; msg.style.color = '#dc2626';
-      });
+      }).catch(function () {}),
+      api('/users/' + session.uuid + '/listings').then(function (d) {
+        state.products = d.data || [];
+        if (d.quota && d.quota.samples) {
+          state.quota = d.quota;
+        }
+      }).catch(function () {}),
+      api('/users/' + session.uuid + '/orders').then(function (d) {
+        state.orders = d.data || [];
+      }).catch(function () {})
+    ]).then(function () {
+      if (!state.quota.products) recomputeLocalQuotas();
+      updateTopBar();
     });
-    wireListingDeletes();
   }
 
-  function renderArchitectEngine() {
-    $('db-page-title').textContent = 'Architect Design Post & Calculation Engine';
-    $('db-page-sub').textContent = 'Create client-facing interior posts with dynamic measurements, verified business card popup, and mandatory "with material" label.';
+  // ---- Bottom Sheet Helpers ----
+  function openSheet(title, html) {
+    $('sheet-title').textContent = title;
+    $('sheet-body').innerHTML = html;
+    $('app-sheet').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSheet() {
+    $('app-sheet').hidden = true;
+    $('sheet-body').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+  $('sheet-close').addEventListener('click', closeSheet);
+  $('app-sheet').addEventListener('click', function (e) { if (e.target === $('app-sheet')) closeSheet(); });
 
-    var catOpts = Object.keys(SUB_CATEGORIES).map(function (c) {
-      return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
-    }).join('');
-    var unitOpts = ARCHITECT_UNITS.map(function (u) {
-      return '<option value="' + u[0] + '">' + u[1] + '</option>';
-    }).join('');
-
-    var html = '<div class="calc-panel">' +
-      '<form id="arch-post-form">' +
-      '<div class="calc-grid">' +
-      '<div class="calc-field"><label for="ar-title">Design / Work Title</label><input id="ar-title" type="text" required placeholder="e.g., Modern Veneer TV Unit & Cove Wall"></div>' +
-      '<div class="calc-field"><label for="ar-cat">Category</label><select id="ar-cat">' + catOpts + '</select></div>' +
-      '<div class="calc-field"><label for="ar-sub">Optional Sub-category</label><select id="ar-sub"></select></div>' +
-      '<div class="calc-field"><label for="ar-unit">Measurement Type</label><select id="ar-unit">' + unitOpts + '</select></div>' +
-      '<div class="calc-field"><label for="ar-rate">Rate per Unit (₹)</label><input id="ar-rate" type="number" min="1" step="0.01" value="1250" required></div>' +
-      '<div class="calc-field"><label for="ar-qty">Sample Estimate Dimension / Qty</label><input id="ar-qty" type="number" min="1" step="0.5" value="100" required></div>' +
-      '</div>' +
-      '<div class="calc-grid" style="margin-top:12px;">' +
-      '<div class="calc-field"><label for="ar-img">Design Image Upload</label><input id="ar-img" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
-      '<div class="calc-field"><label for="ar-desc">Work Scope &amp; Description</label><textarea id="ar-desc" placeholder="Describe laminate finish, plywood grade, hardware fittings, execution timeline..."></textarea></div>' +
-      '</div>' +
-      '<div class="calc-preview">' +
-      '<div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><span class="with-mat-label">with material</span><span class="tcb-label" style="margin:0;">Mandatory Tag Active</span></div>' +
-      '<div class="calc-total" id="ar-calc-total">₹1,47,500</div><div class="tcb-sub" id="ar-calc-sub">Base: ₹1,25,000 + GST (18%): ₹22,500</div></div>' +
-      '<button type="submit" class="tcb-btn primary" id="ar-submit">Publish Architect Post</button>' +
-      '</div>' +
-      '<p class="hint" id="ar-msg" style="margin-top:10px;"></p>' +
-      '</form></div>' + renderListingsSection();
-
-    $('db-content').innerHTML = html;
-
-    function syncSubs() {
-      var list = SUB_CATEGORIES[$('ar-cat').value] || [];
-      $('ar-sub').innerHTML = '<option value="">None (General)</option>' + list.map(function (s) {
-        return '<option value="' + esc(s) + '">' + esc(s) + '</option>';
-      }).join('');
+  function openListProductSheet() {
+    var pq = state.quota.products || { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL };
+    if (pq.totalUsed >= pq.maxTotal) {
+      showToast('Daily limit reached: max 4 products per day.', true);
+      return;
     }
-    $('ar-cat').addEventListener('change', syncSubs);
-    syncSubs();
+    var g = ROLE_PRODUCT_GUIDES[role] || ROLE_PRODUCT_GUIDES.partner;
+    var unitOpts = MEASUREMENTS.map(function (m) {
+      return '<option value="' + m.id + '">' + esc(m.label) + '</option>';
+    }).join('');
+    var u = state.user || {};
+    var defaultCat = u.category_name || (role === 'architect' ? 'Full Interior Contract' : role === 'supplier' ? 'Hardware & Materials' : 'Site Work');
 
-    function recalc() {
-      var res = calcTotals($('ar-rate').value, $('ar-qty').value);
-      $('ar-calc-total').textContent = '₹' + res.total.toLocaleString('en-IN');
-      $('ar-calc-sub').textContent = 'Base: ₹' + res.subtotal.toLocaleString('en-IN') + ' + GST (18%): ₹' + res.gst.toLocaleString('en-IN');
+    var html =
+      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(g.hint) + '</p>' +
+      '<form id="app-prod-form">' +
+      '<div class="f-group"><label for="lp-title">Product / Work Name</label><input id="lp-title" type="text" required placeholder="' + esc(g.placeholder) + '"></div>' +
+      '<div class="f-group"><label>1. Pick Product Image</label>' +
+      '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
+      '<div class="f-pair">' +
+      '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
+      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Price (per sq.ft)</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
+      '</div>' +
+      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
+      '<div class="f-group"><label for="lp-desc">Product Description (Free Write)</label><textarea id="lp-desc" placeholder="Describe specs, fittings, finish, or work scope..."></textarea></div>' +
+      '<div class="mat-toggle"><label for="lp-with-mat">with material</label><input id="lp-with-mat" type="checkbox" checked style="width:20px;height:20px;accent-color:#15803d;"></div>' +
+      '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
+      '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
+      '</form>';
+
+    openSheet(g.heading, html);
+
+    var unitEl = $('lp-unit'), rateLabel = $('lp-rate-label'), rateEl = $('lp-rate'), expEl = $('lp-expected');
+    function syncUnitLabel() {
+      var found = MEASUREMENTS.find(function (m) { return m.id === unitEl.value; }) || MEASUREMENTS[0];
+      rateLabel.textContent = 'Price (' + found.perText + ')';
     }
-    $('ar-rate').addEventListener('input', recalc);
-    $('ar-qty').addEventListener('input', recalc);
-    recalc();
+    unitEl.addEventListener('change', syncUnitLabel);
+    syncUnitLabel();
 
-    $('arch-post-form').addEventListener('submit', function (e) {
+    rateEl.addEventListener('input', function () {
+      if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
+    });
+    expEl.addEventListener('input', function () { expEl.setAttribute('data-touched', '1'); });
+
+    $('lp-img').addEventListener('change', function () {
+      var f = this.files[0];
+      if (!f) return;
+      $('lp-img-label').textContent = f.name;
+      $('lp-preview').src = URL.createObjectURL(f);
+      $('lp-preview').hidden = false;
+    });
+
+    $('app-prod-form').addEventListener('submit', function (e) {
       e.preventDefault();
-      var btn = $('ar-submit'), msg = $('ar-msg');
-      var file = $('ar-img').files[0];
-      btn.disabled = true; btn.textContent = 'Publishing...'; msg.textContent = '';
+      var btn = $('lp-submit'), msg = $('lp-msg');
+      var file = $('lp-img').files[0];
+      btn.disabled = true; btn.textContent = 'Posting product...'; msg.textContent = '';
 
-      var up = file ? uploadFile('architect_post', file) : Promise.resolve('https://interagood.in/assets/interior-hero.webp');
+      var up = file ? uploadFile('supplier_product', file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
       up.then(function (imgUrl) {
         var payload = {
-          title: $('ar-title').value.trim(),
-          category: $('ar-cat').value,
-          sub_category: $('ar-sub').value || null,
-          description: $('ar-desc').value.trim(),
-          unit: $('ar-unit').value,
-          rate_per_unit: Number($('ar-rate').value) || 0,
-          quantity: Number($('ar-qty').value) || 1,
-          with_material: true,
+          title: $('lp-title').value.trim(),
+          category: defaultCat,
+          description: $('lp-desc').value.trim(),
+          unit: unitEl.value,
+          rate_per_unit: Number(rateEl.value) || 0,
+          quantity: 1,
+          expected_amount: Number(expEl.value) || Number(rateEl.value) || 0,
+          with_material: !!$('lp-with-mat').checked,
           image_url: imgUrl,
           media_type: 'image',
           is_private: false
         };
         if (isLocalTest) {
-          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString(), total_amount: calcTotals(payload.rate_per_unit, payload.quantity).subtotal }, payload);
-          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
-          state.listings = list;
-          return { success: true };
-        }
-        return api('/users/' + session.uuid + '/listings', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        }).then(fetchListings);
-      }).then(function () {
-        updateTopBar();
-        renderArchitectEngine();
-      }).catch(function (err) {
-        btn.disabled = false; btn.textContent = 'Publish Architect Post';
-        msg.textContent = err.message; msg.style.color = '#dc2626';
-      });
-    });
-    wireListingDeletes();
-  }
-
-  function renderPartnerPrivateUploader() {
-    $('db-page-title').textContent = 'Private Sample Upload (Admin Skill Evaluation)';
-    $('db-page-sub').textContent = 'Upload photos of your real site work. Admins evaluate these privately to assign incoming projects.';
-
-    var catOpts = (window.CATALOG && window.CATALOG.partner || []).map(function (c) {
-      return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
-    }).join('');
-
-    var html = '<div class="private-notice">' +
-      '<strong>Privacy Guarantee:</strong> Partner sample uploads are stored in a private bucket and <strong>never shown to clients</strong>. Only Interagood Admins review them to verify skill level and assign projects.' +
-      '</div>' +
-      '<div class="calc-panel">' +
-      '<form id="partner-sample-form">' +
-      '<div class="calc-grid">' +
-      '<div class="calc-field"><label for="pt-title">Sample Work Title</label><input id="pt-title" type="text" required placeholder="e.g., Wardrobe Laminate Finishing, POP Cove Work"></div>' +
-      '<div class="calc-field"><label for="pt-cat">Work Category</label><select id="pt-cat">' + catOpts + '</select></div>' +
-      '<div class="calc-field"><label for="pt-img">Work Photo (JPG, PNG, WebP)</label><input id="pt-img" type="file" accept="image/jpeg,image/png,image/webp" required></div>' +
-      '</div>' +
-      '<div class="calc-field" style="margin-top:12px;"><label for="pt-desc">Site Work Details</label><textarea id="pt-desc" placeholder="Brief note about tools used, finish quality, and completion time..."></textarea></div>' +
-      '<div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
-      '<span class="tcb-sub">Marked automatically as Private · Admin Evaluation Only</span>' +
-      '<button type="submit" class="tcb-btn primary" id="pt-submit">Submit Private Sample</button>' +
-      '</div>' +
-      '<p class="hint" id="pt-msg" style="margin-top:10px;"></p>' +
-      '</form></div>' + renderListingsSection();
-
-    $('db-content').innerHTML = html;
-
-    $('partner-sample-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var file = $('pt-img').files[0];
-      if (!file) { $('pt-msg').textContent = 'Please select a sample photo.'; return; }
-      var btn = $('pt-submit'), msg = $('pt-msg');
-      btn.disabled = true; btn.textContent = 'Uploading securely...'; msg.textContent = '';
-
-      uploadFile('partner_sample', file).then(function (url) {
-        var payload = {
-          title: $('pt-title').value.trim(),
-          category: $('pt-cat').value,
-          description: $('pt-desc').value.trim(),
-          unit: 'pieces',
-          rate_per_unit: 0,
-          quantity: 1,
-          image_url: url,
-          media_type: 'image',
-          is_private: true
-        };
-        if (isLocalTest) {
-          var item = Object.assign({ id: 'loc_' + Date.now(), created_at: new Date().toISOString() }, payload);
-          var list = loadLocalFallback(); list.unshift(item); saveLocalFallback(list);
-          state.listings = list;
-          return { success: true };
-        }
-        return api('/users/' + session.uuid + '/listings', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        }).then(fetchListings);
-      }).then(function () {
-        updateTopBar();
-        renderPartnerPrivateUploader();
-      }).catch(function (err) {
-        btn.disabled = false; btn.textContent = 'Submit Private Sample';
-        msg.textContent = err.message; msg.style.color = '#dc2626';
-      });
-    });
-    wireListingDeletes();
-  }
-
-  function renderListingsSection() {
-    var title = role === 'partner' ? 'Your Private Evaluation Samples' : role === 'architect' ? 'Your Published Architect Posts' : 'Your Posted Products & Samples';
-    var html = '<h3 style="margin:24px 0 12px;color:#0b1f3a;">' + title + '</h3>';
-    if (!state.listings.length) {
-      return html + '<div class="db-card"><div class="db-empty">Nothing uploaded yet. Use the form or click "Upload Sample" above.</div></div>';
-    }
-    html += '<div class="listing-grid">';
-    state.listings.forEach(function (it) {
-      var mediaHtml = it.media_type === 'video'
-        ? '<video src="' + esc(it.image_url) + '" controls preload="metadata"></video>'
-        : '<img src="' + esc(it.image_url || 'assets/logo-square.png') + '" alt="' + esc(it.title) + '" onerror="this.src=\'assets/logo-square.png\'">';
-      html += '<article class="listing-card">' +
-        '<div class="listing-media">' + mediaHtml + '</div>' +
-        '<div class="listing-body">' +
-        (role === 'architect' ? '<span class="with-mat-label" style="align-self:flex-start;">with material</span>' : '') +
-        (role === 'partner' ? '<span style="font-size:0.72rem;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:6px;align-self:flex-start;">Private · Admin Only</span>' : '') +
-        '<h4>' + esc(it.title) + '</h4>' +
-        '<div class="listing-meta">' + esc(it.category) + (it.sub_category ? ' → ' + esc(it.sub_category) : '') + '</div>' +
-        (it.description ? '<div class="listing-meta">' + esc(it.description) + '</div>' : '') +
-        (it.rate_per_unit > 0 ? '<div class="listing-price">₹' + Number(it.rate_per_unit).toLocaleString('en-IN') + ' / ' + esc(it.unit || 'sqft') + '</div>' : '') +
-        '<button type="button" class="listing-del" data-del-id="' + esc(it.id) + '">Delete</button>' +
-        '</div></article>';
-    });
-    html += '</div>';
-    return html;
-  }
-
-  function wireListingDeletes() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-del-id]'), function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.getAttribute('data-del-id');
-        btn.disabled = true;
-        if (isLocalTest) {
-          var next = loadLocalFallback().filter(function (x) { return x.id !== id; });
-          saveLocalFallback(next); state.listings = next; updateTopBar(); showPage(state.activePage);
+          var item = Object.assign({ id: 'prod_' + Date.now(), created_at: new Date().toISOString() }, payload);
+          state.products.unshift(item);
+          saveLocal('products', state.products);
+          recomputeLocalQuotas();
           return;
         }
-        api('/users/' + session.uuid + '/listings/' + id, { method: 'DELETE' }).then(function () {
-          return fetchListings();
-        }).then(function () { showPage(state.activePage); }).catch(function (err) { showToast(err.message || 'Delete failed', true); btn.disabled = false; });
+        return api('/users/' + session.uuid + '/listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(fetchAllData);
+      }).then(function () {
+        closeSheet();
+        render();
+        showToast('Product posted to Product Table!', false);
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Post Product';
+        msg.textContent = err.message; msg.style.color = '#dc2626';
       });
     });
   }
 
-  pages.orders = function () {
-    $('db-page-title').textContent = 'Completed & Assigned Orders';
-    $('db-page-sub').textContent = 'Orders assigned to you by Interagood Admin appear here once you toggle Online.';
-    $('db-content').innerHTML = '<div class="db-card"><div class="db-empty">' +
-      'No completed orders yet. Keep your <strong>Online</strong> toggle switched on in the top control bar so Admins can assign nearby projects to you.' +
-      '</div></div>';
-  };
+  function openUploadSampleSheet() {
+    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 6, maxImages: 3, maxVideos: 3 };
+    if (sq.totalUsed >= sq.maxTotal) {
+      showToast('Daily sample limit reached: max 6 samples (3 images + 3 videos) today.', true);
+      return;
+    }
 
-  pages.earnings = function () {
-    var u = state.user || {};
-    var amt = PLAN_AMOUNTS[role] || 199;
-    $('db-page-title').textContent = 'Billing & PayU Payment Cycle';
-    $('db-page-sub').textContent = 'Modular PayU payment gateway hooks are ready for sandbox testing and live key activation.';
-    $('db-content').innerHTML = '<div class="db-card" style="max-width:540px;">' +
-      '<h3 style="margin:0 0 8px;color:#0b1f3a;">' + role.charAt(0).toUpperCase() + role.slice(1) + ' Monthly Membership</h3>' +
-      '<p style="color:#64748b;margin:0 0 16px;">Status: <strong>' + esc(u.payment_status === 'paid' ? 'Paid & Active' : 'Pending Activation (Sandbox Ready)') + '</strong> · Plan: <strong>₹' + amt + ' / month</strong></p>' +
-      '<button type="button" class="tcb-btn green" id="earn-payu">Pay ₹' + amt + ' via PayU</button>' +
-      '</div>';
-    $('earn-payu').addEventListener('click', triggerPayU);
-  };
+    var html =
+      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;">Daily Sample Limit: <strong>' + sq.totalUsed + '/6</strong> used · Images <strong>' + sq.imagesUsed + '/3</strong> · Videos <strong>' + sq.videosUsed + '/3</strong></p>' +
+      '<form id="app-sample-form">' +
+      '<div class="f-group"><label>Pick Sample Image or Video</label>' +
+      '<label class="pick-box" for="us-media"><span id="us-media-label">Tap to pick Image (JPG/PNG/WebP) or Video (MP4/MOV)</span><input id="us-media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" required hidden><img id="us-img-prev" alt="" hidden><video id="us-vid-prev" controls hidden></video></label></div>' +
+      '<div class="f-group"><label for="us-name">Sample Name (Free Write)</label><input id="us-name" type="text" required maxlength="120" placeholder="Write your sample work name..."></div>' +
+      '<div class="f-group"><label for="us-desc">Short Description</label><textarea id="us-desc" maxlength="300" placeholder="Short description of this sample..."></textarea></div>' +
+      '<p class="hint" id="us-msg" style="margin:0 0 8px;"></p>' +
+      '<button type="submit" class="app-cta-btn secondary" style="width:100%;background:#0b1f3a;color:#fff;" id="us-submit">Upload Sample</button>' +
+      '</form>';
 
-  pages.profile = function () {
-    $('db-page-title').textContent = 'Profile';
-    $('db-page-sub').textContent = 'Registered business and Aadhaar KYC details.';
-    var u = state.user || session.profile || {};
-    var html = '<div class="db-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">' +
-      '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a;">Account</h3>' +
-      '<p><strong>Username:</strong> ' + esc(u.username || session.username || '-') + '</p>' +
-      '<p><strong>Role:</strong> ' + esc(role.charAt(0).toUpperCase() + role.slice(1)) + '</p>' +
-      (u.ig_id ? '<p><strong>IG ID:</strong> ' + esc(u.ig_id) + '</p>' : '') +
-      (u.skill_level ? '<p><strong>Skill Level:</strong> ' + esc(u.skill_level) + '</p>' : '') +
-      '</div>' +
-      '<div class="db-card"><h3 style="margin:0 0 12px;color:#0b1f3a;">Business Details</h3>' +
-      '<p><strong>Full Name (Aadhaar):</strong> ' + esc(u.full_name || '-') + '</p>' +
-      '<p><strong>Business Name:</strong> ' + esc(u.business_name || '-') + '</p>' +
-      '<p><strong>Category:</strong> ' + esc(u.category_name || '-') + '</p>' +
-      (u.education ? '<p><strong>Courses Completed:</strong> ' + esc(u.education) + '</p>' : '') +
-      (u.design_software ? '<p><strong>Design Software:</strong> ' + esc(u.design_software) + '</p>' : '') +
-      (u.shop_years != null ? '<p><strong>Shop History:</strong> ' + esc(u.shop_years) + ' years</p>' : '') +
-      '<p><strong>Address:</strong> ' + esc([u.address, u.city, u.state, u.pincode].filter(Boolean).join(', ') || '-') + '</p>' +
-      '</div></div>';
-    $('db-content').innerHTML = html;
-  };
+    openSheet('Upload Sample', html);
 
-  function showPage(id) {
-    state.activePage = id;
-    setActiveNav(id);
-    if (pages[id]) pages[id]();
+    $('us-media').addEventListener('change', function () {
+      var f = this.files[0];
+      if (!f) return;
+      $('us-media-label').textContent = f.name;
+      var isVid = /^video\//.test(f.type);
+      $('us-img-prev').hidden = isVid;
+      $('us-vid-prev').hidden = !isVid;
+      if (isVid) $('us-vid-prev').src = URL.createObjectURL(f);
+      else $('us-img-prev').src = URL.createObjectURL(f);
+    });
+
+    $('app-sample-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var file = $('us-media').files[0];
+      var msg = $('us-msg'), btn = $('us-submit');
+      if (!file) { msg.textContent = 'Please pick an image or video.'; msg.style.color = '#dc2626'; return; }
+      var isVid = /^video\//.test(file.type);
+      if (!isVid && sq.imagesUsed >= 3) { msg.textContent = 'Daily image sample limit (3/3) reached.'; msg.style.color = '#dc2626'; return; }
+      if (isVid && sq.videosUsed >= 3) { msg.textContent = 'Daily video sample limit (3/3) reached.'; msg.style.color = '#dc2626'; return; }
+
+      btn.disabled = true; btn.textContent = 'Uploading...'; msg.textContent = '';
+      var uploadKind = role === 'partner' ? 'partner_sample' : 'sample';
+
+      uploadFile(uploadKind, file).then(function (mediaUrl) {
+        var u = state.user || {};
+        var payload = {
+          media_type: isVid ? 'video' : 'image',
+          title: $('us-name').value.trim(),
+          caption: $('us-desc').value.trim(),
+          media_url: mediaUrl,
+          price: 1,
+          price_unit: 'pcs',
+          is_private: role === 'partner',
+          uuid: session.uuid,
+          role: role,
+          phone: session.phone || u.phone || '',
+          username: session.username || u.username || '',
+          business_name: u.business_name || ''
+        };
+        if (isLocalTest) {
+          var item = Object.assign({ id: 'smp_' + Date.now(), created_at: new Date().toISOString() }, payload);
+          state.samples.unshift(item);
+          saveLocal('samples', state.samples);
+          recomputeLocalQuotas();
+          return;
+        }
+        return api('/users/' + session.uuid + '/samples', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(fetchAllData);
+      }).then(function () {
+        closeSheet();
+        render();
+        showToast('Sample saved to Sample Table!', false);
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Upload Sample';
+        msg.textContent = err.message; msg.style.color = '#dc2626';
+      });
+    });
   }
 
-  $('db-logout-btn').addEventListener('click', function () {
-    sessionStorage.removeItem('ig_session');
-    location.replace('index.html');
-  });
-  $('db-menu').addEventListener('click', function () {
-    $('db-side').classList.toggle('open');
+  // ---- Tab Views ----
+  function renderHome() {
+    var u = state.user || {};
+    var nextDue = u.next_due_at || u.payment_due_date || new Date(Date.now() + 30 * 86400000).toISOString();
+    var dt = new Date(nextDue);
+    var nextStr = !isNaN(dt) ? dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : String(nextDue);
+
+    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 6, maxImages: 3, maxVideos: 3 };
+    var pq = state.quota.products || { totalUsed: 0, maxTotal: 4 };
+    var sRem = Math.max(0, sq.maxTotal - sq.totalUsed);
+    var pRem = Math.max(0, pq.maxTotal - pq.totalUsed);
+    var sPct = Math.min(100, Math.round((sq.totalUsed / sq.maxTotal) * 100));
+    var pPct = Math.min(100, Math.round((pq.totalUsed / pq.maxTotal) * 100));
+
+    var activeBillHtml = state.isOnline
+      ? '<button type="button" class="bill-action-btn is-active" id="bill-state-btn">● Active</button>'
+      : '<button type="button" class="bill-action-btn is-pay-live" id="bill-state-btn">Pay &amp; Live</button>';
+
+    var html =
+      // Billing Card
+      '<section class="bill-card" aria-label="Billing Card">' +
+      '<div class="bill-info">' +
+      '<div class="bill-title-row"><span>Profile Billing</span><span>·</span><span>₹' + (PLAN_FEES[role] || 109) + '/month</span></div>' +
+      '<div class="bill-status-main">' + (state.isOnline ? 'Profile Active' : 'Currently Offline') + '</div>' +
+      '<div class="bill-next-date">Next billing date: ' + esc(nextStr) + '</div>' +
+      '</div>' +
+      activeBillHtml +
+      '</section>' +
+
+      // Product & Sample Daily Countdown
+      '<section class="limit-grid" aria-label="Daily Upload Limits">' +
+      '<div class="limit-card">' +
+      '<div class="limit-top"><span class="limit-title">Sample Countdown (Daily Limit 6)</span><span class="limit-count">' + sRem + ' left</span></div>' +
+      '<div class="quota-bar"><div class="quota-fill ' + (sq.totalUsed >= 6 ? 'full' : '') + '" style="width:' + sPct + '%"></div></div>' +
+      '<div class="limit-sub">' + sq.totalUsed + '/6 used · Images ' + sq.imagesUsed + '/3 · Videos ' + sq.videosUsed + '/3</div>' +
+      '</div>' +
+      '<div class="limit-card">' +
+      '<div class="limit-top"><span class="limit-title">Product Daily Limit (4 Only)</span><span class="limit-count">' + pRem + ' left</span></div>' +
+      '<div class="quota-bar"><div class="quota-fill ' + (pq.totalUsed >= 4 ? 'full' : '') + '" style="width:' + pPct + '%"></div></div>' +
+      '<div class="limit-sub">' + pq.totalUsed + '/4 products listed today</div>' +
+      '</div>' +
+      '</section>' +
+
+      // Two Action Buttons: List Product & Upload Samples
+      '<div class="cta-pair">' +
+      '<button type="button" class="app-cta-btn primary" id="btn-list-product">+ List Product</button>' +
+      '<button type="button" class="app-cta-btn secondary" id="btn-upload-sample">+ Upload Samples</button>' +
+      '</div>';
+
+    // Listed Products Feed
+    html += '<section class="app-section"><div class="app-sec-head"><h2>Your Products</h2><span class="app-sec-meta">' + state.products.length + ' listed</span></div>';
+    if (!state.products.length) {
+      html += '<div class="app-empty">No products listed yet. Tap <strong>+ List Product</strong> above to post your first item.</div>';
+    } else {
+      html += '<div class="app-items-grid">';
+      state.products.forEach(function (p) {
+        var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
+        html += '<article class="app-item-card">' +
+          '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
+          '<div class="app-item-body">' +
+          (p.with_material !== false ? '<span class="with-mat-tag">with material</span>' : '') +
+          '<h3 class="app-item-title">' + esc(p.title) + '</h3>' +
+          (p.description ? '<div class="app-item-desc">' + esc(p.description) + '</div>' : '') +
+          '<div class="app-item-price">₹' + Number(p.rate_per_unit || 0).toLocaleString('en-IN') + ' / ' + esc(p.unit || 'sqfit') +
+          (amt > 0 ? ' · Expected ₹' + amt.toLocaleString('en-IN') : '') + '</div>' +
+          '<button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button>' +
+          '</div></article>';
+      });
+      html += '</div>';
+    }
+    html += '</section>';
+
+    // Uploaded Samples Feed
+    html += '<section class="app-section"><div class="app-sec-head"><h2>Your Samples</h2><span class="app-sec-meta">' + state.samples.length + ' uploaded</span></div>';
+    if (!state.samples.length) {
+      html += '<div class="app-empty">No samples uploaded yet. Tap <strong>+ Upload Samples</strong> above to add work photos or videos.</div>';
+    } else {
+      html += '<div class="app-items-grid">';
+      state.samples.forEach(function (s) {
+        var media = s.media_type === 'video'
+          ? '<video src="' + esc(s.media_url) + '" controls preload="metadata"></video>'
+          : '<img src="' + esc(s.media_url || 'assets/logo-square.png') + '" alt="' + esc(s.title) + '" onerror="this.src=\'assets/logo-square.png\'">';
+        html += '<article class="app-item-card">' +
+          '<div class="app-item-media">' + media + '</div>' +
+          '<div class="app-item-body">' +
+          '<h3 class="app-item-title">' + esc(s.title) + '</h3>' +
+          (s.caption ? '<div class="app-item-desc">' + esc(s.caption) + '</div>' : '') +
+          '<button type="button" class="item-del-btn" data-del-sample="' + esc(s.id) + '">Delete</button>' +
+          '</div></article>';
+      });
+      html += '</div>';
+    }
+    html += '</section>';
+
+    $('app-content').innerHTML = html;
+
+    $('bill-state-btn').addEventListener('click', function () {
+      if (!state.isOnline) triggerPayAndLive();
+      else showToast('Your profile is Active and Online!', false);
+    });
+    $('btn-list-product').addEventListener('click', openListProductSheet);
+    $('btn-upload-sample').addEventListener('click', openUploadSampleSheet);
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-del-prod]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-del-prod');
+        btn.disabled = true;
+        if (isLocalTest) {
+          state.products = state.products.filter(function (x) { return x.id !== id; });
+          saveLocal('products', state.products);
+          recomputeLocalQuotas();
+          render();
+          return;
+        }
+        api('/users/' + session.uuid + '/listings/' + id, { method: 'DELETE' }).then(fetchAllData).then(render).catch(function (err) {
+          showToast(err.message, true); btn.disabled = false;
+        });
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-del-sample]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-del-sample');
+        btn.disabled = true;
+        if (isLocalTest) {
+          state.samples = state.samples.filter(function (x) { return x.id !== id; });
+          saveLocal('samples', state.samples);
+          recomputeLocalQuotas();
+          render();
+          return;
+        }
+        api('/users/' + session.uuid + '/samples/' + id, { method: 'DELETE' }).then(fetchAllData).then(render).catch(function (err) {
+          showToast(err.message, true); btn.disabled = false;
+        });
+      });
+    });
+  }
+
+  function renderOrders() {
+    var pendingCount = state.orders.filter(function (o) { return o.status === 'pending'; }).length;
+    var progCount = state.orders.filter(function (o) { return o.status === 'in_progress'; }).length;
+    var compCount = state.orders.filter(function (o) { return o.status === 'completed'; }).length;
+    var list = state.orders.filter(function (o) { return o.status === state.orderFilter; });
+
+    var html = '<section class="app-section">' +
+      '<div class="app-sec-head"><h2>Assigned Orders</h2><span class="app-sec-meta">' + state.orders.length + ' total</span></div>' +
+      '<div class="order-segs" role="tablist">' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Pending (' + pendingCount + ')</button>' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'in_progress' ? 'active' : '') + '" data-ord-flt="in_progress">Progress (' + progCount + ')</button>' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'completed' ? 'active' : '') + '" data-ord-flt="completed">Complete (' + compCount + ')</button>' +
+      '</div>';
+
+    if (!list.length) {
+      html += '<div class="app-empty">No ' + esc(state.orderFilter.replace('_', ' ')) + ' orders right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
+    } else {
+      list.forEach(function (o) {
+        html += '<div class="order-row">' +
+          '<div class="order-row-top"><strong>' + (o.order_no ? 'Order #' + esc(o.order_no) : esc(o.work_type || 'Project')) + '</strong><span class="app-sec-meta">' + esc(o.status.replace('_', ' ').toUpperCase()) + '</span></div>' +
+          '<div class="app-item-desc">Work: ' + esc(o.work_type) + ' · Location: ' + esc(o.location_name || 'Client Site') + '</div>' +
+          '<div class="order-actions">' +
+          (o.status === 'pending' ? '<button type="button" class="order-act-btn" data-ord-id="' + esc(o.id) + '" data-ord-next="in_progress">Start Progress</button>' : '') +
+          (o.status !== 'completed' ? '<button type="button" class="order-act-btn primary" data-ord-id="' + esc(o.id) + '" data-ord-next="completed">Mark Complete</button>' : '') +
+          '</div></div>';
+      });
+    }
+    html += '</section>';
+    $('app-content').innerHTML = html;
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ord-flt]'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.orderFilter = btn.getAttribute('data-ord-flt');
+        renderOrders();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ord-next]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-ord-id'), next = btn.getAttribute('data-ord-next');
+        btn.disabled = true;
+        api('/users/' + session.uuid + '/orders/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: next })
+        }).then(function () {
+          state.orders.forEach(function (o) { if (o.id === id) o.status = next; });
+          renderOrders();
+          showToast('Order updated!', false);
+        }).catch(function (err) {
+          btn.disabled = false;
+          showToast(err.message, true);
+        });
+      });
+    });
+  }
+
+  function renderProfile() {
+    var u = state.user || {};
+    var addr = [u.address, u.city, u.state, u.pincode].filter(Boolean).join(', ') || '-';
+    var html = '<section class="app-section">' +
+      '<div class="app-sec-head"><h2>My Profile</h2><span class="app-sec-meta">' + esc(role.toUpperCase()) + '</span></div>' +
+      '<div class="prof-list">' +
+      '<div class="prof-row"><span>Full Name (Aadhaar)</span><strong>' + esc(u.full_name || '-') + '</strong></div>' +
+      '<div class="prof-row"><span>Business Name</span><strong>' + esc(u.business_name || '-') + '</strong></div>' +
+      '<div class="prof-row"><span>Username</span><strong>@' + esc(u.username || session.username || '-') + '</strong></div>' +
+      '<div class="prof-row"><span>Mobile Number</span><strong>' + esc(u.phone || session.phone || '-') + '</strong></div>' +
+      '<div class="prof-row"><span>Category</span><strong>' + esc(u.category_name || role) + '</strong></div>' +
+      (u.skill_level ? '<div class="prof-row"><span>Skill Level</span><strong>' + esc(u.skill_level) + '</strong></div>' : '') +
+      (u.experience_years != null ? '<div class="prof-row"><span>Experience</span><strong>' + esc(u.experience_years) + ' yrs</strong></div>' : '') +
+      (u.education ? '<div class="prof-row"><span>Courses Completed</span><strong>' + esc(u.education) + '</strong></div>' : '') +
+      (u.design_software ? '<div class="prof-row"><span>Design Software</span><strong>' + esc(u.design_software) + '</strong></div>' : '') +
+      '<div class="prof-row"><span>Registered Address</span><strong>' + esc(addr) + '</strong></div>' +
+      '</div>' +
+      '<button type="button" class="logout-full" id="prof-logout">Log Out</button>' +
+      '</section>';
+
+    $('app-content').innerHTML = html;
+    $('prof-logout').addEventListener('click', function () {
+      sessionStorage.removeItem('ig_session');
+      location.replace('index.html');
+    });
+  }
+
+  function renderCard() {
+    var u = state.user || {};
+    var bName = u.business_name || u.full_name || session.username || 'Interagood Partner';
+    var uName = u.username || session.username || 'member';
+    var addr = [u.address, u.city, u.state, u.pincode].filter(Boolean).join(', ') || 'Lucknow, India';
+    var roleText = role.charAt(0).toUpperCase() + role.slice(1);
+    var igId = u.ig_id || ('IG-' + String(session.uuid).slice(-6).toUpperCase());
+
+    var avatarHtml = u.profile_photo_url
+      ? '<img src="' + esc(u.profile_photo_url) + '" alt="' + esc(bName) + '">'
+      : '<span>' + esc(bName.charAt(0).toUpperCase()) + '</span>';
+
+    var bannerImg = u.banner_url
+      ? '<img src="' + esc(u.banner_url) + '" alt="" onerror="this.hidden=true">'
+      : '';
+
+    var html = '<section class="app-section">' +
+      '<div class="app-sec-head"><h2>Your Business Card</h2><span class="app-sec-meta">' + esc(igId) + '</span></div>' +
+      '<article class="biz-card">' +
+      '<div class="bc-banner">' + bannerImg +
+      '<div class="bc-id">' +
+      '<div class="bc-avatar">' + avatarHtml + '</div>' +
+      '<div class="bc-who">' +
+      '<h3 class="bc-name"><span>' + esc(bName) + '</span>' +
+      '<svg class="bc-tick" viewBox="0 0 24 24" aria-label="Verified Blue Tick"><circle cx="12" cy="12" r="11" fill="#1d9bf0"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</h3>' +
+      '<p class="bc-user">@' + esc(uName) + ' · Verified</p>' +
+      '</div>' +
+      '</div></div>' +
+      '<dl class="bc-details">' +
+      '<div><dt>Address</dt><dd>' + esc(addr) + '</dd></div>' +
+      '<div><dt>Role</dt><dd>' + esc(roleText) + ' <span class="bc-verified">✓ verified</span></dd></div>' +
+      '<div><dt>Category</dt><dd>' + esc(u.category_name || roleText) + '</dd></div>' +
+      '<div><dt>IG ID</dt><dd>' + esc(igId) + '</dd></div>' +
+      '</dl></article>' +
+      '</section>';
+
+    $('app-content').innerHTML = html;
+  }
+
+  function render() {
+    Array.prototype.forEach.call(document.querySelectorAll('.app-tab-btn'), function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === state.activeTab);
+    });
+    if (state.activeTab === 'home') renderHome();
+    else if (state.activeTab === 'orders') renderOrders();
+    else if (state.activeTab === 'profile') renderProfile();
+    else if (state.activeTab === 'card') renderCard();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.app-tab-btn'), function (b) {
+    b.addEventListener('click', function () {
+      state.activeTab = b.getAttribute('data-tab');
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   });
 
   // ---- Init ----
-  $('db-username').textContent = session.username || 'User';
-  $('db-role').textContent = role.charAt(0).toUpperCase() + role.slice(1);
-  renderNav();
-
-  Promise.all([
-    api('/users/' + session.uuid).then(function (d) {
-      if (d && d.data && !Array.isArray(d.data)) {
-        state.user = d.data;
-        state.isOnline = d.data.is_online !== false;
-        $('db-username').textContent = d.data.business_name || d.data.username || session.username || 'User';
-      } else {
-        state.user = session.profile || {};
-      }
-    }).catch(function () { state.user = session.profile || {}; }),
-    fetchListings()
-  ]).then(function () {
-    updateTopBar();
-    showPage('overview');
-  });
+  updateTopBar();
+  fetchAllData().then(render);
 })();

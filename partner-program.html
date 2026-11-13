@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Interagood">
   <link rel="stylesheet" href="style.css?v=20261106-g">
-  <link rel="stylesheet" href="partner.css?v=20261112e">
+  <link rel="stylesheet" href="partner.css?v=20261113b">
 </head>
 <body class="pp">
   <header class="pp-header">
@@ -49,6 +49,35 @@
             <span class="role-name">Architect</span>
             <span class="role-desc">Design and plan interior spaces for clients.</span>
           </button>
+        </div>
+      </section>
+
+      <section id="step-kyc-guide" class="signup-card kyc-guide-card" hidden aria-labelledby="kyc-guide-title">
+        <div class="kyc-guide-head">
+          <div class="kyc-phone-graphic" aria-hidden="true">
+            <svg viewBox="0 0 120 180" width="108" height="162">
+              <rect x="14" y="6" width="92" height="168" rx="18" fill="#0b1f3a" stroke="#1e3a5f" stroke-width="3"/>
+              <rect x="22" y="20" width="76" height="132" rx="10" fill="#eef4ff"/>
+              <rect x="46" y="11" width="28" height="4" rx="2" fill="#475569"/>
+              <circle cx="60" cy="64" r="18" fill="#cbd5e1"/>
+              <path d="M34 114c2-16 14-24 26-24s24 8 26 24" fill="#94a3b8"/>
+              <rect x="70" y="26" width="22" height="30" rx="5" fill="#0b1f3a" stroke="#f58220" stroke-width="2"/>
+              <circle cx="81" cy="37" r="4.5" fill="#f8fafc"/>
+              <path d="M74 52c1.5-5 4.5-7 7-7s5.5 2 7 7" fill="#cbd5e1"/>
+              <circle cx="60" cy="140" r="9" fill="#1f9d55"/>
+              <path d="M56 140l3 3 5-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="32" cy="32" r="4" fill="#dc2626"/>
+            </svg>
+          </div>
+          <span class="kyc-role-tag" id="kyc-guide-role">Partner Onboarding Guide</span>
+          <h2 id="kyc-guide-title">Video Call KYC</h2>
+          <p class="kyc-guide-text">
+            Kripya aapni poori jaankari <strong>Aadhaar card</strong> ke hisab se darz karna hoga taaki KYC me koi problem na ho. Zarurat padhne pe KYC ki jaayegi.
+          </p>
+        </div>
+        <div class="kyc-guide-actions">
+          <button type="button" class="btn create-btn" id="kyc-proceed-btn">Proceed</button>
+          <button type="button" class="link-btn kyc-back-btn" id="kyc-back-btn">&larr; Change role</button>
         </div>
       </section>
 
@@ -178,19 +207,19 @@
       <section id="step-business" class="signup-card" hidden aria-labelledby="biz-title">
         <div class="signup-head">
           <h2 id="biz-title">Business profile</h2>
-          <p>Step 2 of 3. Tell clients about your business.</p>
+          <p>Step 2 of 3. Enter details accurately as per Aadhaar.</p>
         </div>
         <form id="biz-form" novalidate autocomplete="off">
           <div id="biz-fields"></div>
-          <button type="submit" class="btn create-btn" id="biz-save" disabled>Submit</button>
+          <button type="submit" class="btn create-btn" id="biz-save" disabled>Submit &amp; Continue to Onboarding</button>
           <p class="form-error" id="biz-error" role="alert" hidden></p>
         </form>
       </section>
 
       <section id="step-card" class="signup-card card-step" hidden aria-labelledby="card-title">
         <div class="signup-head">
-          <h2 id="card-title">Your business card</h2>
-          <p>Step 3 of 3. This is how clients will see you.</p>
+          <h2 id="card-title">Onboarding &amp; Business Card</h2>
+          <p>Step 3 of 3. Complete payment to activate your account and unlock your Dashboard.</p>
         </div>
         <article class="biz-card">
           <div class="bc-banner">
@@ -212,19 +241,20 @@
             <div><dt>Role</dt><dd><span id="bc-role"></span> <span class="bc-verified">verified</span></dd></div>
             <div><dt>Category</dt><dd id="bc-category"></dd></div>
             <div><dt>Address</dt><dd id="bc-address"></dd></div>
-            <div><dt>Status</dt><dd id="bc-state">Deactivated</dd></div>
+            <div><dt>Status</dt><dd id="bc-state">Payment Pending</dd></div>
           </dl>
         </article>
-        <button type="button" class="btn create-btn pay-btn" id="pay-btn">Pay</button>
+        <div class="onboard-pay-note" id="onboard-pay-note">Complete one-time monthly payment via PayU to activate your profile &amp; open your App Dashboard.</div>
+        <button type="button" class="btn create-btn pay-btn" id="pay-btn">Pay &amp; Activate Dashboard</button>
         <p class="form-error" id="pay-error" role="alert" hidden></p>
       </section>
 
       <section id="step-download" class="signup-card" hidden aria-labelledby="dl-title">
         <div class="signup-head">
-          <h2 id="dl-title">Download the app</h2>
-          <p>Payment received. Download the Interagood app and log in to start getting leads.</p>
+          <h2 id="dl-title">Account Activated</h2>
+          <p>Payment received. Redirecting you to your Interagood App Dashboard.</p>
         </div>
-        <a class="btn create-btn" id="dl-link" href="download.html">Download app</a>
+        <a class="btn create-btn" id="dl-link" href="dashboard.html">Open Dashboard</a>
       </section>
     </div>
   </main>
@@ -240,9 +270,9 @@
   </div>
 
   <script src="config.js?v=20261104d"></script>
-  <script src="partner.js?v=20261112e"></script>
-  <script src="profile.js?v=20261112e"></script>
+  <script src="partner.js?v=20261113b"></script>
+  <script src="profile.js?v=20261113b"></script>
   <script src="admin-login.js?v=1"></script>
-  <script src="pwa.js?v=20261112"></script>
+  <script src="pwa.js?v=20261113b"></script>
 </body>
 </html>
