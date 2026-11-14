@@ -14,13 +14,13 @@
   };
 
   var MANDATORY_PARTNER_CHECKS = [
-    ['has_team', 'Do you have a working team?'],
-    ['has_tools', 'Do you have your own tool/toolbox?'],
-    ['knows_work_completely', 'Do you have complete knowledge of your work, pricing, calculation, and client dealing?']
+    ['has_tools', 'Aapke paas apna tool/toolbox hai?'],
+    ['knows_work_completely', 'Aapko apne kaam, pricing, calculation aur client dealing ki poori knowledge hai?']
   ];
 
   var PLAN_FEES = { partner: 109, supplier: 219, architect: 310 };
   var session = null, role = null, built = false, toggles = {}, files = {}, urls = {}, skill = 'intermediate';
+  var teamMode = 'solo', memberCount = 0;
   var el = { fields: $('biz-fields'), form: $('biz-form'), save: $('biz-save'), error: $('biz-error') };
 
   function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
@@ -80,6 +80,8 @@
   function build() {
     toggles = {};
     skill = 'intermediate';
+    teamMode = 'solo';
+    memberCount = 0;
     var h = '';
 
     // Cover Banner & Profile Picture (prominent for Architect & Supplier, available across roles)
@@ -96,10 +98,28 @@
 
     // Role-specific top banners & notices
     if (role === 'partner') {
-      h += '<div class="warn-banner" role="alert">' +
-        '<strong>WARNING: Strict KYC / Aadhaar Verification in Progress</strong>' +
-        'Any mismatch or fake profile will lead to immediate account suspension. Ensure you possess the required team, tools, and technical skill before proceeding. For support: <a href="mailto:support@interagood.in">support@interagood.in</a>' +
+      h += '<p class="biz-section">Solo / Team</p>';
+      h += '<div class="field" data-field="team_mode">' +
+        '<label>Kya aap akele hain ya team hai?</label>' +
+        '<div class="skill-grid" role="radiogroup" aria-label="Akele ya Team">' +
+        [['solo', 'Akele (Solo)'], ['team', 'Team']].map(function (t) {
+          var active = t[0] === teamMode;
+          return '<button type="button" class="skill-btn" role="radio" aria-checked="' + (active ? 'true' : 'false') + '" data-team="' + t[0] + '">' + t[1] + '</button>';
+        }).join('') +
+        '</div>' +
+        '<p class="hint">Agar aap akele kaam karte hain toh Solo chunein, warna Team.</p>' +
         '</div>';
+      h += '<div id="team-members-wrap"' + (teamMode === 'team' ? '' : ' hidden') + '>' +
+        select('team_members_count', 'Aapki team me kitne members hai?', 'user', range(2, 20, function (n) { return n + (n === 20 ? '+ members' : ' members'); }), 'Select team size') +
+        '</div>';
+      h += '<p class="biz-section">Readiness Checklist</p>';
+      MANDATORY_PARTNER_CHECKS.forEach(function (item) {
+        toggles[item[0]] = false;
+        h += '<label class="mandatory-check" id="wrap-' + item[0] + '">' +
+          '<input type="checkbox" id="chk-' + item[0] + '" data-req-toggle="' + item[0] + '">' +
+          '<span>' + item[1] + '</span>' +
+          '</label>';
+      });
     } else if (role === 'architect') {
       h += '<div class="warn-banner" role="alert">' +
         '<strong>Architect Compliance Notice</strong>' +
@@ -141,22 +161,6 @@
     if (role === 'supplier') {
       h += '<p class="biz-section">Shop History</p>';
       h += select('shop_years', 'Shop Operational History (Years Active)', 'shop', [['0', 'Newly opened (< 1 year)']].concat(range(1, 60, function (n) { return n + (n === 1 ? ' year active' : ' years active'); })), 'Select years shop is active');
-    }
-
-    // Partner Mandatory 3 Checkboxes + Helpful Tip
-    if (role === 'partner') {
-      h += '<p class="biz-section">Mandatory Readiness Checklist (All 3 required to submit)</p>';
-      MANDATORY_PARTNER_CHECKS.forEach(function (item) {
-        toggles[item[0]] = false;
-        h += '<label class="mandatory-check" id="wrap-' + item[0] + '">' +
-          '<input type="checkbox" id="chk-' + item[0] + '" data-req-toggle="' + item[0] + '">' +
-          '<span>' + item[1] + '</span>' +
-          '</label>';
-      });
-      h += '<div class="tip-banner">' +
-        '<strong>Helpful Tip — Building Your Team</strong>' +
-        'Working alone right now? You can form a legal working team by partnering with skilled friends or family members who already own a complete toolset before completing registration.' +
-        '</div>';
     }
 
     // Current Address + Geolocation Auto-Detect (All Roles)
@@ -212,6 +216,24 @@
         if (wrap) wrap.classList.toggle('checked', !!chk.checked);
         refresh();
       });
+    });
+
+    // Solo / Team selector + members dropdown
+    Array.prototype.forEach.call(el.fields.querySelectorAll('[data-team]'), function (b) {
+      b.addEventListener('click', function () {
+        teamMode = b.getAttribute('data-team');
+        Array.prototype.forEach.call(el.fields.querySelectorAll('[data-team]'), function (o) {
+          o.setAttribute('aria-checked', o === b ? 'true' : 'false');
+        });
+        var wrap = $('team-members-wrap');
+        if (wrap) wrap.hidden = teamMode !== 'team';
+        refresh();
+      });
+    });
+    var memberSel = $('team_members_count');
+    if (memberSel) memberSel.addEventListener('change', function () {
+      memberCount = parseInt(memberSel.value, 10) || 0;
+      refresh();
     });
 
     // Cover banner & avatar uploads
@@ -332,8 +354,9 @@
       need('shop_years', val('shop_years') !== '', 'Select years your shop has been active.');
     }
     if (role === 'partner') {
-      var allThree = MANDATORY_PARTNER_CHECKS.every(function (t) { return !!toggles[t[0]]; });
-      if (!allThree) bad = bad || 'chk-has_team';
+      var checksOk = MANDATORY_PARTNER_CHECKS.every(function (t) { return !!toggles[t[0]]; });
+      if (!checksOk) bad = bad || 'chk-has_tools';
+      if (teamMode === 'team' && !(parseInt(val('team_members_count'), 10) > 0)) bad = bad || 'team_members_count';
     }
     need('address', val('address').length >= 3, 'Enter your current address.');
     need('city', val('city').length >= 2, 'Enter your city.');
@@ -366,9 +389,10 @@
     if ($('category_id')) body.category_id = val('category_id');
     if (role === 'partner' || role === 'architect') body.skill_level = skill;
     if (role === 'partner') {
-      body.has_team = !!toggles.has_team;
+      body.has_team = teamMode === 'team';
       body.has_tools = !!toggles.has_tools;
       body.knows_work_completely = !!toggles.knows_work_completely;
+      if (teamMode === 'team') body.team_members_count = parseInt(val('team_members_count'), 10) || 0;
     }
     if (role === 'architect') {
       body.courses_completed = val('courses_completed');
