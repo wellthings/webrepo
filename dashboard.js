@@ -53,10 +53,11 @@
   }
 
   var role = session.role || 'partner';
+  var isPartner = role === 'partner';
   var isLocalTest = String(session.uuid).indexOf('test_') === 0;
-  var SAMPLE_LIMITS = (role === 'architect' || role === 'supplier')
-    ? { total: 3, image: 3, video: 0 }
-    : { total: SAMPLE_LIMIT_TOTAL, image: SAMPLE_LIMIT_IMG, video: SAMPLE_LIMIT_VID };
+  var SAMPLE_LIMITS = isPartner
+    ? { total: 4, image: 4, video: 0 }
+    : { total: 3, image: 3, video: 0 };
   var PRODUCT_HEADING = { architect: 'Your Product Listings', supplier: 'Your Products for Sale', partner: 'Your Product Listings' };
   var SAMPLE_HEADING = { architect: 'Your Sample Work', supplier: 'Your Product Samples', partner: 'Your Work Samples' };
   var state = {
@@ -302,14 +303,16 @@
           state.quota = d.quota;
         }
       }).catch(function () {}),
-      api('/users/' + session.uuid + '/listings').then(function (d) {
-        state.products = (d && Array.isArray(d.data)) ? d.data : [];
-        if (d && d.quota && d.quota.samples) {
-          state.quota = d.quota;
-        }
-      }).catch(function (err) {
-        showToast((err && err.message) || 'Could not load products.', true);
-      }),
+      (isPartner
+        ? Promise.resolve().then(function () { state.products = []; })
+        : api('/users/' + session.uuid + '/listings').then(function (d) {
+            state.products = (d && Array.isArray(d.data)) ? d.data : [];
+            if (d && d.quota && d.quota.samples) {
+              state.quota = d.quota;
+            }
+          }).catch(function (err) {
+            showToast((err && err.message) || 'Could not load products.', true);
+          })),
       api('/users/' + session.uuid + '/orders').then(function (d) {
         state.orders = (d && Array.isArray(d.data)) ? d.data : [];
       }).catch(function () {})
@@ -335,6 +338,7 @@
   $('app-sheet').addEventListener('click', function (e) { if (e.target === $('app-sheet')) closeSheet(); });
 
   function openListProductSheet() {
+    if (isPartner) return;
     var pq = state.quota.products || { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL };
     if (pq.totalUsed >= pq.maxTotal) {
       showToast('Daily limit reached: max 4 products per day.', true);
@@ -627,48 +631,52 @@
       '</section>' +
 
       // Product & Sample Daily Countdown
-      '<section class="limit-grid" aria-label="Daily Upload Limits">' +
+      '<section class="limit-grid" aria-label="Daily Upload Limits"' + (isPartner ? ' style="grid-template-columns:1fr;"' : '') + '>' +
       '<div class="limit-card">' +
       '<div class="limit-top"><span class="limit-title">Sample Countdown (Daily Limit ' + sq.maxTotal + ')</span><span class="limit-count">' + sRem + ' left</span></div>' +
       '<div class="quota-bar"><div class="quota-fill ' + (sq.totalUsed >= sq.maxTotal ? 'full' : '') + '" style="width:' + sPct + '%"></div></div>' +
-      '<div class="limit-sub">' + sq.totalUsed + '/' + sq.maxTotal + ' used · Images ' + sq.imagesUsed + '/' + sq.maxImages + (sq.maxVideos > 0 ? ' · Videos ' + sq.videosUsed + '/' + sq.maxVideos : '') + '</div>' +
+      '<div class="limit-sub">' + sq.totalUsed + '/' + sq.maxTotal + ' used · Images ' + sq.imagesUsed + '/' + sq.maxImages + (sq.maxVideos > 0 ? ' · Videos ' + sq.videosUsed + '/' + sq.maxVideos : ' (Images only)') + '</div>' +
       '</div>' +
-      '<div class="limit-card">' +
-      '<div class="limit-top"><span class="limit-title">Product Daily Limit (4 Only)</span><span class="limit-count">' + pRem + ' left</span></div>' +
-      '<div class="quota-bar"><div class="quota-fill ' + (pq.totalUsed >= 4 ? 'full' : '') + '" style="width:' + pPct + '%"></div></div>' +
-      '<div class="limit-sub">' + pq.totalUsed + '/4 products listed today</div>' +
-      '</div>' +
+      (isPartner ? '' :
+        '<div class="limit-card">' +
+        '<div class="limit-top"><span class="limit-title">Product Daily Limit (4 Only)</span><span class="limit-count">' + pRem + ' left</span></div>' +
+        '<div class="quota-bar"><div class="quota-fill ' + (pq.totalUsed >= 4 ? 'full' : '') + '" style="width:' + pPct + '%"></div></div>' +
+        '<div class="limit-sub">' + pq.totalUsed + '/4 products listed today</div>' +
+        '</div>'
+      ) +
       '</section>' +
 
-      // Two Action Buttons: List Product & Upload Samples
-      '<div class="cta-pair">' +
-      '<button type="button" class="app-cta-btn primary" id="btn-list-product">+ List Product</button>' +
+      // Action Buttons (Partner: Upload Samples only; Supplier/Architect: List Product + Upload Samples)
+      '<div class="cta-pair"' + (isPartner ? ' style="grid-template-columns:1fr;"' : '') + '>' +
+      (isPartner ? '' : '<button type="button" class="app-cta-btn primary" id="btn-list-product">+ List Product</button>') +
       '<button type="button" class="app-cta-btn secondary" id="btn-upload-sample">+ Upload Samples</button>' +
       '</div>';
 
-    // Listed Products Feed
-    html += '<section class="app-section"><div class="app-sec-head"><h2>' + esc(productHeading) + '</h2><span class="app-sec-meta">' + state.products.length + ' listed</span></div>';
-    if (!state.products.length) {
-      html += '<div class="app-empty">No products listed yet. Tap <strong>+ List Product</strong> above to post your first item.</div>';
-    } else {
-      html += '<div class="app-items-grid">';
-      state.products.forEach(function (p) {
-        var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
-        var rate = Number(p.rate_per_unit || 0);
-        var desc = p.description ? String(p.description) : '';
-        html += '<article class="app-item-card">' +
-          '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
-          '<div class="app-item-body">' +
-          '<div class="app-item-head"><h3 class="app-item-title">' + esc(p.title) + '</h3><span class="app-item-measure">' + esc(p.unit || 'sqfit') + '</span></div>' +
-          '<div class="app-item-pricebox">₹' + rate.toLocaleString('en-IN') + '</div>' +
-          (amt > 0 && amt !== rate ? '<div class="app-item-expected">Expected ₹' + amt.toLocaleString('en-IN') + '</div>' : '') +
-          (desc ? '<div class="app-item-desc clamp">' + esc(desc) + '</div>' + (desc.length > 70 ? '<button type="button" class="app-item-more" data-more>more</button>' : '') : '') +
-          '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button></div>' +
-          '</div></article>';
-      });
-      html += '</div>';
+    // Listed Products Feed (hidden for Partner)
+    if (!isPartner) {
+      html += '<section class="app-section"><div class="app-sec-head"><h2>' + esc(productHeading) + '</h2><span class="app-sec-meta">' + state.products.length + ' listed</span></div>';
+      if (!state.products.length) {
+        html += '<div class="app-empty">No products listed yet. Tap <strong>+ List Product</strong> above to post your first item.</div>';
+      } else {
+        html += '<div class="app-items-grid">';
+        state.products.forEach(function (p) {
+          var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
+          var rate = Number(p.rate_per_unit || 0);
+          var desc = p.description ? String(p.description) : '';
+          html += '<article class="app-item-card">' +
+            '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
+            '<div class="app-item-body">' +
+            '<div class="app-item-head"><h3 class="app-item-title">' + esc(p.title) + '</h3><span class="app-item-measure">' + esc(p.unit || 'sqfit') + '</span></div>' +
+            '<div class="app-item-pricebox">₹' + rate.toLocaleString('en-IN') + '</div>' +
+            (amt > 0 && amt !== rate ? '<div class="app-item-expected">Expected ₹' + amt.toLocaleString('en-IN') + '</div>' : '') +
+            (desc ? '<div class="app-item-desc clamp">' + esc(desc) + '</div>' + (desc.length > 70 ? '<button type="button" class="app-item-more" data-more>more</button>' : '') : '') +
+            '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button></div>' +
+            '</div></article>';
+        });
+        html += '</div>';
+      }
+      html += '</section>';
     }
-    html += '</section>';
 
     // Uploaded Samples Feed
     html += '<section class="app-section"><div class="app-sec-head"><h2>' + esc(sampleHeading) + '</h2><span class="app-sec-meta">' + state.samples.length + ' uploaded</span></div>';
@@ -699,7 +707,7 @@
       if (isPaymentDue) triggerPayAndLive();
       else showToast(state.isOnline ? 'Subscription Active & Online!' : 'Subscription Active (Availability paused Offline by you).', false);
     });
-    $('btn-list-product').addEventListener('click', openListProductSheet);
+    if ($('btn-list-product')) $('btn-list-product').addEventListener('click', openListProductSheet);
     $('btn-upload-sample').addEventListener('click', openUploadSampleSheet);
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-more]'), function (btn) {
