@@ -303,14 +303,31 @@
       showToast('Daily limit reached: max 4 products per day.', true);
       return;
     }
-    var g = ROLE_PRODUCT_GUIDES[role] || ROLE_PRODUCT_GUIDES.partner;
-    var unitOpts = MEASUREMENTS.map(function (m) {
-      return '<option value="' + m.id + '">' + esc(m.label) + '</option>';
-    }).join('');
-    var u = state.user || {};
-    var defaultCat = u.category_name || (role === 'architect' ? 'Full Interior Contract' : role === 'supplier' ? 'Hardware & Materials' : 'Site Work');
+    var catEndpoint = role === 'supplier' ? '/categories/supplier' : '/categories/partner';
+    Promise.all([
+      api(catEndpoint).catch(function () { return { data: [] }; }),
+      api('/measurement-units').catch(function () { return { data: [] }; })
+    ]).then(function (res) {
+      var cats = (res[0] && Array.isArray(res[0].data)) ? res[0].data : [];
+      var units = (res[1] && Array.isArray(res[1].data) && res[1].data.length)
+        ? res[1].data
+        : MEASUREMENTS.map(function (m) { return { code: m.id, name: m.label }; });
+      renderListProductSheet(cats, units);
+    });
+  }
 
+  function renderListProductSheet(cats, units) {
+    var pq = state.quota.products || { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL };
+    var g = ROLE_PRODUCT_GUIDES[role] || ROLE_PRODUCT_GUIDES.partner;
     var isArchitect = role === 'architect';
+
+    var catOpts = '<option value="">Select category (required)</option>' + cats.map(function (c) {
+      return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
+    }).join('');
+    var unitOpts = units.map(function (m) {
+      return '<option value="' + esc(m.code) + '">' + esc(m.name) + '</option>';
+    }).join('');
+
     var matHtml = isArchitect
       ? '<div class="mat-toggle locked"><label for="lp-with-mat">with material <span style="font-weight:600;font-size:0.76rem;color:#166534;">(Locked for Architect)</span></label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
       : '';
@@ -318,15 +335,14 @@
     var html =
       '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(g.hint) + '</p>' +
       '<form id="app-prod-form">' +
-      '<div class="f-group"><label for="lp-title">Product / Work Name</label><input id="lp-title" type="text" required placeholder="' + esc(g.placeholder) + '"></div>' +
-      '<div class="f-group"><label>1. Pick Product Image</label>' +
-      '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
-      '<div class="f-pair">' +
+      '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
-      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Price (per sq.ft)</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
-      '</div>' +
+      '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="' + esc(g.placeholder) + '"></div>' +
+      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
       '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
-      '<div class="f-group"><label for="lp-desc">Product Description (Free Write)</label><textarea id="lp-desc" placeholder="Describe specs, fittings, finish, or work scope..."></textarea></div>' +
+      '<div class="f-group"><label>Example Photo</label>' +
+      '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
+      '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Describe specs, fittings, finish, or work scope..."></textarea></div>' +
       matHtml +
       '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
       '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
@@ -336,8 +352,8 @@
 
     var unitEl = $('lp-unit'), rateLabel = $('lp-rate-label'), rateEl = $('lp-rate'), expEl = $('lp-expected');
     function syncUnitLabel() {
-      var found = MEASUREMENTS.find(function (m) { return m.id === unitEl.value; }) || MEASUREMENTS[0];
-      rateLabel.textContent = 'Price (' + found.perText + ')';
+      var found = units.find(function (m) { return m.code === unitEl.value; }) || units[0];
+      rateLabel.textContent = 'Per Measurement Rate' + (found ? ' (' + found.code + ')' : '');
     }
     unitEl.addEventListener('change', syncUnitLabel);
     syncUnitLabel();
@@ -359,6 +375,12 @@
       e.preventDefault();
       var btn = $('lp-submit'), msg = $('lp-msg');
       var file = $('lp-img').files[0];
+      var category = $('lp-category').value;
+      if (!category) {
+        msg.textContent = 'Please select a product category.';
+        msg.style.color = '#dc2626';
+        return;
+      }
       btn.disabled = true; btn.textContent = 'Posting product...'; msg.textContent = '';
 
       var prodKind = isArchitect ? 'architect_post' : 'supplier_product';
@@ -366,7 +388,7 @@
       up.then(function (imgUrl) {
         var payload = {
           title: $('lp-title').value.trim(),
-          category: defaultCat,
+          category: category,
           description: $('lp-desc').value.trim(),
           unit: unitEl.value,
           rate_per_unit: Number(rateEl.value) || 0,
