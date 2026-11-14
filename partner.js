@@ -247,19 +247,33 @@
             accessToken: d.accessToken,
             refreshToken: d.refreshToken
           }));
-          if (isPaid && d.profile_completed) {
-            location.href = 'dashboard.html';
+        if (isPaid && d.profile_completed) {
+          location.href = 'dashboard.html';
+          return;
+        }
+        ulogin.hidden = true;
+        $('step-role').hidden = true;
+        var p = d.profile || {};
+        // Unverified partner: block re-apply while the 7-day cooldown is active.
+        if (d.role === 'partner' && d.profile_completed && p.verified === false) {
+          var until = p.restricted_until ? new Date(p.restricted_until).getTime() : 0;
+          if (until > Date.now()) {
+            document.dispatchEvent(new CustomEvent('ig:show-restricted', { detail: { until: until } }));
             return;
           }
-          ulogin.hidden = true;
-          $('step-role').hidden = true;
-          if (!d.profile_completed) {
-            $('step-business').hidden = false;
-            document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
-            $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: d.profile } }));
-          }
+          // Cooldown over → allow re-apply (show business form)
+          $('step-business').hidden = false;
+          document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
+          $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        if (!d.profile_completed) {
+          $('step-business').hidden = false;
+          document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
+          $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: d.profile } }));
+        }
         })
         .catch(function (err) {
           uErr.textContent = err.message;
@@ -278,8 +292,17 @@
       var saved = JSON.parse(sessionStorage.getItem('ig_session') || 'null');
       if (saved && saved.uuid) {
         if (el.stepRole) el.stepRole.hidden = true;
-        if (saved.profile && saved.profile.business_name) {
-          setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: saved.profile } })); }, 30);
+        var sp = saved.profile || {};
+        if (saved.role === 'partner' && sp.business_name && sp.verified === false) {
+          var suntil = sp.restricted_until ? new Date(sp.restricted_until).getTime() : 0;
+          if (suntil > Date.now()) {
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:show-restricted', { detail: { until: suntil } })); }, 30);
+          } else {
+            $('step-business').hidden = false;
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: saved.role || 'partner' } })); }, 30);
+          }
+        } else if (sp.business_name) {
+          setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: sp } })); }, 30);
         } else {
           $('step-business').hidden = false;
           setTimeout(function () { document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: saved.role || 'partner' } })); }, 30);

@@ -616,21 +616,44 @@
 
   // Partner is not ready to work yet: show the guidance screen instead of the onboarding card.
   function showNotReady() {
-    var biz = $('step-business'), card = $('step-card'), done = $('step-done'), nr = $('step-notready');
+    var biz = $('step-business'), card = $('step-card'), done = $('step-done'), nr = $('step-notready'), rs = $('step-restricted');
     if (biz) biz.hidden = true;
     if (card) card.hidden = true;
     if (done) done.hidden = true;
+    if (rs) rs.hidden = true;
     if (nr) nr.hidden = false;
     var errEl = $('biz-error'); if (errEl) errEl.hidden = true;
     if (nr) nr.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  var notReadyHome = $('notready-home');
-  if (notReadyHome && !notReadyHome.getAttribute('data-wired')) {
-    notReadyHome.setAttribute('data-wired', '1');
-    notReadyHome.addEventListener('click', function () {
+  // Unverified partner still inside the 7-day cooldown: show the restriction screen.
+  function showRestricted(until) {
+    var biz = $('step-business'), card = $('step-card'), done = $('step-done'), nr = $('step-notready'), rs = $('step-restricted');
+    if (biz) biz.hidden = true;
+    if (card) card.hidden = true;
+    if (done) done.hidden = true;
+    if (nr) nr.hidden = true;
+    if (rs) rs.hidden = false;
+    var ms = Math.max(0, until - Date.now());
+    var days = Math.ceil(ms / 86400000);
+    var msg = $('restricted-msg');
+    if (msg) msg.textContent = 'Aapke 7 din abhi poore nahi hue hain. ' + (days > 0 ? days + ' din' : 'thoda time') + ' baad hi aap dobara apply kar sakte hain.';
+    var errEl = $('biz-error'); if (errEl) errEl.hidden = true;
+    if (rs) rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.addEventListener('ig:show-restricted', function (ev) {
+    var until = ev && ev.detail && ev.detail.until;
+    if (until) showRestricted(until);
+  });
+
+  // "Go to Home" logs the user out.
+  Array.prototype.forEach.call(document.querySelectorAll('.go-home'), function (btn) {
+    if (btn.getAttribute('data-wired')) return;
+    btn.setAttribute('data-wired', '1');
+    btn.addEventListener('click', function () {
       try { sessionStorage.removeItem('ig_session'); } catch (err) {}
       window.location.href = 'index.html';
     });
-  }
+  });
 })();

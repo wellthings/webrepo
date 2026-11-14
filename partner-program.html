@@ -225,7 +225,19 @@
           <strong>Aapke paas required cheezein nahi hai</strong>
           Kaam karne ke liye pehle inhe build karein — apna toolbox, auzaar, basic knowledge, measurement, etc. — aur team. Phir se login karke form fill karein, tab aapki profile onboarding ho jaayegi aur aap order receive kar paayenge aur kaam kar paayenge.
         </div>
-        <button type="button" class="btn create-btn" id="notready-home">Go to Home</button>
+        <button type="button" class="btn create-btn go-home" id="notready-home">Go to Home</button>
+      </section>
+
+      <section id="step-restricted" class="signup-card" hidden aria-labelledby="restricted-title">
+        <div class="signup-head">
+          <h2 id="restricted-title">Aap abhi restricted hain</h2>
+          <p>7 din ka cooldown chal raha hai.</p>
+        </div>
+        <div class="warn-banner" role="alert">
+          <strong>Abhi aapke 7 din poore nahi hue hain</strong>
+          <span id="restricted-msg">7 din baad hi aap dobara apply kar sakte hain.</span>
+        </div>
+        <button type="button" class="btn create-btn go-home" id="restricted-home">Go to Home</button>
       </section>
 
       <section id="step-card" class="signup-card card-step" hidden aria-labelledby="card-title">
@@ -282,8 +294,8 @@
   </div>
 
   <script src="config.js?v=20261104d"></script>
-  <script src="partner.js?v=20261113c"></script>
-  <script src="profile.js?v=20261114d"></script>
+  <script src="partner.js?v=20261114e"></script>
+  <script src="profile.js?v=20261114e"></script>
   <script src="admin-login.js?v=1"></script>
   <script src="pwa.js?v=20261113c"></script>
 </body>
