@@ -196,11 +196,11 @@
   }
 
   function wire() {
-    // Skill radio buttons
-    Array.prototype.forEach.call(el.fields.querySelectorAll('.skill-btn'), function (b) {
+    // Skill radio buttons (scoped to [data-skill] so they never clash with the solo/team buttons)
+    Array.prototype.forEach.call(el.fields.querySelectorAll('.skill-btn[data-skill]'), function (b) {
       b.addEventListener('click', function () {
         skill = b.getAttribute('data-skill');
-        Array.prototype.forEach.call(el.fields.querySelectorAll('.skill-btn'), function (o) {
+        Array.prototype.forEach.call(el.fields.querySelectorAll('.skill-btn[data-skill]'), function (o) {
           o.setAttribute('aria-checked', o === b ? 'true' : 'false');
         });
         refresh();
@@ -344,6 +344,12 @@
     need('full_name', val('full_name').length >= 2, 'Enter full name as per Aadhaar.');
     need('business_name', val('business_name').length >= 2, 'Enter your business name.');
     if ($('category_id')) need('category_id', !!val('category_id'), 'Select a category.');
+    // Partner: only the lean, persisted identity fields gate submission. The toolbox/knowledge
+    // checks and team/solo selection never disable the button; readiness is evaluated on submit.
+    if (role === 'partner') {
+      if (show && bad && $(bad)) $(bad).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return !bad;
+    }
     need('age', !!val('age'), 'Select your age.');
     need('experience_years', val('experience_years') !== '', 'Select your experience in years.');
     if (role === 'architect') {
@@ -352,11 +358,6 @@
     }
     if (role === 'supplier') {
       need('shop_years', val('shop_years') !== '', 'Select years your shop has been active.');
-    }
-    if (role === 'partner') {
-      var checksOk = MANDATORY_PARTNER_CHECKS.every(function (t) { return !!toggles[t[0]]; });
-      if (!checksOk) bad = bad || 'chk-has_tools';
-      if (teamMode === 'team' && !(parseInt(val('team_members_count'), 10) > 0)) bad = bad || 'team_members_count';
     }
     need('address', val('address').length >= 3, 'Enter your current address.');
     need('city', val('city').length >= 2, 'Enter your city.');
@@ -378,14 +379,17 @@
     submitting = true; el.save.disabled = true; el.save.textContent = 'Activating dashboard...'; el.error.hidden = true;
     var body = {
       full_name: val('full_name'),
-      business_name: val('business_name'),
-      address: val('address'),
-      city: val('city'),
-      state: val('state'),
-      pincode: val('pincode'),
-      age: val('age'),
-      experience_years: val('experience_years')
+      business_name: val('business_name')
     };
+    // Partner only persists the lean identity set; the heavy details are not sent at all.
+    if (role !== 'partner') {
+      body.address = val('address');
+      body.city = val('city');
+      body.state = val('state');
+      body.pincode = val('pincode');
+      body.age = val('age');
+      body.experience_years = val('experience_years');
+    }
     if ($('category_id')) body.category_id = val('category_id');
     if (role === 'partner' || role === 'architect') body.skill_level = skill;
     if (role === 'partner') {
@@ -424,6 +428,12 @@
         });
 
     req.then(function (d) {
+      // Partner who lacks the required readiness is saved as unverified and cannot onboard yet.
+      if (role === 'partner' && d && d.verified === false) {
+        submitting = false;
+        showNotReady();
+        return;
+      }
       var cardData = Object.assign({}, body, (d && d.card) || {}, {
         username: (d && d.card && d.card.username) || session.username || 'member',
         role: role,
@@ -575,4 +585,24 @@
     build();
     refresh();
   });
+
+  // Partner is not ready to work yet: show the guidance screen instead of the onboarding card.
+  function showNotReady() {
+    var biz = $('step-business'), card = $('step-card'), done = $('step-done'), nr = $('step-notready');
+    if (biz) biz.hidden = true;
+    if (card) card.hidden = true;
+    if (done) done.hidden = true;
+    if (nr) nr.hidden = false;
+    var errEl = $('biz-error'); if (errEl) errEl.hidden = true;
+    if (nr) nr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  var notReadyHome = $('notready-home');
+  if (notReadyHome && !notReadyHome.getAttribute('data-wired')) {
+    notReadyHome.setAttribute('data-wired', '1');
+    notReadyHome.addEventListener('click', function () {
+      try { sessionStorage.removeItem('ig_session'); } catch (err) {}
+      window.location.href = 'index.html';
+    });
+  }
 })();
