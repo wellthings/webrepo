@@ -117,7 +117,15 @@
   }
 
   function uploadFile(kind, file) {
-    if (isLocalTest) return Promise.resolve(URL.createObjectURL(file));
+    if (isLocalTest) {
+      // Persist a data URL (not a blob: URL) so the picked image survives reloads in test mode.
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { reject(new Error('Could not read file')); };
+        reader.readAsDataURL(file);
+      });
+    }
     var cType = inferMime(file);
     return fetch(API + '/users/' + session.uuid + '/upload?kind=' + encodeURIComponent(kind), {
       method: 'POST',
@@ -348,8 +356,8 @@
       '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
-      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
-      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
+      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required></div>' +
+      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" inputmode="decimal" min="0" step="0.01" placeholder="₹0.00" required></div>' +
       '<div class="f-group"><label>Product Example Photo</label>' +
       '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
       '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
@@ -367,6 +375,21 @@
     }
     unitEl.addEventListener('change', syncUnitLabel);
     syncUnitLabel();
+
+    function bindNumeric(id) {
+      var el = $(id);
+      if (!el) return;
+      var clean = function () {
+        var v = String(el.value).replace(/[^0-9.]/g, '');
+        var dot = v.indexOf('.');
+        if (dot !== -1) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, '');
+        if (v !== el.value) el.value = v;
+      };
+      el.addEventListener('input', clean);
+      el.addEventListener('blur', clean);
+    }
+    bindNumeric('lp-rate');
+    bindNumeric('lp-expected');
 
     rateEl.addEventListener('input', function () {
       if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
@@ -404,7 +427,7 @@
           rate_per_unit: Number(rateEl.value) || 0,
           quantity: 1,
           expected_amount: Number(expEl.value) || Number(rateEl.value) || 0,
-          with_material: isArchitect,
+          with_material: false,
           image_url: imgUrl,
           media_type: 'image',
           is_private: false
@@ -590,7 +613,6 @@
         html += '<article class="app-item-card">' +
           '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
           '<div class="app-item-body">' +
-          (p.with_material === true ? '<span class="with-mat-tag">with material</span>' : '') +
           '<h3 class="app-item-title">' + esc(p.title) + '</h3>' +
           (p.description ? '<div class="app-item-desc">' + esc(p.description) + '</div>' : '') +
           '<div class="app-item-price">₹' + Number(p.rate_per_unit || 0).toLocaleString('en-IN') + ' / ' + esc(p.unit || 'sqfit') +
