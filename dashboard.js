@@ -326,7 +326,6 @@
 
   function renderListProductSheet(cats, units) {
     var pq = state.quota.products || { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL };
-    var g = ROLE_PRODUCT_GUIDES[role] || ROLE_PRODUCT_GUIDES.partner;
     var isArchitect = role === 'architect';
 
     var catOpts = '<option value="">Select category (required)</option>' + cats.map(function (c) {
@@ -337,7 +336,7 @@
     }).join('');
 
     var matHtml = isArchitect
-      ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go <span style="font-weight:600;font-size:0.76rem;color:#166534;">(Locked for Architect)</span></label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
+      ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go</label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
       : '';
 
     var heading = 'List Your Product for Client';
@@ -348,7 +347,7 @@
       '<form id="app-prod-form">' +
       '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
-      '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="' + esc(g.placeholder) + '"></div>' +
+      '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
       '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
       '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
       '<div class="f-group"><label>Product Example Photo</label>' +
@@ -368,28 +367,6 @@
     }
     unitEl.addEventListener('change', syncUnitLabel);
     syncUnitLabel();
-
-    function syncTitlePlaceholder() {
-      var catName = $('lp-category').value;
-      var ph = g.placeholder;
-      if (catName) {
-        var examples = null;
-        if (window.CATALOG) {
-          var list = role === 'supplier' ? window.CATALOG.supplier : window.CATALOG.partner;
-          if (list) {
-            var catObj = list.find(function (c) { return c.name === catName; });
-            if (catObj) {
-              var mods = catObj.modules || catObj.items || [];
-              if (mods.length) examples = mods.slice(0, 3).map(function (m) { return m[1]; });
-            }
-          }
-        }
-        ph = examples ? ('e.g., ' + examples.join(', ')) : ('e.g., ' + catName + ' product / work');
-      }
-      $('lp-title').placeholder = ph;
-    }
-    $('lp-category').addEventListener('change', syncTitlePlaceholder);
-    syncTitlePlaceholder();
 
     rateEl.addEventListener('input', function () {
       if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
