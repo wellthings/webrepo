@@ -309,6 +309,10 @@
       api('/measurement-units').catch(function () { return { data: [] }; })
     ]).then(function (res) {
       var cats = (res[0] && Array.isArray(res[0].data)) ? res[0].data : [];
+      if (!cats.length && window.CATALOG) {
+        var catList = role === 'supplier' ? window.CATALOG.supplier : window.CATALOG.partner;
+        if (catList) cats = catList.map(function (c) { return { name: c.name }; });
+      }
       var units = (res[1] && Array.isArray(res[1].data) && res[1].data.length)
         ? res[1].data
         : MEASUREMENTS.map(function (m) { return { code: m.id, name: m.label }; });
