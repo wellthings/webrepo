@@ -755,8 +755,7 @@
       '</div></div>' +
       '<dl class="bc-details">' +
       '<div><dt>Address</dt><dd>' + esc(addr) + '</dd></div>' +
-      '<div><dt>Skill Level</dt><dd>' + esc(skillText) + '</dd></div>' +
-      '<div><dt>Team</dt><dd>' + esc(teamText) + '</dd></div>' +
+      (role === 'partner' ? '<div><dt>Skill Level</dt><dd>' + esc(skillText) + '</dd></div>' + '<div><dt>Team</dt><dd>' + esc(teamText) + '</dd></div>' : '') +
       '<div><dt>Role</dt><dd>' + esc(roleText) + ' <span class="bc-verified">✓ verified</span></dd></div>' +
       '<div><dt>Category</dt><dd>' + esc(u.category_name || roleText) + '</dd></div>' +
       '<div><dt>IG ID</dt><dd>' + esc(igId) + '</dd></div>' +
