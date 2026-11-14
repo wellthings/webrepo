@@ -304,9 +304,13 @@
       return;
     }
     var catEndpoint = role === 'supplier' ? '/categories/supplier' : '/categories/partner';
+    // Master data is public; fetch directly so it works even in test (test_) sessions.
+    function fetchJson(path) {
+      return fetch(API + path).then(function (r) { return r.json().catch(function () { return {}; }); });
+    }
     Promise.all([
-      api(catEndpoint).catch(function () { return { data: [] }; }),
-      api('/measurement-units').catch(function () { return { data: [] }; })
+      fetchJson(catEndpoint).catch(function () { return { data: [] }; }),
+      fetchJson('/measurement-units').catch(function () { return { data: [] }; })
     ]).then(function (res) {
       var cats = (res[0] && Array.isArray(res[0].data)) ? res[0].data : [];
       if (!cats.length && window.CATALOG) {
