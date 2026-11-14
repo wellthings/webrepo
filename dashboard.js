@@ -655,14 +655,14 @@
       state.products.forEach(function (p) {
         var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
         var rate = Number(p.rate_per_unit || 0);
+        var desc = p.description ? String(p.description) : '';
         html += '<article class="app-item-card">' +
           '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
           '<div class="app-item-body">' +
-          '<div class="app-item-block"><span class="app-item-label">Product</span><h3 class="app-item-title">' + esc(p.title) + '</h3></div>' +
-          '<div class="app-item-block"><span class="app-item-label">Measurement</span><span class="app-item-value">' + esc(p.unit || 'sqfit') + '</span></div>' +
-          '<div class="app-item-block"><span class="app-item-label">Price</span><span class="app-item-price">₹' + rate.toLocaleString('en-IN') + '</span></div>' +
-          (amt > 0 ? '<div class="app-item-block"><span class="app-item-label">Expected Amount</span><span class="app-item-value">₹' + amt.toLocaleString('en-IN') + '</span></div>' : '') +
-          (p.description ? '<div class="app-item-block"><span class="app-item-label">Description</span><span class="app-item-desc">' + esc(p.description) + '</span></div>' : '') +
+          '<div class="app-item-head"><h3 class="app-item-title">' + esc(p.title) + '</h3><span class="app-item-measure">' + esc(p.unit || 'sqfit') + '</span></div>' +
+          '<div class="app-item-pricebox">₹' + rate.toLocaleString('en-IN') + '</div>' +
+          (amt > 0 && amt !== rate ? '<div class="app-item-expected">Expected ₹' + amt.toLocaleString('en-IN') + '</div>' : '') +
+          (desc ? '<div class="app-item-desc clamp">' + esc(desc) + '</div>' + (desc.length > 70 ? '<button type="button" class="app-item-more" data-more>more</button>' : '') : '') +
           '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button></div>' +
           '</div></article>';
       });
@@ -680,11 +680,12 @@
         var media = s.media_type === 'video'
           ? '<video src="' + esc(s.media_url) + '" controls preload="metadata"></video>'
           : '<img src="' + esc(s.media_url || 'assets/logo-square.png') + '" alt="' + esc(s.title) + '" onerror="this.src=\'assets/logo-square.png\'">';
+        var cap = s.caption ? String(s.caption) : '';
         html += '<article class="app-item-card">' +
           '<div class="app-item-media">' + media + '</div>' +
           '<div class="app-item-body">' +
-          '<div class="app-item-block"><span class="app-item-label">Sample</span><h3 class="app-item-title">' + esc(s.title) + '</h3></div>' +
-          (s.caption ? '<div class="app-item-block"><span class="app-item-label">Description</span><span class="app-item-desc">' + esc(s.caption) + '</span></div>' : '') +
+          '<div class="app-item-head"><h3 class="app-item-title">' + esc(s.title) + '</h3></div>' +
+          (cap ? '<div class="app-item-desc clamp">' + esc(cap) + '</div>' + (cap.length > 70 ? '<button type="button" class="app-item-more" data-more>more</button>' : '') : '') +
           '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-sample="' + esc(s.id) + '">Delete</button></div>' +
           '</div></article>';
       });
@@ -700,6 +701,15 @@
     });
     $('btn-list-product').addEventListener('click', openListProductSheet);
     $('btn-upload-sample').addEventListener('click', openUploadSampleSheet);
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-more]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var desc = btn.previousElementSibling;
+        if (!desc) return;
+        var clamped = desc.classList.toggle('clamp');
+        btn.textContent = clamped ? 'more' : 'less';
+      });
+    });
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-del-prod]'), function (btn) {
       btn.addEventListener('click', function () {
