@@ -57,6 +57,8 @@
   var SAMPLE_LIMITS = (role === 'architect' || role === 'supplier')
     ? { total: 3, image: 3, video: 0 }
     : { total: SAMPLE_LIMIT_TOTAL, image: SAMPLE_LIMIT_IMG, video: SAMPLE_LIMIT_VID };
+  var PRODUCT_HEADING = { architect: 'Your Product Listings', supplier: 'Your Products for Sale', partner: 'Your Product Listings' };
+  var SAMPLE_HEADING = { architect: 'Your Sample Work', supplier: 'Your Product Samples', partner: 'Your Work Samples' };
   var state = {
     user: session.profile || {},
     products: [],
@@ -601,6 +603,8 @@
     var pRem = Math.max(0, pq.maxTotal - pq.totalUsed);
     var sPct = Math.min(100, Math.round((sq.totalUsed / sq.maxTotal) * 100));
     var pPct = Math.min(100, Math.round((pq.totalUsed / pq.maxTotal) * 100));
+    var productHeading = PRODUCT_HEADING[role] || 'Your Products';
+    var sampleHeading = SAMPLE_HEADING[role] || 'Your Samples';
 
     // Billing card button depends strictly on payment status, NOT manual Online/Offline toggle
     var activeBillHtml = isPaymentDue
@@ -643,21 +647,23 @@
       '</div>';
 
     // Listed Products Feed
-    html += '<section class="app-section"><div class="app-sec-head"><h2>Your Products</h2><span class="app-sec-meta">' + state.products.length + ' listed</span></div>';
+    html += '<section class="app-section"><div class="app-sec-head"><h2>' + esc(productHeading) + '</h2><span class="app-sec-meta">' + state.products.length + ' listed</span></div>';
     if (!state.products.length) {
       html += '<div class="app-empty">No products listed yet. Tap <strong>+ List Product</strong> above to post your first item.</div>';
     } else {
       html += '<div class="app-items-grid">';
       state.products.forEach(function (p) {
         var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
+        var rate = Number(p.rate_per_unit || 0);
         html += '<article class="app-item-card">' +
           '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
           '<div class="app-item-body">' +
-          '<h3 class="app-item-title">' + esc(p.title) + '</h3>' +
-          (p.description ? '<div class="app-item-desc">' + esc(p.description) + '</div>' : '') +
-          '<div class="app-item-price">₹' + Number(p.rate_per_unit || 0).toLocaleString('en-IN') + ' / ' + esc(p.unit || 'sqfit') +
-          (amt > 0 ? ' · Expected ₹' + amt.toLocaleString('en-IN') : '') + '</div>' +
-          '<button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button>' +
+          '<div class="app-item-block"><span class="app-item-label">Product</span><h3 class="app-item-title">' + esc(p.title) + '</h3></div>' +
+          '<div class="app-item-block"><span class="app-item-label">Measurement</span><span class="app-item-value">' + esc(p.unit || 'sqfit') + '</span></div>' +
+          '<div class="app-item-block"><span class="app-item-label">Price</span><span class="app-item-price">₹' + rate.toLocaleString('en-IN') + '</span></div>' +
+          (amt > 0 ? '<div class="app-item-block"><span class="app-item-label">Expected Amount</span><span class="app-item-value">₹' + amt.toLocaleString('en-IN') + '</span></div>' : '') +
+          (p.description ? '<div class="app-item-block"><span class="app-item-label">Description</span><span class="app-item-desc">' + esc(p.description) + '</span></div>' : '') +
+          '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button></div>' +
           '</div></article>';
       });
       html += '</div>';
@@ -665,9 +671,9 @@
     html += '</section>';
 
     // Uploaded Samples Feed
-    html += '<section class="app-section"><div class="app-sec-head"><h2>Your Samples</h2><span class="app-sec-meta">' + state.samples.length + ' uploaded</span></div>';
+    html += '<section class="app-section"><div class="app-sec-head"><h2>' + esc(sampleHeading) + '</h2><span class="app-sec-meta">' + state.samples.length + ' uploaded</span></div>';
     if (!state.samples.length) {
-      html += '<div class="app-empty">No samples uploaded yet. Tap <strong>+ Upload Samples</strong> above to add work photos or videos.</div>';
+      html += '<div class="app-empty">No samples uploaded yet. Tap <strong>+ Upload Samples</strong> above to add work photos.</div>';
     } else {
       html += '<div class="app-items-grid">';
       state.samples.forEach(function (s) {
@@ -677,9 +683,9 @@
         html += '<article class="app-item-card">' +
           '<div class="app-item-media">' + media + '</div>' +
           '<div class="app-item-body">' +
-          '<h3 class="app-item-title">' + esc(s.title) + '</h3>' +
-          (s.caption ? '<div class="app-item-desc">' + esc(s.caption) + '</div>' : '') +
-          '<button type="button" class="item-del-btn" data-del-sample="' + esc(s.id) + '">Delete</button>' +
+          '<div class="app-item-block"><span class="app-item-label">Sample</span><h3 class="app-item-title">' + esc(s.title) + '</h3></div>' +
+          (s.caption ? '<div class="app-item-block"><span class="app-item-label">Description</span><span class="app-item-desc">' + esc(s.caption) + '</span></div>' : '') +
+          '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-sample="' + esc(s.id) + '">Delete</button></div>' +
           '</div></article>';
       });
       html += '</div>';
