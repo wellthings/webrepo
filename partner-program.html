@@ -93,16 +93,15 @@
           <div class="field">
             <label for="lg-phone">Number</label>
             <div class="input"><span class="prefix">+91</span><input id="lg-phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off"></div>
+            <button type="button" class="btn-sm" id="lg-send" disabled>Get OTP</button>
           </div>
           <div class="field">
             <label for="lg-pass">Password</label>
             <div class="input"><input id="lg-pass" type="password" maxlength="100" placeholder="Enter your password" autocomplete="current-password"></div>
           </div>
-          <div class="field">
-            <div class="input"><input id="lg-email" type="email" maxlength="150" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-          </div>
-          <div class="field">
-            <div class="input"><input id="lg-secret-id" type="password" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+          <div class="field" id="lg-otp-wrap" hidden>
+            <label for="lg-otp">OTP</label>
+            <div class="input"><input id="lg-otp" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit OTP" autocomplete="one-time-code"></div>
           </div>
           <p class="hint" id="lg-msg" role="alert" aria-live="polite"></p>
           <p class="form-error" id="lg-error" role="alert" hidden></p>
@@ -279,7 +278,7 @@
   <script src="config.js?v=20261104d"></script>
   <script src="partner.js?v=20261114f"></script>
   <script src="profile.js?v=20261114i"></script>
-  <script src="admin-login.js?v=20261114a"></script>
+  <script src="admin-login.js?v=20261114b"></script>
   <script src="pwa.js?v=20261113c"></script>
 </body>
 </html>

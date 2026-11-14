@@ -12,11 +12,13 @@
   var user = $('lg-user');
   var phone = $('lg-phone');
   var pass = $('lg-pass');
-  var emailEl = $('lg-email');
-  var secretId = $('lg-secret-id');
+  var otpWrap = $('lg-otp-wrap');
+  var otp = $('lg-otp');
+  var send = $('lg-send');
   var submit = $('lg-submit');
   var msg = $('lg-msg');
   var errBox = $('lg-error');
+  var timer = null;
   var busy = false;
 
   function show(on) {
@@ -72,17 +74,29 @@
     var phoneOk = /^[6-9]\d{9}$/.test(phone.value);
     var hasUser = user.value.trim().length > 0;
     var hasPass = pass && pass.value.length > 0;
-    submit.disabled = busy || !(hasPass && (hasUser || phoneOk));
+    var otpVal = otp ? otp.value.trim() : '';
+    var hasOtp = /^\d{4,8}$/.test(otpVal);
+    if (send) send.disabled = !phoneOk || !!timer;
+
+    // Normal user: (Username or Phone) + Password (no OTP)
+    // Admin: Phone + Password + OTP (Username empty)
+    var canNormal = !otpVal && hasPass && (hasUser || phoneOk);
+    var canOtp = !hasUser && phoneOk && hasPass && hasOtp;
+    submit.disabled = busy || !(canNormal || canOtp);
   }
 
   phone.addEventListener('input', function () {
     phone.value = phone.value.replace(/\D/g, '').slice(0, 10);
     validate();
   });
+  if (otp) {
+    otp.addEventListener('input', function () {
+      otp.value = otp.value.replace(/\D/g, '').slice(0, 6);
+      validate();
+    });
+  }
   user.addEventListener('input', validate);
   if (pass) pass.addEventListener('input', validate);
-  if (emailEl) emailEl.addEventListener('input', validate);
-  if (secretId) secretId.addEventListener('input', validate);
 
   function post(path, data) {
     return fetch(API + path, {
@@ -136,6 +150,37 @@
     }
   }
 
+  if (send) {
+    send.addEventListener('click', function () {
+      say('');
+      send.disabled = true;
+      post('/admin/otp/send', { phone: phone.value })
+        .then(function (d) {
+          if (otpWrap) otpWrap.hidden = false;
+          var left = d.resend_after || 30;
+          say('If this number can log in, an OTP has been sent.');
+          send.textContent = 'Resend in ' + left + 's';
+          timer = setInterval(function () {
+            left--;
+            if (left <= 0) {
+              clearInterval(timer);
+              timer = null;
+              send.textContent = 'Resend OTP';
+              validate();
+            } else {
+              send.textContent = 'Resend in ' + left + 's';
+            }
+          }, 1000);
+          if (otp) otp.focus();
+          validate();
+        })
+        .catch(function (e) {
+          say(e.message || 'Could not send OTP', true);
+          validate();
+        });
+    });
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     validate();
@@ -145,22 +190,15 @@
     var phoneVal = phone.value;
     var phoneOk = /^[6-9]\d{9}$/.test(phoneVal);
     var passVal = pass ? pass.value : '';
-    var emailVal = emailEl ? emailEl.value.trim() : '';
-    var secretVal = secretId ? secretId.value.trim() : '';
-
-    // Partial fill of unlabeled security fields -> reject cleanly without leaking hint
-    if ((emailVal && !secretVal) || (!emailVal && secretVal)) {
-      say('Invalid credentials', true);
-      return;
-    }
+    var otpVal = otp ? otp.value.trim() : '';
 
     busy = true;
     submit.disabled = true;
     submit.textContent = 'Logging in...';
     say('');
 
-    if (emailVal && secretVal) {
-      if (!phoneOk || !userVal || !passVal) {
+    if (otpVal) {
+      if (userVal || !phoneOk || !passVal || !/^\d{4,8}$/.test(otpVal)) {
         busy = false;
         submit.textContent = 'Login';
         say('Invalid credentials', true);
@@ -169,11 +207,8 @@
       }
       post('/admin/login', {
         phone: phoneVal,
-        username: userVal,
         password: passVal,
-        email: emailVal,
-        admin_code: secretVal,
-        login_id: secretVal
+        otp: otpVal
       })
         .then(function (d) {
           sessionStorage.setItem(TOKEN_KEY, d.token);
@@ -182,13 +217,14 @@
         .catch(function (err) {
           busy = false;
           submit.textContent = 'Login';
+          if (otp) otp.value = '';
           say(err.message || 'Invalid credentials', true);
           validate();
         });
       return;
     }
 
-    // Normal user login (both security fields left blank)
+    // Normal user login (without OTP)
     var payload = {
       identifier: userVal || phoneVal,
       password: passVal
