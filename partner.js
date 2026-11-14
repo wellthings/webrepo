@@ -214,14 +214,10 @@
     }).then(function (d) {
       proceedToBusiness(d);
     }).catch(function (err) {
-      // In testing mode, if backend requires SMS OTP token or returns error, proceed smoothly so testing is never blocked
-      console.warn('Backend note on register:', err.message, 'Proceeding with test session.');
-      proceedToBusiness({
-        uuid: 'test_' + Date.now().toString(36),
-        role: state.role,
-        accessToken: 'test_token',
-        refreshToken: 'test_refresh'
-      });
+      el.error.textContent = (err && err.message) || 'Could not create account. Please try again.';
+      el.error.hidden = false;
+      el.create.textContent = 'Create account';
+      refresh();
     });
   });
 
