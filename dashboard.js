@@ -116,15 +116,39 @@
     return 'image/jpeg';
   }
 
+  function fileToDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) {
+        var fr = new FileReader();
+        fr.onload = function () { resolve(fr.result); };
+        fr.onerror = function () { reject(new Error('Could not read file')); };
+        fr.readAsDataURL(file);
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var max = 1000, w = img.width, h = img.height;
+        if (w > max || h > max) {
+          var s = Math.min(max / w, max / h);
+          w = Math.round(w * s); h = Math.round(h * s);
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        try { resolve(cv.toDataURL('image/jpeg', 0.82)); }
+        catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+      img.src = url;
+    });
+  }
+
   function uploadFile(kind, file) {
     if (isLocalTest) {
-      // Persist a data URL (not a blob: URL) so the picked image survives reloads in test mode.
-      return new Promise(function (resolve, reject) {
-        var reader = new FileReader();
-        reader.onload = function () { resolve(reader.result); };
-        reader.onerror = function () { reject(new Error('Could not read file')); };
-        reader.readAsDataURL(file);
-      });
+      // Persist a (downscaled) data URL so the picked image survives reloads in test mode.
+      return fileToDataUrl(file);
     }
     var cType = inferMime(file);
     return fetch(API + '/users/' + session.uuid + '/upload?kind=' + encodeURIComponent(kind), {
