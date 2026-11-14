@@ -499,6 +499,15 @@
       if ($('bc-initial')) $('bc-initial').textContent = bName.charAt(0).toUpperCase();
       if ($('bc-igid')) $('bc-igid').textContent = card.ig_id || ('IG-' + String((session && session.uuid) || '000').slice(-6).toUpperCase());
       if ($('bc-role')) $('bc-role').textContent = r.charAt(0).toUpperCase() + r.slice(1);
+      if ($('bc-skill')) {
+        var skillMap = { new: 'New', intermediate: 'Intermediate', experienced: 'Experienced' };
+        $('bc-skill').textContent = skillMap[String(card.skill_level || '').toLowerCase()] || 'Intermediate';
+      }
+      if ($('bc-team')) {
+        $('bc-team').textContent = card.has_team
+          ? ('Team' + (card.team_members_count ? ' · ' + card.team_members_count + ' members' : ''))
+          : 'Solo';
+      }
       if ($('bc-category')) $('bc-category').textContent = card.category_name || (r.charAt(0).toUpperCase() + r.slice(1));
       if ($('bc-address')) $('bc-address').textContent = addr;
 
