@@ -380,8 +380,8 @@
       '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
-      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required></div>' +
-      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" inputmode="decimal" min="0" step="0.01" placeholder="₹0.00" required></div>' +
+      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required></div>' +
+      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="text" inputmode="decimal" autocomplete="off" placeholder="₹0.00" required></div>' +
       '<div class="f-group"><label>Product Example Photo</label>' +
       '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
       '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
