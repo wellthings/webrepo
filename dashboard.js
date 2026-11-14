@@ -54,7 +54,7 @@
 
   var role = session.role || 'partner';
   var isLocalTest = String(session.uuid).indexOf('test_') === 0;
-  var SAMPLE_LIMITS = role === 'architect'
+  var SAMPLE_LIMITS = (role === 'architect' || role === 'supplier')
     ? { total: 3, image: 3, video: 0 }
     : { total: SAMPLE_LIMIT_TOTAL, image: SAMPLE_LIMIT_IMG, video: SAMPLE_LIMIT_VID };
   var state = {
@@ -362,6 +362,7 @@
   function renderListProductSheet(cats, units) {
     var pq = state.quota.products || { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL };
     var isArchitect = role === 'architect';
+    var isSupplier = role === 'supplier';
 
     var catOpts = '<option value="">Select category (required)</option>' + cats.map(function (c) {
       return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
@@ -374,8 +375,10 @@
       ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go</label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
       : '';
 
-    var heading = 'List Your Product for Client';
-    var hint = 'Attract Clients & Get Orders: Add an eye-catching product photo with your price—real site photos aren’t required, just list what sells best.';
+    var heading = isSupplier ? 'List Your Product for Sale' : 'List Your Product for Client';
+    var hint = isSupplier
+      ? 'Sell Your Products: Add a clear product photo with your selling price—real shop photos aren’t required, just list what you sell best.'
+      : 'Attract Clients & Get Orders: Add an eye-catching product photo with your price—real site photos aren’t required, just list what sells best.';
 
     var html =
       '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(hint) + '</p>' +
@@ -383,7 +386,7 @@
       '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
-      '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required></div>' +
+      (isSupplier ? '' : '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required></div>') +
       '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="text" inputmode="decimal" autocomplete="off" placeholder="₹0.00" required></div>' +
       '<div class="f-group"><label>Product Example Photo</label>' +
       '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
@@ -398,7 +401,7 @@
     var unitEl = $('lp-unit'), rateLabel = $('lp-rate-label'), rateEl = $('lp-rate'), expEl = $('lp-expected');
     function syncUnitLabel() {
       var found = units.find(function (m) { return m.code === unitEl.value; }) || units[0];
-      rateLabel.textContent = 'Per Measurement Rate' + (found ? ' (' + found.code + ')' : '');
+      if (rateLabel) rateLabel.textContent = 'Per Measurement Rate' + (found ? ' (' + found.code + ')' : '');
     }
     unitEl.addEventListener('change', syncUnitLabel);
     syncUnitLabel();
@@ -418,9 +421,11 @@
     bindNumeric('lp-rate');
     bindNumeric('lp-expected');
 
-    rateEl.addEventListener('input', function () {
-      if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
-    });
+    if (rateEl) {
+      rateEl.addEventListener('input', function () {
+        if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
+      });
+    }
     expEl.addEventListener('input', function () { expEl.setAttribute('data-touched', '1'); });
 
     $('lp-img').addEventListener('change', function () {
@@ -451,9 +456,9 @@
           category: category,
           description: $('lp-desc').value.trim(),
           unit: unitEl.value,
-          rate_per_unit: Number(rateEl.value) || 0,
+          rate_per_unit: rateEl ? (Number(rateEl.value) || 0) : (Number(expEl.value) || 0),
           quantity: 1,
-          expected_amount: Number(expEl.value) || Number(rateEl.value) || 0,
+          expected_amount: Number(expEl.value) || (rateEl ? Number(rateEl.value) : 0) || 0,
           with_material: false,
           image_url: imgUrl,
           media_type: 'image',
@@ -530,7 +535,7 @@
       var msg = $('us-msg'), btn = $('us-submit');
       if (!file) { msg.textContent = 'Please pick an image or video.'; msg.style.color = '#dc2626'; return; }
       var isVid = /^video\//.test(file.type);
-      if (noVideo && isVid) { msg.textContent = 'Architects can upload images only.'; msg.style.color = '#dc2626'; return; }
+      if (noVideo && isVid) { msg.textContent = 'Images only (no video) for this role.'; msg.style.color = '#dc2626'; return; }
       if (!isVid && sq.imagesUsed >= sq.maxImages) { msg.textContent = 'Daily image sample limit (' + sq.imagesUsed + '/' + sq.maxImages + ') reached.'; msg.style.color = '#dc2626'; return; }
       if (isVid && sq.videosUsed >= sq.maxVideos) { msg.textContent = 'Daily video sample limit (' + sq.videosUsed + '/' + sq.maxVideos + ') reached.'; msg.style.color = '#dc2626'; return; }
 
