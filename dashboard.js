@@ -344,7 +344,11 @@
       showToast('Daily limit reached: max 4 products per day.', true);
       return;
     }
-    var catEndpoint = role === 'supplier' ? '/categories/supplier' : '/categories/partner';
+    if (role === 'supplier') {
+      renderListProductSheet([], []);
+      return;
+    }
+    var catEndpoint = '/categories/partner';
     // Master data is public; fetch directly so it works even in test (test_) sessions.
     function fetchJson(path) {
       return fetch(API + path).then(function (r) { return r.json().catch(function () { return {}; }); });
@@ -354,9 +358,8 @@
       fetchJson('/measurement-units').catch(function () { return { data: [] }; })
     ]).then(function (res) {
       var cats = (res[0] && Array.isArray(res[0].data)) ? res[0].data : [];
-      if (!cats.length && window.CATALOG) {
-        var catList = role === 'supplier' ? window.CATALOG.supplier : window.CATALOG.partner;
-        if (catList) cats = catList.map(function (c) { return { name: c.name }; });
+      if (!cats.length && window.CATALOG && window.CATALOG.partner) {
+        cats = window.CATALOG.partner.map(function (c) { return { name: c.name }; });
       }
       var units = (res[1] && Array.isArray(res[1].data) && res[1].data.length)
         ? res[1].data
@@ -370,47 +373,64 @@
     var isArchitect = role === 'architect';
     var isSupplier = role === 'supplier';
 
-    var catOpts = '<option value="">Select category (required)</option>' + cats.map(function (c) {
-      return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
-    }).join('');
-    var unitOpts = units.map(function (m) {
-      return '<option value="' + esc(m.code) + '">' + esc(m.name) + '</option>';
-    }).join('');
-
-    var matHtml = isArchitect
-      ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go</label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
-      : '';
-
-    var heading = isSupplier ? 'List Your Product for Sale' : 'List Your Product for Client';
+    var heading = isSupplier ? 'List Your Product' : 'List Your Product for Client';
     var hint = isSupplier
-      ? 'Sell Your Products: Add a clear product photo with your selling price—real shop photos aren’t required, just list what you sell best.'
+      ? 'Add product name, photo, price, and description.'
       : 'Attract Clients & Get Orders: Add an eye-catching product photo with your price—real site photos aren’t required, just list what sells best.';
 
-    var html =
-      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(hint) + '</p>' +
-      '<form id="app-prod-form">' +
-      '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
-      '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
-      '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
-      (isSupplier ? '' : '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required></div>') +
-      '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="text" inputmode="decimal" autocomplete="off" placeholder="₹0.00" required></div>' +
-      '<div class="f-group"><label>Product Example Photo</label>' +
-      '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
-      '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
-      matHtml +
-      '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
-      '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
-      '</form>';
+    var html;
+    if (isSupplier) {
+      html =
+        '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(hint) + '</p>' +
+        '<form id="app-prod-form">' +
+        '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
+        '<div class="f-group"><label>Product Image</label>' +
+        '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" required hidden><img id="lp-preview" alt="" hidden></label></div>' +
+        '<div class="f-group"><label for="lp-expected">Price (₹0.00)</label><input id="lp-expected" type="text" inputmode="decimal" autocomplete="off" placeholder="₹0.00" required></div>' +
+        '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
+        '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
+        '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
+        '</form>';
+    } else {
+      var catOpts = '<option value="">Select category (required)</option>' + cats.map(function (c) {
+        return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
+      }).join('');
+      var unitOpts = units.map(function (m) {
+        return '<option value="' + esc(m.code) + '">' + esc(m.name) + '</option>';
+      }).join('');
+      var matHtml = isArchitect
+        ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go</label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
+        : '';
+
+      html =
+        '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(hint) + '</p>' +
+        '<form id="app-prod-form">' +
+        '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
+        '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
+        '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="Enter product name here"></div>' +
+        '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required></div>' +
+        '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="text" inputmode="decimal" autocomplete="off" placeholder="₹0.00" required></div>' +
+        '<div class="f-group"><label>Product Example Photo</label>' +
+        '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
+        '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
+        matHtml +
+        '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
+        '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
+        '</form>';
+    }
 
     openSheet(heading, html);
 
     var unitEl = $('lp-unit'), rateLabel = $('lp-rate-label'), rateEl = $('lp-rate'), expEl = $('lp-expected');
     function syncUnitLabel() {
+      if (!unitEl) return;
       var found = units.find(function (m) { return m.code === unitEl.value; }) || units[0];
       if (rateLabel) rateLabel.textContent = 'Per Measurement Rate' + (found ? ' (' + found.code + ')' : '');
     }
-    unitEl.addEventListener('change', syncUnitLabel);
-    syncUnitLabel();
+    if (unitEl) {
+      unitEl.addEventListener('change', syncUnitLabel);
+      syncUnitLabel();
+    }
 
     function bindNumeric(id) {
       var el = $(id);
@@ -446,7 +466,14 @@
       e.preventDefault();
       var btn = $('lp-submit'), msg = $('lp-msg');
       var file = $('lp-img').files[0];
-      var category = $('lp-category').value;
+      if (isSupplier && !file) {
+        msg.textContent = 'Please choose a product image.';
+        msg.style.color = '#dc2626';
+        return;
+      }
+      var category = isSupplier
+        ? ((state.user && state.user.category_name) || 'Supplier Product')
+        : ($('lp-category') ? $('lp-category').value : '');
       if (!category) {
         msg.textContent = 'Please select a product category.';
         msg.style.color = '#dc2626';
@@ -457,14 +484,15 @@
       var prodKind = isArchitect ? 'architect_post' : 'supplier_product';
       var up = file ? uploadFile(prodKind, file) : Promise.resolve('https://interagood.in/assets/logo-square.png');
       up.then(function (imgUrl) {
+        var priceVal = Number(expEl.value) || (rateEl ? Number(rateEl.value) : 0) || 0;
         var payload = {
           title: $('lp-title').value.trim(),
           category: category,
           description: $('lp-desc').value.trim(),
-          unit: unitEl.value,
-          rate_per_unit: rateEl ? (Number(rateEl.value) || 0) : (Number(expEl.value) || 0),
+          unit: unitEl ? unitEl.value : 'pcs',
+          rate_per_unit: rateEl ? (Number(rateEl.value) || 0) : priceVal,
           quantity: 1,
-          expected_amount: Number(expEl.value) || (rateEl ? Number(rateEl.value) : 0) || 0,
+          expected_amount: priceVal,
           with_material: false,
           image_url: imgUrl,
           media_type: 'image',
@@ -663,12 +691,14 @@
           var amt = Number(p.expected_amount || p.total_amount || p.rate_per_unit || 0);
           var rate = Number(p.rate_per_unit || 0);
           var desc = p.description ? String(p.description) : '';
+          var isSup = role === 'supplier';
+          var displayPrice = isSup ? (amt || rate) : rate;
           html += '<article class="app-item-card">' +
             '<div class="app-item-media"><img src="' + esc(p.image_url || 'assets/logo-square.png') + '" alt="' + esc(p.title) + '" onerror="this.src=\'assets/logo-square.png\'"></div>' +
             '<div class="app-item-body">' +
-            '<div class="app-item-head"><h3 class="app-item-title">' + esc(p.title) + '</h3><span class="app-item-measure">' + esc(p.unit || 'sqfit') + '</span></div>' +
-            '<div class="app-item-pricebox">₹' + rate.toLocaleString('en-IN') + '</div>' +
-            (amt > 0 && amt !== rate ? '<div class="app-item-expected">Expected ₹' + amt.toLocaleString('en-IN') + '</div>' : '') +
+            '<div class="app-item-head"><h3 class="app-item-title">' + esc(p.title) + '</h3>' + (isSup ? '' : '<span class="app-item-measure">' + esc(p.unit || 'sqfit') + '</span>') + '</div>' +
+            '<div class="app-item-pricebox">₹' + displayPrice.toLocaleString('en-IN') + '</div>' +
+            (!isSup && amt > 0 && amt !== rate ? '<div class="app-item-expected">Expected ₹' + amt.toLocaleString('en-IN') + '</div>' : '') +
             (desc ? '<div class="app-item-desc clamp">' + esc(desc) + '</div>' + (desc.length > 70 ? '<button type="button" class="app-item-more" data-more>more</button>' : '') : '') +
             '<div class="app-item-foot"><button type="button" class="item-del-btn" data-del-prod="' + esc(p.id) + '">Delete</button></div>' +
             '</div></article>';
