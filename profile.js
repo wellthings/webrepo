@@ -269,6 +269,18 @@
 
   // ---- location: browser geolocation + OpenStreetMap Nominatim ----
   var NOM = 'https://nominatim.openstreetmap.org';
+  function geocodeAddress(q) {
+    if (!q || q.length < 3) return Promise.resolve(null);
+    return fetch(NOM + '/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (rows && rows.length) {
+          var lat = parseFloat(rows[0].lat), lng = parseFloat(rows[0].lon);
+          if (!isNaN(lat) && !isNaN(lng)) return { lat: lat, lng: lng };
+        }
+        return null;
+      }).catch(function () { return null; });
+  }
   var coords = null;
   function setVal(id, v) { if (v && $(id)) { $(id).value = v; $(id).closest('.field').classList.remove('bad'); } }
   function fillAddress(a, display) {
@@ -378,82 +390,96 @@
     if (el.save.disabled || !session) return;
     if (isUploading() || !validate(true)) return;
     submitting = true; el.save.disabled = true; el.save.textContent = 'Activating dashboard...'; el.error.hidden = true;
-    var body = {
-      full_name: val('full_name'),
-      business_name: val('business_name')
-    };
-    body.address = val('address');
-    body.city = val('city');
-    body.state = val('state');
-    body.pincode = val('pincode');
-    // Age/experience are not part of the lean partner profile, so they are only sent for other roles.
-    if (role !== 'partner') {
-      body.age = val('age');
-      body.experience_years = val('experience_years');
-    }
-    if ($('category_id')) body.category_id = val('category_id');
-    if (role === 'partner' || role === 'architect') body.skill_level = skill;
-    if (role === 'partner') {
-      body.has_team = teamMode === 'team';
-      body.has_tools = !!toggles.has_tools;
-      body.knows_work_completely = !!toggles.knows_work_completely;
-      if (teamMode === 'team') body.team_members_count = parseInt(val('team_members_count'), 10) || 0;
-    }
-    if (role === 'architect') {
-      body.courses_completed = val('courses_completed');
-      body.education = val('courses_completed');
-      body.design_software = val('design_software');
-      body.uses_boq_tools = true;
-      body.worked_with_team_before = true;
-    }
-    if (role === 'supplier') {
-      body.shop_years = parseInt(val('shop_years') || '0', 10);
-      if (!coords) coords = { lat: 26.8467, lng: 80.9462 };
-    }
-    if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
-    if (urls.profile_photo) body.profile_photo_url = urls.profile_photo;
-    if (urls.banner) body.banner_url = urls.banner;
 
-    var isLocalTest = String(session.uuid || '').indexOf('test_') === 0;
-    var req = isLocalTest
-      ? Promise.resolve({ success: true, card: body })
-      : fetch(API + '/users/' + session.uuid + '/profile-setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken },
-          body: JSON.stringify(body)
-        }).then(function (r) {
-          return r.json().catch(function () { return {}; }).then(function (d) {
-            if (!r.ok) throw new Error(d.message || 'Could not save profile. Please try again.');
-            return d;
-          });
-        });
-
-    req.then(function (d) {
-      // Partner who lacks the required readiness is saved as unverified and cannot onboard yet.
-      if (role === 'partner' && d && d.verified === false) {
-        submitting = false;
-        showNotReady();
-        return;
+    function doSubmit() {
+      var body = {
+        full_name: val('full_name'),
+        business_name: val('business_name')
+      };
+      body.address = val('address');
+      body.city = val('city');
+      body.state = val('state');
+      body.pincode = val('pincode');
+      // Age/experience are not part of the lean partner profile, so they are only sent for other roles.
+      if (role !== 'partner') {
+        body.age = val('age');
+        body.experience_years = val('experience_years');
       }
-      var cardData = Object.assign({}, body, (d && d.card) || {}, {
-        username: (d && d.card && d.card.username) || session.username || 'member',
-        role: role,
-        category_name: (d && d.card && d.card.category_name) || ($('category_id') && $('category_id').selectedIndex >= 0 ? $('category_id').options[$('category_id').selectedIndex].text : ''),
-        ig_id: (d && d.card && d.card.ig_id) || session.ig_id || ('IG-' + String(session.uuid).slice(-6).toUpperCase()),
-        payment_status: (d && d.card && d.card.payment_status) || session.payment_status || 'unpaid',
-        address: (role === 'partner' && body.address) ? [body.address, body.city, body.state, body.pincode].filter(Boolean).join(', ') : ((d && d.card && d.card.address) || '')
+      if ($('category_id')) body.category_id = val('category_id');
+      if (role === 'partner' || role === 'architect') body.skill_level = skill;
+      if (role === 'partner') {
+        body.has_team = teamMode === 'team';
+        body.has_tools = !!toggles.has_tools;
+        body.knows_work_completely = !!toggles.knows_work_completely;
+        if (teamMode === 'team') body.team_members_count = parseInt(val('team_members_count'), 10) || 0;
+      }
+      if (role === 'architect') {
+        body.courses_completed = val('courses_completed');
+        body.education = val('courses_completed');
+        body.design_software = val('design_software');
+        body.uses_boq_tools = true;
+        body.worked_with_team_before = true;
+      }
+      if (role === 'supplier') {
+        body.shop_years = parseInt(val('shop_years') || '0', 10);
+        if (!coords) coords = { lat: 26.8467, lng: 80.9462 };
+      }
+      if (coords) { body.latitude = coords.lat; body.longitude = coords.lng; }
+      if (urls.profile_photo) body.profile_photo_url = urls.profile_photo;
+      if (urls.banner) body.banner_url = urls.banner;
+
+      var isLocalTest = String(session.uuid || '').indexOf('test_') === 0;
+      var req = isLocalTest
+        ? Promise.resolve({ success: true, card: body })
+        : fetch(API + '/users/' + session.uuid + '/profile-setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken },
+            body: JSON.stringify(body)
+          }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) {
+              if (!r.ok) throw new Error(d.message || 'Could not save profile. Please try again.');
+              return d;
+            });
+          });
+
+      req.then(function (d) {
+        // Partner who lacks the required readiness is saved as unverified and cannot onboard yet.
+        if (role === 'partner' && d && d.verified === false) {
+          submitting = false;
+          showNotReady();
+          return;
+        }
+        var cardData = Object.assign({}, body, (d && d.card) || {}, {
+          username: (d && d.card && d.card.username) || session.username || 'member',
+          role: role,
+          category_name: (d && d.card && d.card.category_name) || ($('category_id') && $('category_id').selectedIndex >= 0 ? $('category_id').options[$('category_id').selectedIndex].text : ''),
+          ig_id: (d && d.card && d.card.ig_id) || session.ig_id || ('IG-' + String(session.uuid).slice(-6).toUpperCase()),
+          payment_status: (d && d.card && d.card.payment_status) || session.payment_status || 'unpaid',
+          address: (role === 'partner' && body.address) ? [body.address, body.city, body.state, body.pincode].filter(Boolean).join(', ') : ((d && d.card && d.card.address) || '')
+        });
+        try {
+          session.profile = cardData;
+          session.payment_status = cardData.payment_status;
+          sessionStorage.setItem('ig_session', JSON.stringify(session));
+        } catch (err) {}
+        showOnboardingCard(cardData);
+      }).catch(function (err) {
+        submitting = false;
+        el.error.textContent = err.message; el.error.hidden = false;
+        el.save.textContent = 'Submit & Continue to Onboarding'; refresh();
       });
-      try {
-        session.profile = cardData;
-        session.payment_status = cardData.payment_status;
-        sessionStorage.setItem('ig_session', JSON.stringify(session));
-      } catch (err) {}
-      showOnboardingCard(cardData);
-    }).catch(function (err) {
-      submitting = false;
-      el.error.textContent = err.message; el.error.hidden = false;
-      el.save.textContent = 'Submit & Continue to Onboarding'; refresh();
-    });
+    }
+
+    // Partner: coordinates are required; geocode the typed address if none was detected.
+    if (role === 'partner' && !coords && val('address')) {
+      el.save.textContent = 'Detecting location...';
+      geocodeAddress(val('address')).then(function (c) {
+        if (c) coords = c;
+        doSubmit();
+      });
+    } else {
+      doSubmit();
+    }
   });
 
   function showOnboardingCard(card) {
