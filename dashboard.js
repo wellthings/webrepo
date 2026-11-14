@@ -337,26 +337,29 @@
     }).join('');
 
     var matHtml = isArchitect
-      ? '<div class="mat-toggle locked"><label for="lp-with-mat">with material <span style="font-weight:600;font-size:0.76rem;color:#166534;">(Locked for Architect)</span></label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
+      ? '<div class="mat-toggle locked"><label for="lp-with-mat">Pay as you go <span style="font-weight:600;font-size:0.76rem;color:#166534;">(Locked for Architect)</span></label><input id="lp-with-mat" type="checkbox" checked disabled style="width:20px;height:20px;accent-color:#15803d;"></div>'
       : '';
 
+    var heading = 'List Your Product for Client';
+    var hint = 'Attract Clients & Get Orders: Add an eye-catching product photo with your price—real site photos aren’t required, just list what sells best.';
+
     var html =
-      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(g.hint) + '</p>' +
+      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;line-height:1.45;">' + esc(hint) + '</p>' +
       '<form id="app-prod-form">' +
       '<div class="f-group"><label for="lp-category">Product Category</label><select id="lp-category" required>' + catOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-unit">Measurement Type</label><select id="lp-unit">' + unitOpts + '</select></div>' +
       '<div class="f-group"><label for="lp-title">Product Name</label><input id="lp-title" type="text" required placeholder="' + esc(g.placeholder) + '"></div>' +
       '<div class="f-group"><label for="lp-rate" id="lp-rate-label">Per Measurement Rate</label><input id="lp-rate" type="number" min="1" step="0.01" placeholder="0.00" required></div>' +
       '<div class="f-group"><label for="lp-expected">Expected Amount (₹0.00)</label><input id="lp-expected" type="number" min="0" step="0.01" placeholder="₹0.00" required></div>' +
-      '<div class="f-group"><label>Example Photo</label>' +
+      '<div class="f-group"><label>Product Example Photo</label>' +
       '<label class="pick-box" for="lp-img"><span id="lp-img-label">Tap to choose 1 image (JPG, PNG, WebP)</span><input id="lp-img" type="file" accept="image/jpeg,image/png,image/webp" hidden><img id="lp-preview" alt="" hidden></label></div>' +
-      '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Describe specs, fittings, finish, or work scope..."></textarea></div>' +
+      '<div class="f-group"><label for="lp-desc">Description</label><textarea id="lp-desc" placeholder="Please describe your product here"></textarea></div>' +
       matHtml +
       '<p class="hint" id="lp-msg" style="margin:0 0 8px;"></p>' +
       '<button type="submit" class="app-cta-btn primary" style="width:100%;" id="lp-submit">Post Product (' + pq.totalUsed + '/' + pq.maxTotal + ' used today)</button>' +
       '</form>';
 
-    openSheet(g.heading, html);
+    openSheet(heading, html);
 
     var unitEl = $('lp-unit'), rateLabel = $('lp-rate-label'), rateEl = $('lp-rate'), expEl = $('lp-expected');
     function syncUnitLabel() {
@@ -365,6 +368,28 @@
     }
     unitEl.addEventListener('change', syncUnitLabel);
     syncUnitLabel();
+
+    function syncTitlePlaceholder() {
+      var catName = $('lp-category').value;
+      var ph = g.placeholder;
+      if (catName) {
+        var examples = null;
+        if (window.CATALOG) {
+          var list = role === 'supplier' ? window.CATALOG.supplier : window.CATALOG.partner;
+          if (list) {
+            var catObj = list.find(function (c) { return c.name === catName; });
+            if (catObj) {
+              var mods = catObj.modules || catObj.items || [];
+              if (mods.length) examples = mods.slice(0, 3).map(function (m) { return m[1]; });
+            }
+          }
+        }
+        ph = examples ? ('e.g., ' + examples.join(', ')) : ('e.g., ' + catName + ' product / work');
+      }
+      $('lp-title').placeholder = ph;
+    }
+    $('lp-category').addEventListener('change', syncTitlePlaceholder);
+    syncTitlePlaceholder();
 
     rateEl.addEventListener('input', function () {
       if (!expEl.getAttribute('data-touched')) expEl.value = rateEl.value;
