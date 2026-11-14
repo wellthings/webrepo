@@ -54,6 +54,9 @@
 
   var role = session.role || 'partner';
   var isLocalTest = String(session.uuid).indexOf('test_') === 0;
+  var SAMPLE_LIMITS = role === 'architect'
+    ? { total: 3, image: 3, video: 0 }
+    : { total: SAMPLE_LIMIT_TOTAL, image: SAMPLE_LIMIT_IMG, video: SAMPLE_LIMIT_VID };
   var state = {
     user: session.profile || {},
     products: [],
@@ -61,7 +64,7 @@
     orders: [],
     orderFilter: 'pending',
     quota: {
-      samples: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMIT_TOTAL, maxImages: SAMPLE_LIMIT_IMG, maxVideos: SAMPLE_LIMIT_VID },
+      samples: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMITS.total, maxImages: SAMPLE_LIMITS.image, maxVideos: SAMPLE_LIMITS.video },
       products: { totalUsed: 0, maxTotal: PRODUCT_LIMIT_TOTAL }
     },
     isOnline: session.is_online !== false,
@@ -252,9 +255,9 @@
         totalUsed: sToday.length,
         imagesUsed: sToday.filter(function (x) { return x.media_type !== 'video'; }).length,
         videosUsed: sToday.filter(function (x) { return x.media_type === 'video'; }).length,
-        maxTotal: SAMPLE_LIMIT_TOTAL,
-        maxImages: SAMPLE_LIMIT_IMG,
-        maxVideos: SAMPLE_LIMIT_VID
+        maxTotal: SAMPLE_LIMITS.total,
+        maxImages: SAMPLE_LIMITS.image,
+        maxVideos: SAMPLE_LIMITS.video
       },
       products: {
         totalUsed: pToday.length,
@@ -484,17 +487,24 @@
   }
 
   function openUploadSampleSheet() {
-    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 6, maxImages: 3, maxVideos: 3 };
+    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMITS.total, maxImages: SAMPLE_LIMITS.image, maxVideos: SAMPLE_LIMITS.video };
     if (sq.totalUsed >= sq.maxTotal) {
-      showToast('Daily sample limit reached: max 6 samples (3 images + 3 videos) today.', true);
+      showToast('Daily sample limit reached: max ' + sq.maxTotal + ' samples today.', true);
       return;
     }
+    var noVideo = sq.maxVideos === 0;
+    var limitText = noVideo
+      ? 'Daily Sample Limit: <strong>' + sq.totalUsed + '/' + sq.maxTotal + '</strong> used · Images <strong>' + sq.imagesUsed + '/' + sq.maxImages + '</strong>'
+      : 'Daily Sample Limit: <strong>' + sq.totalUsed + '/' + sq.maxTotal + '</strong> used · Images <strong>' + sq.imagesUsed + '/' + sq.maxImages + '</strong> · Videos <strong>' + sq.videosUsed + '/' + sq.maxVideos + '</strong>';
+    var mediaLabel = noVideo ? 'Pick Sample Image' : 'Pick Sample Image or Video';
+    var mediaHint = noVideo ? 'Tap to pick Image (JPG/PNG/WebP)' : 'Tap to pick Image (JPG/PNG/WebP) or Video (MP4/MOV)';
+    var mediaAccept = noVideo ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime';
 
     var html =
-      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;">Daily Sample Limit: <strong>' + sq.totalUsed + '/6</strong> used · Images <strong>' + sq.imagesUsed + '/3</strong> · Videos <strong>' + sq.videosUsed + '/3</strong></p>' +
+      '<p style="margin:0 0 12px;font-size:0.82rem;color:#475569;">' + limitText + '</p>' +
       '<form id="app-sample-form">' +
-      '<div class="f-group"><label>Pick Sample Image or Video</label>' +
-      '<label class="pick-box" for="us-media"><span id="us-media-label">Tap to pick Image (JPG/PNG/WebP) or Video (MP4/MOV)</span><input id="us-media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" required hidden><img id="us-img-prev" alt="" hidden><video id="us-vid-prev" controls hidden></video></label></div>' +
+      '<div class="f-group"><label>' + mediaLabel + '</label>' +
+      '<label class="pick-box" for="us-media"><span id="us-media-label">' + mediaHint + '</span><input id="us-media" type="file" accept="' + mediaAccept + '" required hidden><img id="us-img-prev" alt="" hidden><video id="us-vid-prev" controls hidden></video></label></div>' +
       '<div class="f-group"><label for="us-name">Sample Name (Free Write)</label><input id="us-name" type="text" required maxlength="120" placeholder="Write your sample work name..."></div>' +
       '<div class="f-group"><label for="us-desc">Short Description</label><textarea id="us-desc" maxlength="300" placeholder="Short description of this sample..."></textarea></div>' +
       '<p class="hint" id="us-msg" style="margin:0 0 8px;"></p>' +
@@ -520,8 +530,9 @@
       var msg = $('us-msg'), btn = $('us-submit');
       if (!file) { msg.textContent = 'Please pick an image or video.'; msg.style.color = '#dc2626'; return; }
       var isVid = /^video\//.test(file.type);
-      if (!isVid && sq.imagesUsed >= 3) { msg.textContent = 'Daily image sample limit (3/3) reached.'; msg.style.color = '#dc2626'; return; }
-      if (isVid && sq.videosUsed >= 3) { msg.textContent = 'Daily video sample limit (3/3) reached.'; msg.style.color = '#dc2626'; return; }
+      if (noVideo && isVid) { msg.textContent = 'Architects can upload images only.'; msg.style.color = '#dc2626'; return; }
+      if (!isVid && sq.imagesUsed >= sq.maxImages) { msg.textContent = 'Daily image sample limit (' + sq.imagesUsed + '/' + sq.maxImages + ') reached.'; msg.style.color = '#dc2626'; return; }
+      if (isVid && sq.videosUsed >= sq.maxVideos) { msg.textContent = 'Daily video sample limit (' + sq.videosUsed + '/' + sq.maxVideos + ') reached.'; msg.style.color = '#dc2626'; return; }
 
       btn.disabled = true; btn.textContent = 'Uploading...'; msg.textContent = '';
       var uploadKind = role === 'partner' ? 'partner_sample' : 'sample';
@@ -579,7 +590,7 @@
       (u.payment_status && u.payment_status !== 'paid') ||
       (u.next_due_at && !isNaN(new Date(u.next_due_at)) && new Date(u.next_due_at).getTime() <= Date.now());
 
-    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: 6, maxImages: 3, maxVideos: 3 };
+    var sq = state.quota.samples || { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMITS.total, maxImages: SAMPLE_LIMITS.image, maxVideos: SAMPLE_LIMITS.video };
     var pq = state.quota.products || { totalUsed: 0, maxTotal: 4 };
     var sRem = Math.max(0, sq.maxTotal - sq.totalUsed);
     var pRem = Math.max(0, pq.maxTotal - pq.totalUsed);
@@ -609,9 +620,9 @@
       // Product & Sample Daily Countdown
       '<section class="limit-grid" aria-label="Daily Upload Limits">' +
       '<div class="limit-card">' +
-      '<div class="limit-top"><span class="limit-title">Sample Countdown (Daily Limit 6)</span><span class="limit-count">' + sRem + ' left</span></div>' +
-      '<div class="quota-bar"><div class="quota-fill ' + (sq.totalUsed >= 6 ? 'full' : '') + '" style="width:' + sPct + '%"></div></div>' +
-      '<div class="limit-sub">' + sq.totalUsed + '/6 used · Images ' + sq.imagesUsed + '/3 · Videos ' + sq.videosUsed + '/3</div>' +
+      '<div class="limit-top"><span class="limit-title">Sample Countdown (Daily Limit ' + sq.maxTotal + ')</span><span class="limit-count">' + sRem + ' left</span></div>' +
+      '<div class="quota-bar"><div class="quota-fill ' + (sq.totalUsed >= sq.maxTotal ? 'full' : '') + '" style="width:' + sPct + '%"></div></div>' +
+      '<div class="limit-sub">' + sq.totalUsed + '/' + sq.maxTotal + ' used · Images ' + sq.imagesUsed + '/' + sq.maxImages + (sq.maxVideos > 0 ? ' · Videos ' + sq.videosUsed + '/' + sq.maxVideos : '') + '</div>' +
       '</div>' +
       '<div class="limit-card">' +
       '<div class="limit-top"><span class="limit-title">Product Daily Limit (4 Only)</span><span class="limit-count">' + pRem + ' left</span></div>' +
