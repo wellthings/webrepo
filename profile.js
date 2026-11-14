@@ -87,13 +87,13 @@
     // Cover Banner & Profile Picture (prominent for Architect & Supplier, available across roles)
     h += '<div class="cover"><label class="cover-banner" for="banner"><img id="banner-img" alt="" hidden><span class="cover-ph">' +
       svg('pin').replace(ICONS.pin, '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>') +
-      (role === 'architect' ? 'Upload Architect Banner' : role === 'supplier' ? 'Upload Shop Banner' : 'Add banner photo') +
+      (role === 'architect' ? 'Upload Architect Banner' : role === 'supplier' ? 'Always use your shop banner' : 'Add banner photo') +
       '</span></label>' +
       '<input class="sr" id="banner" type="file" accept="image/jpeg,image/png,image/webp">' +
       '<label class="avatar" for="profile_photo"><img id="profile_photo-img" alt="" hidden><span class="avatar-ph">' + svg('user') + '</span><span class="avatar-plus">+</span></label>' +
       '<input class="sr" id="profile_photo" type="file" accept="image/jpeg,image/png,image/webp"></div>' +
       '<p class="hint cover-hint" id="banner-hint">' +
-      (role === 'partner' ? 'Profile and banner photo (optional). JPG, PNG or WebP, up to 5 MB.' : 'Upload your profile picture & banner (JPG, PNG or WebP, up to 5 MB).') +
+      (role === 'partner' ? 'Profile and banner photo (optional). JPG, PNG or WebP, up to 5 MB.' : role === 'supplier' ? 'Always use your shop banner. JPG, PNG or WebP, up to 5 MB.' : 'Upload your profile picture & banner (JPG, PNG or WebP, up to 5 MB).') +
       '</p><p class="hint cover-hint" id="profile_photo-hint"></p>';
 
     // Role-specific top banners & notices
@@ -144,11 +144,13 @@
       h += buildSkillLevel(role === 'partner' ? 'Skill Level' : 'Architect Level');
     }
 
-    // Common Age & Experience (Required for All Roles)
-    h += '<p class="biz-section">Age &amp; Experience</p><div class="field-row">';
-    h += select('age', 'Age', 'num', range(18, 70, function (n) { return n + ' yrs'; }), 'Select age');
-    h += select('experience_years', 'Experience (in Years)', 'clock', [['0', 'Less than 1 year (New)']].concat(range(1, 40, function (n) { return n + (n === 1 ? ' year' : ' years'); })), 'Select experience');
-    h += '</div>';
+    // Age & Experience (not captured for supplier)
+    if (role !== 'supplier') {
+      h += '<p class="biz-section">Age &amp; Experience</p><div class="field-row">';
+      h += select('age', 'Age', 'num', range(18, 70, function (n) { return n + ' yrs'; }), 'Select age');
+      h += select('experience_years', 'Experience (in Years)', 'clock', [['0', 'Less than 1 year (New)']].concat(range(1, 40, function (n) { return n + (n === 1 ? ' year' : ' years'); })), 'Select experience');
+      h += '</div>';
+    }
 
     // Architect-specific specialized fields
     if (role === 'architect') {
@@ -363,8 +365,10 @@
       if (show && bad && $(bad)) $(bad).scrollIntoView({ behavior: 'smooth', block: 'center' });
       return !bad;
     }
-    need('age', !!val('age'), 'Select your age.');
-    need('experience_years', val('experience_years') !== '', 'Select your experience in years.');
+    if (role !== 'supplier') {
+      need('age', !!val('age'), 'Select your age.');
+      need('experience_years', val('experience_years') !== '', 'Select your experience in years.');
+    }
     if (role === 'architect') {
       need('courses_completed', val('courses_completed').length >= 2, 'Enter completed courses or degree.');
       need('design_software', val('design_software').length >= 2, 'Enter design software used.');
@@ -400,8 +404,8 @@
       body.city = val('city');
       body.state = val('state');
       body.pincode = val('pincode');
-      // Age/experience are not part of the lean partner profile, so they are only sent for other roles.
-      if (role !== 'partner') {
+      // Age/experience are not part of the lean partner profile and are not captured for suppliers.
+      if (role !== 'partner' && role !== 'supplier') {
         body.age = val('age');
         body.experience_years = val('experience_years');
       }
