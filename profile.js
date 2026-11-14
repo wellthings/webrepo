@@ -155,8 +155,24 @@
     // Architect-specific specialized fields
     if (role === 'architect') {
       h += '<p class="biz-section">Qualifications &amp; Software</p>';
-      h += text('courses_completed', 'Courses Completed', 'cap', 'e.g., B.Arch, Diploma in Interior Design, Vastu', 'maxlength="150"');
-      h += text('design_software', 'Design Software Used', 'pc', 'e.g., AutoCAD, SketchUp, Revit, 3ds Max, V-Ray', 'maxlength="80"');
+      h += select('courses_completed', 'Courses Completed', 'cap', [
+        ['B.Arch', 'B.Arch'],
+        ['Diploma in Interior', 'Diploma in Interior'],
+        ['Master', 'Master'],
+        ['High School', 'High School'],
+        ['Entry Level', 'Entry Level'],
+        ['Basic Knowledge', 'Basic Knowledge'],
+        ['Just long-time experience', 'Just long-time experience']
+      ], 'Select course completed');
+      h += select('design_software', 'Design Software Used', 'pc', [
+        ['AutoCAD', 'AutoCAD'],
+        ['SketchUp', 'SketchUp'],
+        ['Revit', 'Revit'],
+        ['3ds Max', '3ds Max'],
+        ['V-Ray', 'V-Ray'],
+        ['Lumion', 'Lumion'],
+        ['Other', 'Other']
+      ], 'Select design software');
     }
 
     // Supplier-specific shop operational history
@@ -370,8 +386,8 @@
       need('experience_years', val('experience_years') !== '', 'Select your experience in years.');
     }
     if (role === 'architect') {
-      need('courses_completed', val('courses_completed').length >= 2, 'Enter completed courses or degree.');
-      need('design_software', val('design_software').length >= 2, 'Enter design software used.');
+      need('courses_completed', val('courses_completed').length >= 2, 'Select your course completed.');
+      need('design_software', val('design_software').length >= 2, 'Select design software used.');
     }
     if (role === 'supplier') {
       need('shop_years', val('shop_years') !== '', 'Select years your shop has been active.');
@@ -421,8 +437,6 @@
         body.courses_completed = val('courses_completed');
         body.education = val('courses_completed');
         body.design_software = val('design_software');
-        body.uses_boq_tools = true;
-        body.worked_with_team_before = true;
       }
       if (role === 'supplier') {
         body.shop_years = parseInt(val('shop_years') || '0', 10);
@@ -503,19 +517,29 @@
       if ($('bc-initial')) $('bc-initial').textContent = bName.charAt(0).toUpperCase();
       if ($('bc-igid')) $('bc-igid').textContent = card.ig_id || ('IG-' + String((session && session.uuid) || '000').slice(-6).toUpperCase());
       if ($('bc-role')) $('bc-role').textContent = r.charAt(0).toUpperCase() + r.slice(1);
-      var partnerOnly = r === 'partner';
+      var isPartner = r === 'partner', isArch = r === 'architect', isSupplier = r === 'supplier';
+      function row(id, on) { var n = $(id); if (n) n.style.display = on ? '' : 'none'; }
+      row('bc-row-level', isPartner || isArch);
+      row('bc-row-team', isPartner);
+      row('bc-row-category', isPartner || isSupplier);
+      row('bc-row-experience', isArch);
+      row('bc-row-courses', isArch);
+      row('bc-row-design', isArch);
+
       var skillMap = { new: 'New', intermediate: 'Intermediate', experienced: 'Experienced' };
-      if ($('bc-skill')) {
-        $('bc-skill').textContent = skillMap[String(card.skill_level || '').toLowerCase()] || 'Intermediate';
-        if ($('bc-skill').parentNode) $('bc-skill').parentNode.style.display = partnerOnly ? '' : 'none';
-      }
+      if ($('bc-skill')) $('bc-skill').textContent = skillMap[String(card.skill_level || '').toLowerCase()] || 'Intermediate';
       if ($('bc-team')) {
         $('bc-team').textContent = card.has_team
           ? ('Team' + (card.team_members_count ? ' · ' + card.team_members_count + ' members' : ''))
           : 'Solo';
-        if ($('bc-team').parentNode) $('bc-team').parentNode.style.display = partnerOnly ? '' : 'none';
       }
       if ($('bc-category')) $('bc-category').textContent = card.category_name || (r.charAt(0).toUpperCase() + r.slice(1));
+      if ($('bc-experience')) {
+        var ey = card.experience_years;
+        $('bc-experience').textContent = (ey === 0 || ey) ? (ey + (Number(ey) === 1 ? ' year' : ' years')) : '-';
+      }
+      if ($('bc-courses')) $('bc-courses').textContent = card.education || card.courses_completed || '-';
+      if ($('bc-design')) $('bc-design').textContent = card.design_software || '-';
       if ($('bc-address')) $('bc-address').textContent = addr;
 
       if ($('bc-banner') && card.banner_url) { $('bc-banner').src = card.banner_url; $('bc-banner').hidden = false; }

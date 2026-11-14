@@ -732,6 +732,9 @@
     var teamText = u.has_team
       ? ('Team' + (u.team_members_count ? ' · ' + u.team_members_count + ' members' : ''))
       : 'Solo';
+    var expText = (u.experience_years === 0 || u.experience_years) ? (u.experience_years + (Number(u.experience_years) === 1 ? ' year' : ' years')) : '-';
+    var coursesText = u.education || u.courses_completed || '-';
+    var designText = u.design_software || '-';
 
     var avatarHtml = u.profile_photo_url
       ? '<img src="' + esc(u.profile_photo_url) + '" alt="' + esc(bName) + '">'
@@ -754,11 +757,19 @@
       '</div>' +
       '</div></div>' +
       '<dl class="bc-details">' +
-      '<div><dt>Address</dt><dd>' + esc(addr) + '</dd></div>' +
-      (role === 'partner' ? '<div><dt>Skill Level</dt><dd>' + esc(skillText) + '</dd></div>' + '<div><dt>Team</dt><dd>' + esc(teamText) + '</dd></div>' : '') +
-      '<div><dt>Role</dt><dd>' + esc(roleText) + ' <span class="bc-verified">✓ verified</span></dd></div>' +
-      '<div><dt>Category</dt><dd>' + esc(u.category_name || roleText) + '</dd></div>' +
-      '<div><dt>IG ID</dt><dd>' + esc(igId) + '</dd></div>' +
+      (role === 'architect'
+        ? '<div><dt>IG ID</dt><dd>' + esc(igId) + '</dd></div>' +
+          '<div><dt>Role</dt><dd>' + esc(roleText) + ' <span class="bc-verified">✓ verified</span></dd></div>' +
+          '<div><dt>Level</dt><dd>' + esc(skillText) + '</dd></div>' +
+          '<div><dt>Experience</dt><dd>' + esc(expText) + '</dd></div>' +
+          '<div><dt>Courses</dt><dd>' + esc(coursesText) + '</dd></div>' +
+          '<div><dt>Design</dt><dd>' + esc(designText) + '</dd></div>' +
+          '<div><dt>Address</dt><dd>' + esc(addr) + '</dd></div>'
+        : '<div><dt>Address</dt><dd>' + esc(addr) + '</dd></div>' +
+          (role === 'partner' ? '<div><dt>Skill Level</dt><dd>' + esc(skillText) + '</dd></div>' + '<div><dt>Team</dt><dd>' + esc(teamText) + '</dd></div>' : '') +
+          '<div><dt>Role</dt><dd>' + esc(roleText) + ' <span class="bc-verified">✓ verified</span></dd></div>' +
+          '<div><dt>Category</dt><dd>' + esc(u.category_name || roleText) + '</dd></div>' +
+          '<div><dt>IG ID</dt><dd>' + esc(igId) + '</dd></div>') +
       '</dl></article>' +
       '</section>';
 
