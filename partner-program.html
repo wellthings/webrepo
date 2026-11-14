@@ -27,8 +27,7 @@
     <div class="pp-wrap">
       <section id="step-role" aria-labelledby="pp-title">
         <div class="role-top-actions" style="display:flex;justify-content:flex-end;gap:12px;margin-bottom:12px;">
-          <a class="locked-login" href="#login" id="admin-login" style="color:#d9534f;font-weight:700;border:1px solid rgba(217,83,79,0.3);padding:4px 10px;border-radius:6px;text-decoration:none;font-size:0.82rem;">🔒 ADMIN ACCESS</a>
-          <a class="locked-login" href="#" id="top-login" style="font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;font-size:0.82rem;">LOGIN</a>
+          <a class="locked-login" href="#login" id="top-login" style="font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;font-size:0.82rem;">LOGIN</a>
         </div>
         <h1 id="pp-title">Join Interagood</h1>
         <p class="pp-sub">Choose how you want to join. Partners, suppliers and architects get their own control panel.</p>
@@ -83,54 +82,33 @@
 
       <section id="step-login" class="signup-card" hidden aria-labelledby="login-title">
         <div class="signup-head">
-          <h2 id="login-title">Secure Admin Login</h2>
-          <p>Authorized personnel authentication. <button type="button" class="link-btn" id="login-back">Back</button></p>
+          <h2 id="login-title">Login</h2>
+          <p>Enter your account details. <button type="button" class="link-btn" id="login-back">Back</button></p>
         </div>
         <form id="login-form" novalidate autocomplete="off">
           <div class="field">
             <label for="lg-user">Username</label>
-            <div class="input"><input id="lg-user" type="text" maxlength="100" placeholder="Admin username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+            <div class="input"><input id="lg-user" type="text" maxlength="100" placeholder="Enter your username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
           </div>
           <div class="field">
-            <label for="lg-phone">Phone</label>
+            <label for="lg-phone">Number</label>
             <div class="input"><span class="prefix">+91</span><input id="lg-phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off"></div>
-            <button type="button" class="btn-sm" id="lg-send" disabled>Get OTP</button>
           </div>
           <div class="field">
             <label for="lg-pass">Password</label>
-            <div class="input"><input id="lg-pass" type="password" maxlength="100" placeholder="Admin password" autocomplete="off"></div>
+            <div class="input"><input id="lg-pass" type="password" maxlength="100" placeholder="Enter your password" autocomplete="current-password"></div>
           </div>
-          <div class="field" id="lg-otp-wrap" hidden>
-            <label for="lg-otp">OTP</label>
-            <div class="input"><input id="lg-otp" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit OTP" autocomplete="one-time-code"></div>
+          <div class="field">
+            <div class="input"><input id="lg-email" type="email" maxlength="150" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
           </div>
           <div class="field">
             <div class="input"><input id="lg-secret-id" type="password" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
           </div>
           <p class="hint" id="lg-msg" role="alert" aria-live="polite"></p>
+          <p class="form-error" id="lg-error" role="alert" hidden></p>
           <button type="submit" class="btn" id="lg-submit" disabled>Login</button>
         </form>
-      </section>
-
-      <section id="step-user-login" class="signup-card" hidden aria-labelledby="ulogin-title">
-        <div class="signup-head">
-          <h2 id="ulogin-title">Welcome back</h2>
-          <p>Log in to your Interagood account. <button type="button" class="link-btn" id="ulogin-back">Back</button></p>
-        </div>
-        <form id="ulogin-form" novalidate autocomplete="off">
-          <div class="field">
-            <label for="ulogin-id">Phone, email or username</label>
-            <div class="input"><input id="ulogin-id" type="text" maxlength="100" placeholder="Enter your phone, email or username" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-          </div>
-          <div class="field">
-            <label for="ulogin-pass">Password</label>
-            <div class="input"><input id="ulogin-pass" type="password" maxlength="100" placeholder="Your password" autocomplete="current-password"></div>
-          </div>
-          <p class="hint" id="ulogin-msg" role="alert" aria-live="polite"></p>
-          <button type="submit" class="btn" id="ulogin-submit">Log in</button>
-          <p class="form-error" id="ulogin-error" role="alert" hidden></p>
-        </form>
-        <p style="margin-top:16px;text-align:center;font-size:0.9rem;color:#6b7a90">New here? <button type="button" class="link-btn" id="ulogin-signup">Create an account</button></p>
+        <p style="margin-top:16px;text-align:center;font-size:0.9rem;color:#6b7a90">New here? <button type="button" class="link-btn" id="lg-signup">Create an account</button></p>
       </section>
 
       <section id="step-signup" class="signup-card" hidden aria-labelledby="signup-title">
@@ -299,9 +277,9 @@
   </div>
 
   <script src="config.js?v=20261104d"></script>
-  <script src="partner.js?v=20261114e"></script>
+  <script src="partner.js?v=20261114f"></script>
   <script src="profile.js?v=20261114i"></script>
-  <script src="admin-login.js?v=1"></script>
+  <script src="admin-login.js?v=20261114a"></script>
   <script src="pwa.js?v=20261113c"></script>
 </body>
 </html>

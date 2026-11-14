@@ -221,66 +221,6 @@
     });
   });
 
-  // user login (client/partner/supplier)
-  var ulogin = $('step-user-login');
-  if (ulogin) {
-    var uForm = $('ulogin-form'), uId = $('ulogin-id'), uPass = $('ulogin-pass'), uErr = $('ulogin-error'), uBtn = $('ulogin-submit');
-    uForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      uErr.hidden = true;
-      uBtn.disabled = true;
-      uBtn.textContent = 'Logging in...';
-      post('/login', { identifier: uId.value.trim(), password: uPass.value })
-        .then(function (d) {
-          var isPaid = d.payment_status === 'paid';
-          sessionStorage.setItem('ig_session', JSON.stringify({
-            uuid: d.uuid,
-            role: d.role,
-            username: d.username,
-            payment_status: d.payment_status || 'unpaid',
-            is_online: !!d.is_online,
-            profile: d.profile || null,
-            accessToken: d.accessToken,
-            refreshToken: d.refreshToken
-          }));
-        if (isPaid && d.profile_completed) {
-          location.href = 'dashboard.html';
-          return;
-        }
-        ulogin.hidden = true;
-        $('step-role').hidden = true;
-        var p = d.profile || {};
-        // Unverified partner: block re-apply while the 7-day cooldown is active.
-        if (d.role === 'partner' && d.profile_completed && p.verified === false) {
-          var until = p.restricted_until ? new Date(p.restricted_until).getTime() : 0;
-          if (until > Date.now()) {
-            document.dispatchEvent(new CustomEvent('ig:show-restricted', { detail: { until: until } }));
-            return;
-          }
-          // Cooldown over → allow re-apply (show business form)
-          $('step-business').hidden = false;
-          document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
-          $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
-        if (!d.profile_completed) {
-          $('step-business').hidden = false;
-          document.dispatchEvent(new CustomEvent('ig:account', { detail: { role: d.role } }));
-          $('step-business').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          document.dispatchEvent(new CustomEvent('ig:show-onboarding-card', { detail: { card: d.profile } }));
-        }
-        })
-        .catch(function (err) {
-          uErr.textContent = err.message;
-          uErr.hidden = false;
-          uBtn.disabled = false;
-          uBtn.textContent = 'Log in';
-        });
-    });
-    $('ulogin-back').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
-    $('ulogin-signup').addEventListener('click', function () { ulogin.hidden = true; $('step-role').hidden = false; $('step-role').scrollIntoView({ behavior: 'smooth' }); });
-  }
 
   // Resume unpaid onboarding payment step if redirected from dashboard guard
   if (location.hash === '#onboarding-pay') {
