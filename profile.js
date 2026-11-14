@@ -344,9 +344,10 @@
     need('full_name', val('full_name').length >= 2, 'Enter full name as per Aadhaar.');
     need('business_name', val('business_name').length >= 2, 'Enter your business name.');
     if ($('category_id')) need('category_id', !!val('category_id'), 'Select a category.');
-    // Partner: only the lean, persisted identity fields gate submission. The toolbox/knowledge
+    // Partner: the button enables once the lean identity + address are filled. The toolbox/knowledge
     // checks and team/solo selection never disable the button; readiness is evaluated on submit.
     if (role === 'partner') {
+      need('address', val('address').length >= 3, 'Enter your current address.');
       if (show && bad && $(bad)) $(bad).scrollIntoView({ behavior: 'smooth', block: 'center' });
       return !bad;
     }
@@ -381,12 +382,12 @@
       full_name: val('full_name'),
       business_name: val('business_name')
     };
-    // Partner only persists the lean identity set; the heavy details are not sent at all.
+    body.address = val('address');
+    body.city = val('city');
+    body.state = val('state');
+    body.pincode = val('pincode');
+    // Age/experience are not part of the lean partner profile, so they are only sent for other roles.
     if (role !== 'partner') {
-      body.address = val('address');
-      body.city = val('city');
-      body.state = val('state');
-      body.pincode = val('pincode');
       body.age = val('age');
       body.experience_years = val('experience_years');
     }
@@ -439,7 +440,8 @@
         role: role,
         category_name: (d && d.card && d.card.category_name) || ($('category_id') && $('category_id').selectedIndex >= 0 ? $('category_id').options[$('category_id').selectedIndex].text : ''),
         ig_id: (d && d.card && d.card.ig_id) || session.ig_id || ('IG-' + String(session.uuid).slice(-6).toUpperCase()),
-        payment_status: (d && d.card && d.card.payment_status) || session.payment_status || 'unpaid'
+        payment_status: (d && d.card && d.card.payment_status) || session.payment_status || 'unpaid',
+        address: (role === 'partner' && body.address) ? [body.address, body.city, body.state, body.pincode].filter(Boolean).join(', ') : ((d && d.card && d.card.address) || '')
       });
       try {
         session.profile = cardData;
