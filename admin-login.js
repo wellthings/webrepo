@@ -9,7 +9,6 @@
   var signupBtn = $('lg-signup');
   if (!form) return;
 
-  var user = $('lg-user');
   var phone = $('lg-phone');
   var pass = $('lg-pass');
   var otpWrap = $('lg-otp-wrap');
@@ -31,7 +30,7 @@
       if ($('step-business')) $('step-business').hidden = true;
       if ($('step-card')) $('step-card').hidden = true;
       say('');
-      user.focus();
+      phone.focus();
       if (location.hash !== '#login') history.replaceState(null, '', '#login');
     } else if (location.hash === '#login') {
       history.replaceState(null, '', location.pathname + location.search);
@@ -72,17 +71,14 @@
 
   function validate() {
     var phoneOk = /^[6-9]\d{9}$/.test(phone.value);
-    var hasUser = user.value.trim().length > 0;
     var hasPass = pass && pass.value.length > 0;
     var otpVal = otp ? otp.value.trim() : '';
     var hasOtp = /^\d{4,8}$/.test(otpVal);
     if (send) send.disabled = !phoneOk || !!timer;
 
-    // Normal user: (Username or Phone) + Password (no OTP)
-    // Admin: Phone + Password + OTP (Username empty)
-    var canNormal = !otpVal && hasPass && (hasUser || phoneOk);
-    var canOtp = !hasUser && phoneOk && hasPass && hasOtp;
-    submit.disabled = busy || !(canNormal || canOtp);
+    // If OTP input has characters, require valid 4-8 digit OTP; otherwise Phone + Password
+    var otpOk = otpVal.length === 0 || hasOtp;
+    submit.disabled = busy || !(phoneOk && hasPass && otpOk);
   }
 
   phone.addEventListener('input', function () {
@@ -95,7 +91,6 @@
       validate();
     });
   }
-  user.addEventListener('input', validate);
   if (pass) pass.addEventListener('input', validate);
 
   function post(path, data) {
@@ -186,7 +181,6 @@
     validate();
     if (submit.disabled) return;
 
-    var userVal = user.value.trim();
     var phoneVal = phone.value;
     var phoneOk = /^[6-9]\d{9}$/.test(phoneVal);
     var passVal = pass ? pass.value : '';
@@ -198,7 +192,7 @@
     say('');
 
     if (otpVal) {
-      if (userVal || !phoneOk || !passVal || !/^\d{4,8}$/.test(otpVal)) {
+      if (!phoneOk || !passVal || !/^\d{4,8}$/.test(otpVal)) {
         busy = false;
         submit.textContent = 'Login';
         say('Invalid credentials', true);
@@ -224,14 +218,12 @@
       return;
     }
 
-    // Normal user login (without OTP)
-    var payload = {
-      identifier: userVal || phoneVal,
+    // Normal user login (Phone + Password, without OTP)
+    post('/login', {
+      identifier: phoneVal,
+      phone: phoneVal,
       password: passVal
-    };
-    if (userVal && phoneOk) payload.phone = phoneVal;
-
-    post('/login', payload)
+    })
       .then(function (d) {
         routeUser(d);
       })
