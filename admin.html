@@ -12,17 +12,41 @@
   <link rel="stylesheet" href="style.css?v=20261105-e">
   <link rel="stylesheet" href="partner.css?v=20261113">
   <style>
-    body.ad { background: #f5f6f8; }
-    .ad-main { padding: 24px 0 64px; }
-    .ad-wrap { width: min(1140px, 94%); margin: 0 auto; }
+    body.ad { background: #f5f6f8; margin: 0; }
+    .ad-head-left { display: flex; align-items: center; gap: 12px; }
+    .ad-menu-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--navy); cursor: pointer; padding: 0; }
+    .ad-menu-btn:hover { background: #f1f5f9; }
+    .ad-menu-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; }
     .ad-user { display: flex; align-items: center; gap: 14px; color: var(--navy); font-size: 0.92rem; font-weight: 600; }
-    .ad-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-    .ad-bar .tabs { justify-content: flex-start; margin: 0; flex-wrap: wrap; }
+
+    .ad-shell { display: flex; min-height: calc(100vh - 64px); position: relative; }
+    .ad-backdrop { position: fixed; inset: 0; background: rgba(11, 31, 58, 0.45); z-index: 40; }
+    .ad-backdrop[hidden] { display: none; }
+
+    .ad-drawer { width: 260px; flex: 0 0 260px; background: #fff; border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
+    .ad-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+    .ad-drawer-title { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+    .ad-drawer-close { display: none; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--navy); font-size: 1.2rem; line-height: 1; cursor: pointer; }
+
+    .ad-nav-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 11px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--navy); font: inherit; font-size: 0.92rem; font-weight: 700; text-align: left; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .ad-nav-item:hover { background: #f1f5f9; }
+    .ad-nav-item.active { background: var(--navy); color: #fff; }
+    .ad-nav-left { display: inline-flex; align-items: center; gap: 10px; }
+    .ad-nav-left svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .ad-nav-count { padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; background: #eef2f7; color: var(--navy); }
+    .ad-nav-item.active .ad-nav-count { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+    .ad-main { flex: 1; min-width: 0; padding: 22px 24px 64px; }
+    .ad-wrap { max-width: 1060px; margin: 0 auto; }
+    .ad-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .ad-sec-title { margin: 0; font-size: 1.35rem; font-weight: 800; color: var(--navy); }
+    .ad-sec-sub { margin: 3px 0 0; font-size: 0.85rem; color: var(--muted); }
+    .ad-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     .ad-bar .btn-sm { margin-top: 0; }
 
-    .ad-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 16px; }
+    .ad-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; }
     .ad-filters label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.86rem; font-weight: 700; color: var(--navy); cursor: pointer; }
-    .ad-filters select { width: auto; margin: 0; padding: 7px 12px; border: 1.5px solid #cbd5e1; border-radius: 9px; font-size: 0.86rem; font-weight: 600; }
+    .ad-filters select { width: auto; margin: 0; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; font-weight: 600; background: #fff; color: var(--navy); }
 
     .ad-list { display: grid; gap: 14px; }
     .ad-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 18px; }
@@ -54,12 +78,27 @@
     .ad-sample-item { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #f8fafc; }
     .ad-sample-item img { width: 100%; height: 96px; object-fit: cover; display: block; }
     .ad-sample-item div { padding: 6px 8px; font-size: 0.76rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    body.ad.drawer-collapsed .ad-drawer { display: none; }
+
+    @media (max-width: 900px) {
+      .ad-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 270px; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 4px 0 24px rgba(11, 31, 58, 0.16); display: flex; }
+      body.ad.drawer-open .ad-drawer { transform: translateX(0); display: flex; }
+      body.ad.drawer-collapsed .ad-drawer { display: flex; }
+      .ad-drawer-close { display: inline-flex; align-items: center; justify-content: center; }
+      .ad-main { padding: 18px 14px 64px; }
+    }
   </style>
 </head>
 <body class="ad">
   <header class="pp-header">
     <div class="container pp-header-inner">
-      <a class="brand" href="admin.html" aria-label="Interagood admin"><span class="brand-name">Interagood Admin</span></a>
+      <div class="ad-head-left">
+        <button type="button" class="ad-menu-btn" id="ad-drawer-btn" aria-label="Toggle menu" aria-expanded="false" aria-controls="ad-drawer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a class="brand" href="admin.html" aria-label="Interagood admin"><span class="brand-name">Interagood Admin</span></a>
+      </div>
       <div class="ad-user">
         <span id="ad-name">Admin</span>
         <button type="button" class="btn-sm" id="ad-logout">Log out</button>
@@ -67,46 +106,100 @@
     </div>
   </header>
 
-  <main class="ad-main">
-    <div class="ad-wrap">
-      <div class="ad-bar">
-        <div class="tabs" role="tablist" aria-label="Admin sections">
-          <button type="button" class="tab active" id="tab-orders" role="tab" aria-selected="true" aria-controls="panel-orders">Orders</button>
-          <button type="button" class="tab" id="tab-users" role="tab" aria-selected="false" aria-controls="panel-users">Online Talent &amp; Partner Samples</button>
-          <button type="button" class="tab" id="tab-carts" role="tab" aria-selected="false" aria-controls="panel-carts">Live carts</button>
-        </div>
-        <button type="button" class="btn-sm" id="ad-refresh">Refresh</button>
+  <div class="ad-shell">
+    <div class="ad-backdrop" id="ad-backdrop" hidden></div>
+
+    <aside class="ad-drawer" id="ad-drawer" aria-label="Admin navigation">
+      <div class="ad-drawer-head">
+        <p class="ad-drawer-title">Menu</p>
+        <button type="button" class="ad-drawer-close" id="ad-drawer-close" aria-label="Close menu">&times;</button>
       </div>
 
-      <p class="hint" id="ad-msg" role="status" aria-live="polite"></p>
+      <button type="button" class="ad-nav-item active" id="nav-orders" data-section="orders">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Orders</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-orders">-</span>
+      </button>
 
-      <section id="panel-orders" class="ad-list" role="tabpanel" aria-labelledby="tab-orders">
-        <p class="ad-empty">Loading orders&hellip;</p>
-      </section>
+      <button type="button" class="ad-nav-item" id="nav-architect" data-section="architect">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+          <span>Architects</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-architect">-</span>
+      </button>
 
-      <section id="panel-users" class="ad-list" role="tabpanel" aria-labelledby="tab-users" hidden>
-        <div class="ad-filters">
-          <label><input type="checkbox" id="flt-online-only" checked> Online Users Only</label>
-          <label>Role:
-            <select id="flt-role">
-              <option value="all">All Roles</option>
-              <option value="partner">Partners (Private Samples)</option>
-              <option value="supplier">Suppliers</option>
-              <option value="architect">Architects</option>
+      <button type="button" class="ad-nav-item" id="nav-partner" data-section="partner">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5l3 3M4 20l4.5-1 10-10a2.1 2.1 0 00-3-3l-10 10z"/></svg>
+          <span>Partners</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-partner">-</span>
+      </button>
+
+      <button type="button" class="ad-nav-item" id="nav-supplier" data-section="supplier">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9M3 9v11h18V9M9 20v-6h6v6"/></svg>
+          <span>Suppliers</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-supplier">-</span>
+      </button>
+
+      <button type="button" class="ad-nav-item" id="nav-carts" data-section="carts">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11h11.6l2-7H6"/></svg>
+          <span>Live Carts</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-carts">-</span>
+      </button>
+    </aside>
+
+    <main class="ad-main">
+      <div class="ad-wrap">
+        <div class="ad-bar">
+          <div>
+            <h1 class="ad-sec-title" id="ad-section-title">Orders</h1>
+            <p class="ad-sec-sub" id="ad-section-sub">Incoming client orders and partner assignments</p>
+          </div>
+          <div class="ad-bar-actions">
+            <button type="button" class="btn-sm" id="ad-refresh">Refresh</button>
+          </div>
+        </div>
+
+        <div class="ad-filters" id="ad-filters-orders">
+          <label>Status:
+            <select id="flt-order-status">
+              <option value="all">All Orders</option>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="closed">Closed</option>
             </select>
           </label>
         </div>
-        <div id="ad-users-list" class="ad-list">
-          <p class="ad-empty">Loading registered professionals&hellip;</p>
-        </div>
-      </section>
 
-      <section id="panel-carts" class="ad-list" role="tabpanel" aria-labelledby="tab-carts" hidden></section>
-    </div>
-  </main>
+        <div class="ad-filters" id="ad-filters-users" hidden>
+          <label><input type="checkbox" id="flt-online-only"> Online Only</label>
+        </div>
+
+        <p class="hint" id="ad-msg" role="status" aria-live="polite"></p>
+
+        <section id="panel-orders" class="ad-list" aria-live="polite">
+          <p class="ad-empty">Loading orders&hellip;</p>
+        </section>
+
+        <section id="panel-users" class="ad-list" hidden aria-live="polite">
+          <p class="ad-empty">Loading list&hellip;</p>
+        </section>
+
+        <section id="panel-carts" class="ad-list" hidden aria-live="polite"></section>
+      </div>
+    </main>
+  </div>
 
   <script src="config.js?v=20261104d"></script>
   <script src="pwa.js?v=20261113"></script>
-  <script src="admin.js?v=20261113"></script>
+  <script src="admin.js?v=20261114a"></script>
 </body>
 </html>

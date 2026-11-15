@@ -4,18 +4,41 @@
   var LOGIN_PAGE = 'partner-program.html#login';
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
   var ORDER_STATUSES = ['new', 'contacted', 'closed'];
+  var SECTION_META = {
+    orders: { title: 'Orders', sub: 'Incoming client orders and partner assignments' },
+    architect: { title: 'Architects', sub: 'Registered architects filtered separately' },
+    partner: { title: 'Partners', sub: 'Registered partners and private skill samples' },
+    supplier: { title: 'Suppliers', sub: 'Registered material suppliers' },
+    carts: { title: 'Live Carts', sub: 'Items currently in client carts before checkout' }
+  };
   var $ = function (id) { return document.getElementById(id); };
 
   var token = sessionStorage.getItem(TOKEN_KEY) || '';
   if (!token) { location.replace(LOGIN_PAGE); return; }
 
-  var msg = $('ad-msg'), ordersEl = $('panel-orders'), usersWrap = $('panel-users'), usersEl = $('ad-users-list'), cartsEl = $('panel-carts');
-  var tabOrders = $('tab-orders'), tabUsers = $('tab-users'), tabCarts = $('tab-carts');
-  var fltOnline = $('flt-online-only'), fltRole = $('flt-role');
-  var loaded = { orders: false, users: false, carts: false };
+  var msg = $('ad-msg');
+  var ordersEl = $('panel-orders');
+  var usersEl = $('panel-users');
+  var cartsEl = $('panel-carts');
+  var filterOrdersBox = $('ad-filters-orders');
+  var filterUsersBox = $('ad-filters-users');
+  var fltOrderStatus = $('flt-order-status');
+  var fltOnline = $('flt-online-only');
+  var secTitle = $('ad-section-title');
+  var secSub = $('ad-section-sub');
+  var drawerBtn = $('ad-drawer-btn');
+  var drawerClose = $('ad-drawer-close');
+  var backdrop = $('ad-backdrop');
+  var navItems = Array.prototype.slice.call(document.querySelectorAll('.ad-nav-item'));
+
+  var currentSection = 'orders';
+  var cachedOrders = [];
   var onlinePros = [];
 
-  function say(text, bad) { msg.textContent = text || ''; msg.style.color = bad ? '#c0392b' : ''; }
+  function say(text, bad) {
+    msg.textContent = text || '';
+    msg.style.color = bad ? '#c0392b' : '';
+  }
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -23,6 +46,7 @@
     if (text != null) n.textContent = text;
     return n;
   }
+
   function line(label, value) {
     var box = el('div');
     box.appendChild(el('p', 'ad-label', label));
@@ -31,10 +55,12 @@
     box.appendChild(v);
     return box;
   }
+
   function when(value) {
     var d = new Date(value);
     return isNaN(d) ? '' : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
   }
+
   function phoneLink(phone) {
     if (!phone) return el('span', '', '-');
     var a = el('a', '', '+91 ' + phone);
@@ -42,18 +68,38 @@
     return a;
   }
 
-  function setTab(name) {
-    var tabs = { orders: tabOrders, users: tabUsers, carts: tabCarts };
-    Object.keys(tabs).forEach(function (k) {
-      var on = k === name;
-      tabs[k].classList.toggle('active', on);
-      tabs[k].setAttribute('aria-selected', String(on));
-    });
-    ordersEl.hidden = name !== 'orders';
-    usersWrap.hidden = name !== 'users';
-    cartsEl.hidden = name !== 'carts';
-    if (!loaded[name]) load(name);
+  function isMobile() {
+    return window.innerWidth <= 900;
   }
+
+  function openMobileDrawer() {
+    document.body.classList.add('drawer-open');
+    backdrop.hidden = false;
+    drawerBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeMobileDrawer() {
+    document.body.classList.remove('drawer-open');
+    backdrop.hidden = true;
+    drawerBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleDrawer() {
+    if (isMobile()) {
+      if (document.body.classList.contains('drawer-open')) closeMobileDrawer();
+      else openMobileDrawer();
+    } else {
+      var collapsed = document.body.classList.toggle('drawer-collapsed');
+      drawerBtn.setAttribute('aria-expanded', String(!collapsed));
+    }
+  }
+
+  drawerBtn.addEventListener('click', toggleDrawer);
+  if (drawerClose) drawerClose.addEventListener('click', closeMobileDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeMobileDrawer);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) closeMobileDrawer();
+  });
 
   function api(path, options) {
     options = options || {};
@@ -190,7 +236,7 @@
     var top = el('div', 'ad-top');
     var head = el('div');
     head.appendChild(el('span', 'ad-no', (u.business_name || u.full_name || u.username || 'User') + ' '));
-    head.appendChild(el('span', 'ad-chip', u.role.toUpperCase()));
+    head.appendChild(el('span', 'ad-chip', (u.role || '').toUpperCase()));
     if (u.ig_id) head.appendChild(el('span', 'ad-chip', u.ig_id));
     top.appendChild(head);
 
@@ -260,56 +306,103 @@
     rows.forEach(function (r) { target.appendChild(build(r)); });
   }
 
+  function renderFilteredOrders() {
+    var st = fltOrderStatus ? fltOrderStatus.value : 'all';
+    var filtered = st === 'all' ? cachedOrders : cachedOrders.filter(function (o) { return o.status === st; });
+    render(ordersEl, filtered, orderCard, st === 'all' ? 'No orders yet.' : 'No ' + st + ' orders.');
+    say(filtered.length + ' order(s) shown · ' + onlinePros.length + ' online pro(s) ready.');
+  }
+
+  function setCount(id, val) {
+    var node = $(id);
+    if (node) node.textContent = String(val);
+  }
+
+  function refreshDrawerCounts() {
+    api('/admin/users?online=false').then(function (d) {
+      var list = d.data || [];
+      setCount('cnt-architect', list.filter(function (u) { return u.role === 'architect'; }).length);
+      setCount('cnt-partner', list.filter(function (u) { return u.role === 'partner'; }).length);
+      setCount('cnt-supplier', list.filter(function (u) { return u.role === 'supplier'; }).length);
+    }).catch(function () { return null; });
+    api('/admin/carts').then(function (d) {
+      setCount('cnt-carts', (d.data || []).length);
+    }).catch(function () { return null; });
+  }
+
   function fetchOnlinePool() {
     return api('/admin/users?online=true').then(function (d) {
       onlinePros = d.data || [];
     }).catch(function () { onlinePros = []; });
   }
 
-  function load(name) {
+  function load(section) {
     say('Loading...');
-    if (name === 'users') {
+    if (section === 'architect' || section === 'partner' || section === 'supplier') {
       var onlineParam = fltOnline && fltOnline.checked ? 'true' : 'false';
-      var roleParam = fltRole ? fltRole.value : 'all';
-      return api('/admin/users?online=' + onlineParam + '&role=' + encodeURIComponent(roleParam))
+      return api('/admin/users?online=' + onlineParam + '&role=' + encodeURIComponent(section))
         .then(function (d) {
-          loaded.users = true;
           var rows = d.data || [];
-          render(usersEl, rows, userCard, 'No matching professionals found for this availability filter.');
-          say(rows.length + ' registered professional(s) shown.');
+          var label = SECTION_META[section].title;
+          render(usersEl, rows, userCard, 'No ' + label.toLowerCase() + ' found for this filter.');
+          if (!fltOnline || !fltOnline.checked) setCount('cnt-' + section, rows.length);
+          say(rows.length + ' ' + label.toLowerCase() + ' shown.');
         }).catch(function (e) { say(e.message, true); });
     }
 
-    if (name === 'orders') {
+    if (section === 'orders') {
       return fetchOnlinePool().then(function () {
         return api('/admin/orders');
       }).then(function (d) {
-        loaded.orders = true;
-        var rows = d.data || [];
-        render(ordersEl, rows, orderCard, 'No orders yet.');
-        say(rows.length + ' order(s) · ' + onlinePros.length + ' online pro(s) ready.');
+        cachedOrders = d.data || [];
+        setCount('cnt-orders', cachedOrders.length);
+        renderFilteredOrders();
       }).catch(function (e) { say(e.message, true); });
     }
 
     return api('/admin/carts')
       .then(function (d) {
-        loaded.carts = true;
         var rows = d.data || [];
+        setCount('cnt-carts', rows.length);
         render(cartsEl, rows, cartCard, 'No client has items in the cart right now.');
         say(rows.length + ' live cart(s).');
       })
       .catch(function (e) { say(e.message, true); });
   }
 
-  $('ad-refresh').addEventListener('click', function () {
-    var active = tabOrders.classList.contains('active') ? 'orders' : tabUsers.classList.contains('active') ? 'users' : 'carts';
-    load(active);
+  function setSection(section) {
+    currentSection = section;
+    navItems.forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-section') === section);
+    });
+    var meta = SECTION_META[section] || SECTION_META.orders;
+    secTitle.textContent = meta.title;
+    secSub.textContent = meta.sub;
+
+    ordersEl.hidden = section !== 'orders';
+    usersEl.hidden = !(section === 'architect' || section === 'partner' || section === 'supplier');
+    cartsEl.hidden = section !== 'carts';
+    filterOrdersBox.hidden = section !== 'orders';
+    filterUsersBox.hidden = !(section === 'architect' || section === 'partner' || section === 'supplier');
+
+    if (isMobile()) closeMobileDrawer();
+    load(section);
+  }
+
+  navItems.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setSection(btn.getAttribute('data-section'));
+    });
   });
-  tabOrders.addEventListener('click', function () { setTab('orders'); });
-  tabUsers.addEventListener('click', function () { setTab('users'); });
-  tabCarts.addEventListener('click', function () { setTab('carts'); });
-  if (fltOnline) fltOnline.addEventListener('change', function () { load('users'); });
-  if (fltRole) fltRole.addEventListener('change', function () { load('users'); });
+
+  $('ad-refresh').addEventListener('click', function () {
+    load(currentSection);
+    refreshDrawerCounts();
+  });
+
+  if (fltOrderStatus) fltOrderStatus.addEventListener('change', renderFilteredOrders);
+  if (fltOnline) fltOnline.addEventListener('change', function () { load(currentSection); });
+
   $('ad-logout').addEventListener('click', function () {
     sessionStorage.removeItem(TOKEN_KEY);
     location.replace(LOGIN_PAGE);
@@ -318,5 +411,8 @@
   api('/admin/me')
     .then(function (d) { $('ad-name').textContent = (d.admin && d.admin.username) || 'Admin'; })
     .catch(function () { return null; })
-    .then(function () { setTab('orders'); });
+    .then(function () {
+      setSection('orders');
+      refreshDrawerCounts();
+    });
 })();
