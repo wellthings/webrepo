@@ -549,7 +549,9 @@
         if ($('bc-initial')) $('bc-initial').hidden = true;
       }
 
-      var isPaid = card.payment_status === 'paid' || (session && session.payment_status === 'paid');
+      var dueAt = (session && session.next_due_at) || card.next_due_at || card.payment_due_date || null;
+      var notExpired = !dueAt || isNaN(new Date(dueAt).getTime()) || new Date(dueAt).getTime() > Date.now();
+      var isPaid = ((session && session.payment_status) ? session.payment_status === 'paid' : card.payment_status === 'paid') && notExpired;
       if ($('bc-state')) {
         $('bc-state').textContent = isPaid ? 'Active · Paid' : 'Payment Pending';
         $('bc-state').classList.toggle('on', isPaid);
@@ -578,7 +580,9 @@
         var errEl = $('pay-error');
         if (errEl) errEl.hidden = true;
 
-        if (session.payment_status === 'paid') {
+        var curDue = session.next_due_at || p.next_due_at || p.payment_due_date || null;
+        var curNotExpired = !curDue || isNaN(new Date(curDue).getTime()) || new Date(curDue).getTime() > Date.now();
+        if (session.payment_status === 'paid' && curNotExpired) {
           window.location.href = 'dashboard.html';
           return;
         }
@@ -587,50 +591,20 @@
           return;
         }
         payBtnEl.disabled = true;
+        payBtnEl.textContent = 'Redirecting to PayU...';
         window.InteragoodPayU.initiatePayment({
+          purpose: 'subscription',
+          accessToken: session.accessToken,
           amount: fee,
           productInfo: 'Interagood ' + r.charAt(0).toUpperCase() + r.slice(1) + ' Onboarding',
           firstName: p.full_name || session.username || 'Member',
           email: p.email || 'onboarding@interagood.in',
-          phone: session.phone || p.phone || '9999999999',
-          onSuccess: function (res) {
-            var isLocal = String(session.uuid || '').indexOf('test_') === 0;
-            var actReq = isLocal
-              ? Promise.resolve({ payment_status: 'paid', next_due_at: new Date(Date.now() + 30 * 86400000).toISOString() })
-              : fetch(API + '/payments/payu/sandbox-activate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.accessToken },
-                  body: JSON.stringify({ txnid: res.txnid })
-                }).then(function (resp) {
-                  return resp.json().catch(function () { return {}; }).then(function (dd) {
-                    if (!resp.ok) throw new Error(dd.message || 'Activation failed');
-                    return dd;
-                  });
-                });
-
-            actReq.then(function (dd) {
-              session.payment_status = dd.payment_status || 'paid';
-              session.is_online = true;
-              session.profile = Object.assign({}, session.profile || {}, {
-                payment_status: 'paid',
-                is_online: true,
-                next_due_at: dd.next_due_at || new Date(Date.now() + 30 * 86400000).toISOString()
-              });
-              sessionStorage.setItem('ig_session', JSON.stringify(session));
-              if ($('bc-state')) { $('bc-state').textContent = 'Active · Paid'; $('bc-state').classList.add('on'); }
-              if ($('bc-online')) $('bc-online').setAttribute('aria-checked', 'true');
-              if ($('bc-online-label')) $('bc-online-label').textContent = 'Online';
-              payBtnEl.textContent = 'Activated! Opening Dashboard...';
-              setTimeout(function () { window.location.href = 'dashboard.html'; }, 550);
-            }).catch(function (e2) {
-              payBtnEl.disabled = false;
-              if (errEl) { errEl.textContent = e2.message || 'Payment verification failed.'; errEl.hidden = false; }
-            });
-          },
+          phone: session.phone || p.phone || '',
           onFailure: function (failRes) {
             payBtnEl.disabled = false;
+            payBtnEl.textContent = 'Pay ₹' + fee + ' & Activate Dashboard';
             if (errEl) {
-              errEl.textContent = (failRes && failRes.message) || 'Payment cancelled. Complete payment to unlock your Dashboard.';
+              errEl.textContent = (failRes && failRes.message) || 'Payment could not be started. Complete payment to unlock your Dashboard.';
               errEl.hidden = false;
             }
           }

@@ -47,7 +47,13 @@
     location.replace('partner-program.html#login');
     return;
   }
-  if (session.payment_status !== 'paid') {
+  var sessDue = session.next_due_at || (session.profile && session.profile.next_due_at);
+  var sessExpired = !!(sessDue && !isNaN(new Date(sessDue).getTime()) && new Date(sessDue).getTime() <= Date.now());
+  if (session.payment_status !== 'paid' || sessExpired) {
+    if (sessExpired) {
+      session.payment_status = 'expired';
+      try { sessionStorage.setItem('ig_session', JSON.stringify(session)); } catch (e) {}
+    }
     location.replace('partner-program.html#onboarding-pay');
     return;
   }
@@ -218,33 +224,20 @@
     var u = state.user || {};
     var amt = PLAN_FEES[role] || 109;
     if (!window.InteragoodPayU) {
-      setOnlineState(true);
+      showToast('Payment engine unavailable. Please reload.', true);
       return;
     }
+    showToast('Redirecting to PayU Checkout...', false);
     window.InteragoodPayU.initiatePayment({
+      purpose: 'subscription',
+      accessToken: session.accessToken,
       amount: amt,
       productInfo: 'Interagood ' + role.charAt(0).toUpperCase() + role.slice(1) + ' Active Cycle',
       firstName: u.full_name || session.username || 'Member',
       email: u.email || 'billing@interagood.in',
-      phone: u.phone || session.phone || '9999999999',
-      onSuccess: function (res) {
-        var req = isLocalTest
-          ? Promise.resolve({ payment_status: 'paid', next_due_at: new Date(Date.now() + 30 * 86400000).toISOString() })
-          : api('/payments/payu/sandbox-activate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ txnid: res.txnid })
-            });
-        req.then(function (d) {
-          state.user.payment_status = d.payment_status || 'paid';
-          state.user.next_due_at = d.next_due_at || state.user.next_due_at;
-          session.payment_status = 'paid';
-          sessionStorage.setItem('ig_session', JSON.stringify(session));
-          setOnlineState(true);
-          showToast('Profile Active & Live!', false);
-        }).catch(function () {
-          setOnlineState(true);
-        });
+      phone: u.phone || session.phone || '',
+      onFailure: function (failRes) {
+        showToast((failRes && failRes.message) || 'Could not start PayU payment.', true);
       }
     });
   }
@@ -284,9 +277,13 @@
         if (d && d.data && !Array.isArray(d.data)) {
           state.user = d.data;
           if (!gotDedicatedSamples && Array.isArray(d.data.samples)) state.samples = d.data.samples;
-          state.isOnline = d.data.is_online !== false;
-          if (d.data.payment_status && d.data.payment_status !== 'paid') {
-            session.payment_status = d.data.payment_status;
+          var active = d.data.payment_active !== undefined ? !!d.data.payment_active : d.data.payment_status === 'paid';
+          state.isOnline = active && d.data.is_online !== false;
+          session.next_due_at = d.data.next_due_at || null;
+          if (!active) {
+            session.payment_status = d.data.payment_status || 'unpaid';
+            session.payment_active = false;
+            session.is_online = false;
             sessionStorage.setItem('ig_session', JSON.stringify(session));
             location.replace('partner-program.html#onboarding-pay');
           }

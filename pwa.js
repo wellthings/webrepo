@@ -102,99 +102,76 @@
     });
   }
 
-  // 4. PayU Modular Payment Integration Placeholder
+  // 4. Real PayU Hosted Checkout Integration (Server-signed SHA-512 form POST)
   window.InteragoodPayU = {
-    // Current environment configuration
-    config: {
-      merchantKey: window.SITE?.payuMerchantKey || 'PLACEHOLDER_KEY',
-      merchantSalt: window.SITE?.payuMerchantSalt || 'PLACEHOLDER_SALT',
-      mode: 'test', // 'test' or 'live'
-    },
-
-    /**
-     * Initiates a PayU payment request
-     * @param {Object} options
-     * @param {number} options.amount
-     * @param {string} options.productInfo
-     * @param {string} options.firstName
-     * @param {string} options.email
-     * @param {string} options.phone
-     * @param {Function} options.onSuccess
-     * @param {Function} options.onFailure
-     */
     initiatePayment: function (options) {
-      var amount = Number(options.amount) || 0;
-      var txnid = 'IG_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-      var isTest = this.config.mode === 'test' || !this.config.merchantKey || this.config.merchantKey === 'PLACEHOLDER_KEY';
+      options = options || {};
+      var apiBase = (window.SITE && window.SITE.apiBase) || '';
+      var session = null;
+      try { session = JSON.parse(sessionStorage.getItem('ig_session') || 'null'); } catch (e) { session = null; }
+      var token = options.accessToken || (session && session.accessToken) || '';
+      var purpose = options.purpose || (token ? 'subscription' : 'order');
 
-      console.log('[PayU Engine] Initiating transaction ' + txnid + ' for ₹' + amount + ' (Mode: ' + (isTest ? 'Sandbox/Placeholder' : 'Live') + ')');
-
-      // Create interactive payment modal for sandbox testing or real redirect
-      var overlay = document.createElement('div');
-      overlay.id = 'payu-checkout-modal';
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,31,58,0.7);backdrop-filter:blur(3px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn 0.2s ease;';
-
-      overlay.innerHTML =
-        '<div style="background:#fff;max-width:420px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.3);font-family:inherit;">' +
-        '<div style="background:#0b1f3a;color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;">' +
-        '<div style="display:flex;align-items:center;gap:10px;">' +
-        '<span style="background:#f58220;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:800;letter-spacing:0.05em;">PayU</span>' +
-        '<strong style="font-size:1.05rem;">Secure Checkout</strong>' +
-        '</div>' +
-        '<button id="payu-cancel-btn" style="background:none;border:0;color:#cbd5e0;font-size:1.3rem;cursor:pointer;">&times;</button>' +
-        '</div>' +
-        '<div style="padding:22px;">' +
-        '<div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:18px;">' +
-        '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#718096;margin-bottom:6px;">' +
-        '<span>Item</span><strong>' + (options.productInfo || 'Interagood Subscription') + '</strong>' +
-        '</div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#718096;margin-bottom:6px;">' +
-        '<span>Transaction ID</span><span style="font-family:monospace;font-size:0.8rem;">' + txnid + '</span>' +
-        '</div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:1.15rem;color:#0b1f3a;font-weight:800;border-top:1px dashed #cbd5e0;padding-top:10px;margin-top:6px;">' +
-        '<span>Amount to Pay</span><span>₹' + amount.toLocaleString('en-IN') + '</span>' +
-        '</div>' +
-        '</div>' +
-        '<div style="margin-bottom:18px;">' +
-        '<label style="display:block;font-size:0.82rem;font-weight:700;color:#2d3748;margin-bottom:8px;">Select Payment Method (Sandbox Active)</label>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' +
-        '<label style="border:1.5px solid #f58220;border-radius:8px;padding:10px;text-align:center;font-size:0.8rem;font-weight:700;color:#0b1f3a;cursor:pointer;background:#fff8f3;">UPI / QR</label>' +
-        '<label style="border:1.5px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;font-size:0.8rem;font-weight:600;color:#4a5568;cursor:pointer;">Cards</label>' +
-        '<label style="border:1.5px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center;font-size:0.8rem;font-weight:600;color:#4a5568;cursor:pointer;">NetBanking</label>' +
-        '</div>' +
-        '</div>' +
-        '<button id="payu-confirm-btn" style="width:100%;background:#1f9d55;color:#fff;border:0;padding:12px;border-radius:10px;font-size:0.95rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">' +
-        '<span>Pay ₹' + amount.toLocaleString('en-IN') + ' via PayU</span>' +
-        '</button>' +
-        '<p style="margin:10px 0 0;text-align:center;font-size:0.75rem;color:#a0aec0;">256-bit encrypted bank grade transaction</p>' +
-        '</div>' +
-        '</div>';
-
-      document.body.appendChild(overlay);
-
-      document.getElementById('payu-cancel-btn').addEventListener('click', function () {
-        overlay.remove();
+      function fail(msg) {
         if (typeof options.onFailure === 'function') {
-          options.onFailure({ status: 'cancelled', message: 'User closed payment window' });
+          options.onFailure({ status: 'failed', message: msg });
         }
-      });
+      }
 
-      document.getElementById('payu-confirm-btn').addEventListener('click', function () {
-        var btn = this;
-        btn.disabled = true;
-        btn.textContent = 'Processing with Bank...';
-        setTimeout(function () {
-          overlay.remove();
-          if (typeof options.onSuccess === 'function') {
-            options.onSuccess({
-              status: 'success',
-              txnid: txnid,
-              amount: amount,
-              paymentId: 'PAYU_TEST_' + Math.floor(Math.random() * 1000000),
-            });
-          }
-        }, 1200);
-      });
+      if (purpose !== 'subscription' || !token) {
+        fail('Online checkout requires an active account session. Please proceed with your request or contact support.');
+        return;
+      }
+      if (!apiBase) {
+        fail('Payment service URL is missing. Please reload the page.');
+        return;
+      }
+
+      // Persist short-lived session backup for PayU redirect return across mobile/PWA webviews
+      if (session && session.uuid && session.accessToken) {
+        try {
+          localStorage.setItem('ig_pay_resume', JSON.stringify({
+            session: session,
+            expiresAt: Date.now() + 20 * 60 * 1000
+          }));
+        } catch (e) {}
+      }
+
+      fetch(apiBase + '/payments/payu/init', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ returnOrigin: window.location.origin })
+      })
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok || !d.order || !d.order.action || !d.order.fields) {
+              throw new Error(d.message || 'Could not start PayU payment.');
+            }
+            return d.order;
+          });
+        })
+        .then(function (order) {
+          var form = document.createElement('form');
+          form.method = order.method || 'POST';
+          form.action = order.action;
+          form.style.display = 'none';
+          Object.keys(order.fields).forEach(function (k) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = k;
+            input.value = String(order.fields[k] == null ? '' : order.fields[k]);
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        })
+        .catch(function (err) {
+          try { localStorage.removeItem('ig_pay_resume'); } catch (e) {}
+          fail((err && err.message) || 'Could not connect to PayU payment gateway.');
+        });
     }
   };
 

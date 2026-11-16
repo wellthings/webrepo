@@ -107,13 +107,16 @@
   }
 
   function routeUser(d) {
-    var isPaid = d.payment_status === 'paid';
+    var isPaid = d.payment_active !== undefined ? !!d.payment_active : d.payment_status === 'paid';
     sessionStorage.setItem('ig_session', JSON.stringify({
       uuid: d.uuid,
       role: d.role,
       username: d.username,
-      payment_status: d.payment_status || 'unpaid',
-      is_online: !!d.is_online,
+      phone: (d.profile && d.profile.phone) || phone.value || '',
+      payment_status: isPaid ? 'paid' : (d.payment_status || 'unpaid'),
+      payment_active: isPaid,
+      next_due_at: d.next_due_at || (d.profile && d.profile.next_due_at) || null,
+      is_online: isPaid && !!d.is_online,
       profile: d.profile || null,
       accessToken: d.accessToken,
       refreshToken: d.refreshToken

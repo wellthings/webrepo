@@ -27,28 +27,123 @@
       <a class="pr-btn" id="pr-btn" href="dashboard.html">Go to dashboard</a>
     </div>
   </div>
+  <script src="config.js?v=20261116a"></script>
   <script>
     (function () {
+      var API = (window.SITE && window.SITE.apiBase) || '';
       var q = new URLSearchParams(location.search);
       var status = q.get('status');
       var reason = q.get('reason') || '';
+      var txnid = q.get('txnid') || '';
       var icon = document.getElementById('pr-icon');
       var title = document.getElementById('pr-title');
       var msg = document.getElementById('pr-msg');
       var btn = document.getElementById('pr-btn');
-      if (status === 'success') {
+
+      // Restore session from sessionStorage or short-lived PayU return backup
+      var session = null;
+      try { session = JSON.parse(sessionStorage.getItem('ig_session') || 'null'); } catch (e) { session = null; }
+      try {
+        var backupRaw = localStorage.getItem('ig_pay_resume');
+        localStorage.removeItem('ig_pay_resume');
+        if ((!session || !session.accessToken) && backupRaw) {
+          var backup = JSON.parse(backupRaw);
+          if (backup && backup.expiresAt > Date.now() && backup.session && backup.session.uuid && backup.session.accessToken) {
+            session = backup.session;
+            sessionStorage.setItem('ig_session', JSON.stringify(session));
+          }
+        }
+      } catch (e) {}
+
+      function showFailed(customMsg) {
+        icon.className = 'pr-icon pr-bad'; icon.textContent = '✕';
+        title.textContent = 'Payment not completed';
+        var reasons = {
+          hash: 'We could not verify the payment signature. If money was deducted, contact support.',
+          user: 'We could not match this payment to your account.',
+          status: 'The payment was cancelled or failed at PayU.',
+          amount: 'The paid amount did not match your plan.',
+          verify: 'PayU could not confirm this transaction. If money was deducted, contact support.',
+          activate: 'Payment received but activation failed. Contact support.'
+        };
+        msg.textContent = customMsg || reasons[reason] || 'Your payment was not completed. Please try again.';
+        btn.textContent = session && session.accessToken ? 'Back to payment' : 'Login to retry';
+        btn.href = session && session.accessToken ? 'partner-program.html#onboarding-pay' : 'partner-program.html#login';
+      }
+
+      function showActivated() {
         icon.className = 'pr-icon pr-ok'; icon.textContent = '✓';
         title.textContent = 'Payment successful';
         msg.textContent = 'Your monthly plan is now active. You are online and can receive leads, orders and deals.';
         btn.textContent = 'Go to dashboard';
-      } else {
-        icon.className = 'pr-icon pr-bad'; icon.textContent = '✕';
-        title.textContent = 'Payment not completed';
-        var reasons = { hash: 'We could not verify the payment. If money was deducted, contact support.', user: 'We could not match this payment to your account.', status: 'The payment was not successful.', amount: 'The paid amount did not match your plan.', activate: 'Payment received but activation failed. Contact support.' };
-        msg.textContent = reasons[reason] || 'Your payment was not completed. You can try again from the app.';
-        btn.textContent = 'Back to payment';
-        btn.href = 'partner-program.html';
+        btn.href = 'dashboard.html';
       }
+
+      if (status !== 'success') {
+        showFailed();
+        return;
+      }
+
+      if (!session || !session.uuid || !session.accessToken || !API) {
+        icon.className = 'pr-icon pr-ok'; icon.textContent = '✓';
+        title.textContent = 'Payment received';
+        msg.textContent = 'Please log in with your registered mobile number and password to open your active dashboard.';
+        btn.textContent = 'Login to Dashboard';
+        btn.href = 'partner-program.html#login';
+        return;
+      }
+
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.6';
+      btn.textContent = 'Verifying payment...';
+
+      function fetchUser() {
+        return fetch(API + '/users/' + encodeURIComponent(session.uuid), {
+          headers: { Authorization: 'Bearer ' + session.accessToken }
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok || !d.data) throw new Error(d.message || 'Could not load profile');
+            return d.data;
+          });
+        });
+      }
+
+      function confirmWithBackend() {
+        return fetchUser().then(function (user) {
+          var active = user.payment_active === true || user.payment_status === 'paid';
+          if (active || !txnid) return user;
+          return fetch(API + '/payments/payu/verify/' + encodeURIComponent(txnid), {
+            headers: { Authorization: 'Bearer ' + session.accessToken }
+          })
+            .then(function (r) { return r.json().catch(function () { return {}; }); })
+            .then(function () { return fetchUser(); });
+        });
+      }
+
+      confirmWithBackend()
+        .then(function (user) {
+          btn.style.pointerEvents = '';
+          btn.style.opacity = '';
+          var active = user.payment_active === true || user.payment_status === 'paid';
+          if (!active) {
+            session.payment_status = user.payment_status || 'unpaid';
+            sessionStorage.setItem('ig_session', JSON.stringify(session));
+            showFailed('Payment is not active yet. Please wait a moment or try again.');
+            return;
+          }
+          session.payment_status = 'paid';
+          session.payment_active = true;
+          session.next_due_at = user.next_due_at || null;
+          session.is_online = user.is_online !== false;
+          session.profile = user;
+          sessionStorage.setItem('ig_session', JSON.stringify(session));
+          showActivated();
+        })
+        .catch(function () {
+          btn.style.pointerEvents = '';
+          btn.style.opacity = '';
+          showFailed('Could not verify payment status with server. Please log in again to check your plan.');
+        });
     })();
   </script>
 </body>
