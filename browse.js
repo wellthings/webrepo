@@ -631,7 +631,7 @@
     var sg = document.getElementById('service-grid');
     if (!sg || !C.partner) return;
     sg.innerHTML = '';
-    C.partner.slice(0, 6).forEach(function (c) {
+    C.partner.forEach(function (c) {
       var card = el('div', 'service-card');
       card.style.cursor = 'pointer';
       card.appendChild(el('div', 'svc-icon', c.icon || '🏠'));
