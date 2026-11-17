@@ -112,7 +112,6 @@
     home: '🛋️', palette: '🖼️', wind: '❄️', wall: '🧱', tree: '🌲', tool: '🔩'
   };
   var partnerCats = (C.partner || []).slice();
-  var repairBox = document.getElementById('repair-services-box');
 
   function findCatById(catId) {
     if (!catId) return null;
@@ -642,61 +641,9 @@
   if (wsClearBtn) {
     wsClearBtn.addEventListener('click', function () {
       state.cat = '';
-      renderServiceGrid();
-      renderRepairServices();
       renderWorkSamples();
       draw();
     });
-  }
-
-  function renderRepairServices() {
-    if (!repairBox) return;
-    var cat = state.cat ? findCatById(state.cat) : null;
-    var repairs = (cat && Array.isArray(cat.repairing_services)) ? cat.repairing_services : [];
-    if (!cat || !repairs.length) {
-      repairBox.hidden = true;
-      repairBox.innerHTML = '';
-      return;
-    }
-    repairBox.hidden = false;
-    repairBox.innerHTML = '';
-
-    var head = el('div', 'repairs-head');
-    var hText = el('div');
-    hText.appendChild(el('h4', '', (cat.icon || '') + ' ' + cat.name + ' — Repairing & Fixing'));
-    hText.appendChild(el('p', '', 'Need a quick repair or installation? Add any service directly to your visit cart.'));
-    head.appendChild(hText);
-    head.appendChild(el('span', 'repairs-count', repairs.length + ' services'));
-    repairBox.appendChild(head);
-
-    var grid = el('div', 'repairs-grid');
-    var previewImg = (cat.modules && cat.modules.length) ? partnerSrc(cat, cat.modules[0]) : 'assets/logo-square.png';
-    repairs.forEach(function (srv) {
-      var item = el('div', 'repair-item');
-      item.appendChild(el('span', 'repair-label', srv));
-      var addBtn = el('button', 'repair-add-btn', '+ Add');
-      addBtn.type = 'button';
-      addBtn.addEventListener('click', function () {
-        if (!window.IGCart) return;
-        window.IGCart.add({
-          cat: cat.id,
-          catName: cat.name,
-          module: srv,
-          label: srv,
-          mode: 'repair',
-          img: previewImg
-        });
-        addBtn.textContent = 'Added ✓';
-        addBtn.classList.add('added');
-        setTimeout(function () {
-          addBtn.textContent = '+ Add';
-          addBtn.classList.remove('added');
-        }, 1200);
-      });
-      item.appendChild(addBtn);
-      grid.appendChild(item);
-    });
-    repairBox.appendChild(grid);
   }
 
   function loadPartnerCategories() {
@@ -714,9 +661,6 @@
         });
         partnerCats = rows.map(function (row) {
           var base = existingById[String(row.id)] || existingByName[String(row.name || '').toLowerCase()] || {};
-          var repairs = Array.isArray(row.repairing_services) && row.repairing_services.length
-            ? row.repairing_services
-            : (base.repairing_services || []);
           return {
             id: base.id || ('cat-' + row.id),
             dbId: row.id,
@@ -725,12 +669,10 @@
             icon_name: row.icon || row.icon_name || base.icon_name || '',
             icon: resolveCatIcon(row.icon || row.icon_name || base.icon_name, row.name) || base.icon || '🔧',
             keywords: base.keywords || [String(row.name || '').toLowerCase().split('(')[0].trim()],
-            repairing_services: repairs,
             modules: base.modules || []
           };
         });
         renderServiceGrid();
-        renderRepairServices();
       })
       .catch(function () {});
   }
@@ -859,7 +801,6 @@
 
   document.addEventListener('ig:filter', function (e) {
     state.role = e.detail.role; state.cat = e.detail.cat; state.q = e.detail.q;
-    renderRepairServices();
     renderWorkSamples();
     draw();
   });
@@ -986,8 +927,6 @@
     if (modTab) modTab.click();
     state.role = 'partner';
     state.cat = c.id;
-    renderServiceGrid();
-    renderRepairServices();
     renderWorkSamples();
     draw();
     var mkt = document.getElementById('marketplace');
@@ -999,18 +938,11 @@
     if (!sg || !partnerCats.length) return;
     sg.innerHTML = '';
     partnerCats.forEach(function (c) {
-      var card = el('button', 'service-card' + (state.cat === c.id ? ' active' : ''));
-      card.type = 'button';
+      var card = el('div', 'service-card');
+      card.style.cursor = 'pointer';
       card.appendChild(el('div', 'svc-icon', c.icon || '🏠'));
       card.appendChild(el('h3', '', c.name));
-      var repairs = Array.isArray(c.repairing_services) ? c.repairing_services : [];
-      var summaryText = repairs.length
-        ? repairs.slice(0, 2).join(' · ')
-        : (c.modules || []).slice(0, 3).map(function (m) { return m[1]; }).join(', ');
-      card.appendChild(el('p', '', summaryText));
-      if (repairs.length) {
-        card.appendChild(el('span', 'svc-meta', repairs.length + ' repairing & fixing services →'));
-      }
+      card.appendChild(el('p', '', (c.modules || []).slice(0, 3).map(function (m) { return m[1]; }).join(', ')));
       card.addEventListener('click', function () {
         selectPartnerCategory(c);
       });
@@ -1019,7 +951,6 @@
   }
 
   renderServiceGrid();
-  renderRepairServices();
   draw();
   loadPartnerCategories();
   loadMarketplace();
