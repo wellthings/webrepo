@@ -20,11 +20,11 @@
     if (c && c.token) {
       link.textContent = 'Dashboard';
       link.href = 'client-dashboard.html';
-      link.setAttribute('aria-label', 'Open Client Dashboard');
+      link.setAttribute('aria-label', 'Open Control Panel');
     } else {
       link.textContent = 'Sign Up';
       link.href = '#client-signup';
-      link.setAttribute('aria-label', 'Client Sign Up');
+      link.setAttribute('aria-label', 'Sign Up');
     }
   }
 
@@ -74,7 +74,7 @@
       if (signedCard) signedCard.hidden = !hasSession;
       if (formsCard) formsCard.hidden = hasSession;
       if (hasSession) {
-        if (whoName) whoName.textContent = c.name || 'Client';
+        if (whoName) whoName.textContent = c.name || 'Welcome';
         if (whoMeta) {
           var parts = [];
           if (c.phone) parts.push('+91 ' + c.phone);
@@ -192,7 +192,7 @@
         }
 
         signupBtn.disabled = true;
-        signupBtn.textContent = 'Creating your dashboard...';
+        signupBtn.textContent = 'Creating your control panel...';
         setMsg(signupMsg, '', false);
 
         fetch(API + '/client/signup', {
@@ -224,7 +224,7 @@
           })
           .catch(function (err) {
             signupBtn.disabled = false;
-            signupBtn.textContent = 'Sign Up & Open Dashboard';
+            signupBtn.textContent = 'Create your control panel';
             setMsg(signupMsg, (err && err.message) || 'Could not complete signup.', true);
           });
       });
@@ -241,7 +241,7 @@
         }
 
         loginBtn.disabled = true;
-        loginBtn.textContent = 'Opening dashboard...';
+        loginBtn.textContent = 'Logging in...';
         setMsg(loginMsg, '', false);
 
         fetch(API + '/client/login', {
@@ -270,7 +270,7 @@
           })
           .catch(function (err) {
             loginBtn.disabled = false;
-            loginBtn.textContent = 'Login to Client Dashboard';
+            loginBtn.textContent = 'Login';
             setMsg(loginMsg, (err && err.message) || 'Account not found. Please sign up first.', true);
           });
       });

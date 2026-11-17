@@ -258,6 +258,7 @@
 .hero .ca-card p.ca-msg, .ca-msg { margin: 0; min-height: 16px; max-width: none; font-size: 0.84rem; font-weight: 600; color: var(--muted); line-height: 1.4; }
 .hero .ca-card p.ca-msg.err, .ca-msg.err { color: #dc2626; }
 .hero .ca-card p.ca-msg.ok, .ca-msg.ok { color: #16a34a; }
+.hero .ca-card p.ca-convenience { margin: 2px 0 0; max-width: none; font-size: 0.84rem; font-weight: 600; color: #475569; text-align: center; line-height: 1.4; }
 
 .hero .ca-card h3.ca-signed-name, .ca-signed-card h3 { margin: 0 0 6px; font-size: 1.35rem; color: var(--navy); }
 .hero .ca-card p.ca-signed-meta, .ca-signed-meta { margin: 0 0 18px; max-width: none; color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; line-height: 1.45; }

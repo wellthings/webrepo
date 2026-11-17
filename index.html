@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261117h">
-  <link rel="stylesheet" href="shop.css?v=20261117f">
+  <link rel="stylesheet" href="shop.css?v=20261117g">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -55,19 +55,19 @@
         </div>
         <div class="hero-visual" id="client-signup">
           <div class="ca-card ca-signed-card" id="ca-signedin-card" hidden>
-            <span class="ca-kicker">Client Account</span>
-            <h3 id="ca-who-name">Client</h3>
+            <span class="ca-kicker">Your Account</span>
+            <h3 id="ca-who-name">Welcome</h3>
             <p class="ca-signed-meta" id="ca-who-meta"></p>
             <div class="ca-signed-actions">
-              <a class="btn btn-primary" href="client-dashboard.html">Open Client Dashboard</a>
+              <a class="btn btn-primary" href="client-dashboard.html">Open Control Panel</a>
               <button type="button" class="ca-logout-link" id="ca-logout-btn">Log Out</button>
             </div>
           </div>
 
           <div class="ca-card" id="ca-forms-card">
-            <div class="ca-tabs" role="tablist" aria-label="Client authentication mode">
-              <button type="button" class="ca-tab active" data-ca-mode="signup" role="tab" aria-selected="true">New Client Sign Up</button>
-              <button type="button" class="ca-tab" data-ca-mode="login" role="tab" aria-selected="false">Client Login</button>
+            <div class="ca-tabs" role="tablist" aria-label="Authentication mode">
+              <button type="button" class="ca-tab active" data-ca-mode="signup" role="tab" aria-selected="true">Sign Up</button>
+              <button type="button" class="ca-tab" data-ca-mode="login" role="tab" aria-selected="false">Login</button>
             </div>
 
             <form id="ca-signup-form" class="ca-form" novalidate>
@@ -85,7 +85,8 @@
                 <button type="button" class="ca-loc-btn" id="ca-use-loc">Use my current location</button>
               </div>
               <p class="ca-msg" id="ca-signup-msg" role="alert"></p>
-              <button type="submit" class="btn btn-primary" id="ca-signup-submit" style="width:100%;">Sign Up &amp; Open Dashboard</button>
+              <p class="ca-convenience">Sign up for your convenience</p>
+              <button type="submit" class="btn btn-primary" id="ca-signup-submit" style="width:100%;">Create your control panel</button>
             </form>
 
             <form id="ca-login-form" class="ca-form" hidden novalidate>
@@ -94,7 +95,7 @@
                 <input id="cl-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number">
               </div>
               <p class="ca-msg" id="ca-login-msg" role="alert"></p>
-              <button type="submit" class="btn btn-primary" id="ca-login-submit" style="width:100%;">Login to Client Dashboard</button>
+              <button type="submit" class="btn btn-primary" id="ca-login-submit" style="width:100%;">Login</button>
             </form>
           </div>
         </div>
@@ -281,7 +282,7 @@
   <script src="geo.js?v=2"></script>
   <script src="pwa.js?v=20261117f"></script>
   <script src="cart.js?v=20261117a"></script>
-  <script src="client-auth.js?v=20261117a"></script>
+  <script src="client-auth.js?v=20261117b"></script>
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=20261117d"></script>
   <script src="gallery.js?v=20261117f"></script>
