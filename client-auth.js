@@ -61,12 +61,129 @@
     var phoneEl = document.getElementById('ca-phone');
     var locEl = document.getElementById('ca-location');
     var useLocBtn = document.getElementById('ca-use-loc');
+    var termsCheck = document.getElementById('ca-terms-check');
     var signupMsg = document.getElementById('ca-signup-msg');
     var signupBtn = document.getElementById('ca-signup-submit');
 
     var loginPhoneEl = document.getElementById('cl-phone');
     var loginMsg = document.getElementById('ca-login-msg');
     var loginBtn = document.getElementById('ca-login-submit');
+
+    function syncSignupButtonState() {
+      if (!signupBtn) return;
+      signupBtn.disabled = !(termsCheck && termsCheck.checked);
+    }
+    if (termsCheck) {
+      termsCheck.addEventListener('change', function () {
+        syncSignupButtonState();
+        if (termsCheck.checked && signupMsg && signupMsg.className.indexOf('err') !== -1) {
+          setMsg(signupMsg, '', false);
+        }
+      });
+    }
+    syncSignupButtonState();
+
+    // Legal document modal (loaded from Supabase admin_uploads bucket via /api/content/client/{terms|privacy})
+    var legalModal = document.getElementById('ca-legal-modal');
+    var legalTitle = document.getElementById('ca-legal-title');
+    var legalBody = document.getElementById('ca-legal-body');
+    var legalCloseBtn = document.getElementById('ca-legal-close');
+    var legalDoneBtn = document.getElementById('ca-legal-done');
+    var legalCache = {};
+
+    function closeLegalModal() {
+      if (!legalModal) return;
+      legalModal.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    function renderLegalBlocks(blocks) {
+      if (!legalBody) return;
+      legalBody.innerHTML = '';
+      if (!Array.isArray(blocks) || !blocks.length) {
+        var empty = document.createElement('p');
+        empty.className = 'ca-legal-para';
+        empty.textContent = 'Document content is currently empty.';
+        legalBody.appendChild(empty);
+        return;
+      }
+      blocks.forEach(function (b, idx) {
+        var txt = (b && b.text) || '';
+        if (!txt) return;
+        var el;
+        if (b.type === 'title') {
+          el = document.createElement('h4');
+          el.className = 'ca-legal-doc-title';
+        } else if (b.type === 'heading' && idx === 1 && txt.indexOf('Platform:') === 0) {
+          el = document.createElement('p');
+          el.className = 'ca-legal-meta';
+        } else if (b.type === 'heading') {
+          el = document.createElement('h5');
+          el.className = 'ca-legal-heading';
+        } else if (txt.indexOf('- ') === 0) {
+          el = document.createElement('p');
+          el.className = 'ca-legal-bullet';
+          txt = '• ' + txt.slice(2);
+        } else {
+          el = document.createElement('p');
+          el.className = 'ca-legal-para';
+        }
+        el.textContent = txt;
+        legalBody.appendChild(el);
+      });
+    }
+
+    function openLegalModal(docKey) {
+      if (!legalModal || !legalBody) return;
+      if (legalTitle) {
+        legalTitle.textContent = docKey === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions';
+      }
+      legalModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+
+      if (legalCache[docKey]) {
+        renderLegalBlocks(legalCache[docKey]);
+        return;
+      }
+      legalBody.innerHTML = '<p class="ca-legal-loading">Loading document...</p>';
+      fetch(API + '/content/client/' + encodeURIComponent(docKey))
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok || !d.blocks) throw new Error(d.message || d.error || 'Could not load document.');
+            return d.blocks;
+          });
+        })
+        .then(function (blocks) {
+          legalCache[docKey] = blocks;
+          renderLegalBlocks(blocks);
+        })
+        .catch(function (err) {
+          legalBody.innerHTML = '';
+          var p = document.createElement('p');
+          p.className = 'ca-legal-para';
+          p.style.color = '#dc2626';
+          p.textContent = (err && err.message) || 'Could not load document right now. Please try again.';
+          legalBody.appendChild(p);
+        });
+    }
+
+    Array.prototype.slice.call(section.querySelectorAll('[data-legal-doc]')).forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openLegalModal(btn.getAttribute('data-legal-doc'));
+      });
+    });
+    if (legalCloseBtn) legalCloseBtn.addEventListener('click', closeLegalModal);
+    if (legalDoneBtn) legalDoneBtn.addEventListener('click', closeLegalModal);
+    if (legalModal) {
+      legalModal.addEventListener('click', function (e) {
+        if (e.target === legalModal) closeLegalModal();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && legalModal && !legalModal.hidden) closeLegalModal();
+    });
 
     function renderSessionState() {
       var c = readJson(CLIENT_KEY);
@@ -163,6 +280,12 @@
         var phoneVal = phoneEl ? phoneEl.value.trim() : '';
         var locVal = locEl ? locEl.value.trim() : '';
 
+        if (!termsCheck || !termsCheck.checked) {
+          setMsg(signupMsg, 'Please accept terms&conditions and privacy policy to continue.', true);
+          syncSignupButtonState();
+          if (termsCheck) termsCheck.focus();
+          return;
+        }
         if (nameVal.length < 2) {
           setMsg(signupMsg, 'Please enter your full name (at least 2 characters).', true);
           if (nameEl) nameEl.focus();
@@ -223,8 +346,8 @@
             });
           })
           .catch(function (err) {
-            signupBtn.disabled = false;
             signupBtn.textContent = 'Create your control panel';
+            syncSignupButtonState();
             setMsg(signupMsg, (err && err.message) || 'Could not complete signup.', true);
           });
       });

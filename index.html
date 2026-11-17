@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261117h">
-  <link rel="stylesheet" href="shop.css?v=20261117g">
+  <link rel="stylesheet" href="shop.css?v=20261117h">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -84,9 +84,17 @@
                 <input id="ca-location" type="text" autocomplete="street-address" maxlength="200" placeholder="House no, area, city">
                 <button type="button" class="ca-loc-btn" id="ca-use-loc">Use my current location</button>
               </div>
+              <div class="ca-terms-row">
+                <input id="ca-terms-check" type="checkbox" class="ca-terms-check" aria-label="Accept terms and conditions and privacy policy">
+                <span class="ca-terms-text">
+                  <button type="button" class="ca-terms-link" data-legal-doc="terms">terms&amp;conditions</button>
+                  <label for="ca-terms-check" class="ca-terms-and">and</label>
+                  <button type="button" class="ca-terms-link" data-legal-doc="privacy">privacy policy</button>
+                </span>
+              </div>
               <p class="ca-msg" id="ca-signup-msg" role="alert"></p>
               <p class="ca-convenience">Sign up for your convenience</p>
-              <button type="submit" class="btn btn-primary" id="ca-signup-submit" style="width:100%;">Create your control panel</button>
+              <button type="submit" class="btn btn-primary" id="ca-signup-submit" style="width:100%;" disabled>Create your control panel</button>
             </form>
 
             <form id="ca-login-form" class="ca-form" hidden novalidate>
@@ -277,12 +285,28 @@
     </div>
   </footer>
 
+  <div class="ca-legal-backdrop" id="ca-legal-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ca-legal-title">
+    <div class="ca-legal-dialog">
+      <div class="ca-legal-head">
+        <div>
+          <span class="ca-legal-badge">Interagood Legal</span>
+          <h3 id="ca-legal-title">Terms &amp; Conditions</h3>
+        </div>
+        <button type="button" class="ca-legal-close" id="ca-legal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="ca-legal-body" id="ca-legal-body"></div>
+      <div class="ca-legal-foot">
+        <button type="button" class="btn btn-primary" id="ca-legal-done">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="config.js?v=20261117f"></script>
   <script src="catalog.js?v=20261117a"></script>
   <script src="geo.js?v=2"></script>
   <script src="pwa.js?v=20261117f"></script>
   <script src="cart.js?v=20261117a"></script>
-  <script src="client-auth.js?v=20261117b"></script>
+  <script src="client-auth.js?v=20261117c"></script>
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=20261117d"></script>
   <script src="gallery.js?v=20261117f"></script>
