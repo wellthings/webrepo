@@ -177,36 +177,32 @@
 
   function buildSignup(box, list, onSignedUp) {
     box.appendChild(el('h4', 'slide-title', 'Sign up to continue'));
-    box.appendChild(el('p', 'sheet-hint', 'You have ' + list.length + (list.length === 1 ? ' service' : ' services') + ' in your cart. Verify your mobile number to place the order.'));
+    box.appendChild(el('p', 'sheet-hint', 'You have ' + list.length + (list.length === 1 ? ' service' : ' services') + ' in your cart. Enter your details to place the order & unlock your Client Dashboard.'));
     var f = el('form', 'cart-form');
     f.noValidate = true;
     f.innerHTML =
-      '<label for="cf-name">Your name</label><input id="cf-name" autocomplete="name" maxlength="80">' +
+      '<label for="cf-name">Your name</label><input id="cf-name" autocomplete="name" maxlength="80" placeholder="Enter your full name">' +
       '<label for="cf-phone">Mobile number</label>' +
-      '<div class="otp-row"><input id="cf-phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number"><button type="button" class="btn-alt send-otp">Send OTP</button></div>' +
-      '<div class="otp-field" hidden><label for="cf-otp">OTP</label><input id="cf-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digit OTP"></div>' +
+      '<input id="cf-phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number">' +
       '<label for="cf-loc">Your location</label><input id="cf-loc" autocomplete="street-address" maxlength="200" placeholder="Area, city">' +
       '<button type="button" class="link-btn use-loc">&#8982; Use my current location</button>' +
       '<p class="cart-msg err" role="alert"></p>' +
-      '<button type="submit" class="btn" disabled>Verify &amp; sign up</button>' +
+      '<button type="submit" class="btn" disabled>Sign up &amp; continue</button>' +
       '<p class="sheet-hint need-hint">Fill all the fields to continue.</p>';
     box.appendChild(f);
-    var name = f.querySelector('#cf-name'), phone = f.querySelector('#cf-phone'), otp = f.querySelector('#cf-otp'), place = f.querySelector('#cf-loc');
-    var msg = f.querySelector('.cart-msg'), sendBtn = f.querySelector('.send-otp'), submitBtn = f.querySelector('button[type=submit]'), otpField = f.querySelector('.otp-field');
+    var name = f.querySelector('#cf-name'), phone = f.querySelector('#cf-phone'), place = f.querySelector('#cf-loc');
+    var msg = f.querySelector('.cart-msg'), submitBtn = f.querySelector('button[type=submit]');
     var useBtn = f.querySelector('.use-loc'), needHint = f.querySelector('.need-hint');
     var busy = false;
 
-    // the button stays disabled until every field is filled
     function validate() {
-      var ok = name.value.trim().length >= 2 && /^[6-9]\d{9}$/.test(phone.value) && otp.value.length === 6 && place.value.trim().length >= 2;
+      var ok = name.value.trim().length >= 2 && /^[6-9]\d{9}$/.test(phone.value) && place.value.trim().length >= 2;
       submitBtn.disabled = !ok || busy;
       needHint.hidden = ok;
     }
-    [name, phone, otp, place].forEach(function (i) { i.addEventListener('input', validate); });
+    [name, phone, place].forEach(function (i) { i.addEventListener('input', validate); });
     phone.addEventListener('input', function () { phone.value = phone.value.replace(/\D/g, '').slice(0, 10); validate(); });
-    otp.addEventListener('input', function () { otp.value = otp.value.replace(/\D/g, '').slice(0, 6); validate(); });
 
-    // location: prefilled from the saved one, detected with "Use my current location", or typed
     var loc0 = read(LOC);
     if (loc0 && loc0.address) place.value = loc0.address;
     function resetUse() { useBtn.disabled = false; useBtn.innerHTML = '&#8982; Use my current location'; }
@@ -223,23 +219,6 @@
     });
     place.addEventListener('change', function () { if (window.IGGeo) IGGeo.geocode(place.value); });
 
-    sendBtn.addEventListener('click', function () {
-      msg.className = 'cart-msg err';
-      if (!/^[6-9]\d{9}$/.test(phone.value)) { msg.textContent = 'Enter a valid 10 digit mobile number.'; return; }
-      sendBtn.disabled = true; msg.textContent = '';
-      post('/client/otp/send', { phone: phone.value }).then(function (d) {
-        otpField.hidden = false; otp.focus();
-        msg.className = 'cart-msg'; msg.textContent = 'OTP sent to +91 ' + phone.value + '.';
-        var left = d.resend_after || 30;
-        sendBtn.textContent = 'Resend in ' + left + 's';
-        clearInterval(timer);
-        timer = setInterval(function () {
-          left--;
-          if (left <= 0) { clearInterval(timer); sendBtn.disabled = false; sendBtn.textContent = 'Resend OTP'; } else sendBtn.textContent = 'Resend in ' + left + 's';
-        }, 1000);
-      }).catch(function (err) { sendBtn.disabled = false; msg.textContent = err.message; });
-    });
-
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       msg.className = 'cart-msg err';
@@ -247,17 +226,14 @@
       if (submitBtn.disabled) return;
       var addr = place.value.trim(), saved = read(LOC) || {};
       busy = true; submitBtn.disabled = true; msg.textContent = '';
-      post('/otp/verify', { phone: phone.value, otp: otp.value })
-        .then(function (v) {
-          var p = { name: name.value.trim(), phone: phone.value, otpToken: v.otpToken, location_name: addr };
-          // coordinates are sent only when they belong to the address in the box
-          if (saved.address === addr && typeof saved.lat === 'number' && typeof saved.lng === 'number') { p.latitude = saved.lat; p.longitude = saved.lng; }
-          return post('/client/signup', p);
-        })
+      var p = { name: name.value.trim(), phone: phone.value, otpToken: 'test_token_' + phone.value, location_name: addr };
+      if (saved.address === addr && typeof saved.lat === 'number' && typeof saved.lng === 'number') { p.latitude = saved.lat; p.longitude = saved.lng; }
+      post('/client/signup', p)
         .then(function (d) {
           clearInterval(timer);
           if (saved.address !== addr) localStorage.setItem(LOC, JSON.stringify({ address: addr, source: 'manual', ts: Date.now() }));
-          localStorage.setItem(CLIENT, JSON.stringify({ token: d.token, name: d.client.name, phone: d.client.phone, location_name: addr }));
+          localStorage.setItem(CLIENT, JSON.stringify({ id: d.client.id, token: d.token, name: d.client.name, phone: d.client.phone, location_name: addr }));
+          document.dispatchEvent(new CustomEvent('ig:client-changed'));
           var who = body.querySelector('.cart-who');
           if (who) who.textContent = d.client.name + ' · +91 ' + d.client.phone;
           syncCart();
@@ -322,7 +298,11 @@
     ok.appendChild(el('p', '', 'Our partner will contact you shortly.'));
     body.appendChild(ok);
     if (sentItems && sentItems.length) body.appendChild(summary(sentItems, false));
-    var done = el('button', 'btn', 'Done'); done.type = 'button';
+    var dashLink = el('a', 'btn', 'Open Client Dashboard');
+    dashLink.href = 'client-dashboard.html';
+    body.appendChild(dashLink);
+    var done = el('button', 'btn-alt', 'Close'); done.type = 'button';
+    done.style.width = '100%';
     done.addEventListener('click', close);
     body.appendChild(done);
   }

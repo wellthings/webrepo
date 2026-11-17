@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261117g">
-  <link rel="stylesheet" href="shop.css?v=20261117d">
+  <link rel="stylesheet" href="style.css?v=20261117h">
+  <link rel="stylesheet" href="shop.css?v=20261117e">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -25,8 +25,9 @@
         <div class="container nav-inner">
           <a class="brand brand-stroke" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
           <div style="display:flex;align-items:center;gap:6px;">
-            <a class="header-contact" href="#orders" data-orders-open>Orders</a>
-            <a class="header-contact" href="#cart" data-cart-open style="display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;">Cart <span class="cart-count" data-cart-count hidden style="position:static;margin:0;background:var(--orange);color:#fff;">0</span></a>
+            <a class="header-contact" id="header-client-link" href="#client-signup" style="white-space:nowrap;">Sign Up</a>
+            <a class="header-contact" href="#orders" data-orders-open style="white-space:nowrap;">Orders</a>
+            <a class="header-contact" href="#cart" data-cart-open style="display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;white-space:nowrap;">Cart <span class="cart-count" data-cart-count hidden style="position:static;margin:0;background:var(--orange);color:#fff;">0</span></a>
           </div>
         </div>
       </header>
@@ -46,7 +47,7 @@
           <p>Get a free site visit, a transparent quote and verified partners to build the space you actually want.</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="#marketplace">Get free site visit</a>
-            <a class="btn ghost" href="#services">Explore services</a>
+            <a class="btn ghost" href="#client-signup" style="border-color:rgba(255,255,255,0.55);color:#fff;">Client Sign Up</a>
           </div>
           <div class="hero-trust">
             <span>★ 4.9</span><span>1,000+ homes</span><span>✓ Verified partners</span><span>₹ Transparent pricing</span>
@@ -139,6 +140,78 @@
         </div>
         <div class="amz-grid" id="supplier-showcase-grid"></div>
         <div class="mkt-empty" id="supplier-showcase-empty" hidden>No supplier products or samples posted yet.</div>
+      </div>
+    </section>
+
+    <section id="client-signup" class="client-auth-section">
+      <div class="container">
+        <div class="client-auth-grid">
+          <div class="ca-copy">
+            <span class="ca-kicker">Client Account</span>
+            <h2>Sign up to access your personal Client Dashboard</h2>
+            <p>Create your free client account once to manage service bookings, track assigned partners, and keep your site address saved.</p>
+            <div class="ca-benefits">
+              <div class="ca-benefit-item">
+                <strong>01. Track Orders &amp; Site Visits</strong>
+                <span>See live status for every request from booking to partner assignment.</span>
+              </div>
+              <div class="ca-benefit-item">
+                <strong>02. Synced Cart &amp; Quick Booking</strong>
+                <span>Save carpenter, electrical, plumbing, or interior modules across visits.</span>
+              </div>
+              <div class="ca-benefit-item">
+                <strong>03. Direct Transparent Quotes</strong>
+                <span>Work directly with verified partners at zero brokerage fee.</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="ca-card ca-signed-card" id="ca-signedin-card" hidden>
+              <span class="ca-kicker">Signed In</span>
+              <h3 id="ca-who-name">Client</h3>
+              <p class="ca-signed-meta" id="ca-who-meta"></p>
+              <div class="ca-signed-actions">
+                <a class="btn btn-primary" href="client-dashboard.html">Open Client Dashboard</a>
+                <button type="button" class="ca-logout-link" id="ca-logout-btn">Log Out</button>
+              </div>
+            </div>
+
+            <div class="ca-card" id="ca-forms-card">
+              <div class="ca-tabs" role="tablist" aria-label="Client authentication mode">
+                <button type="button" class="ca-tab active" data-ca-mode="signup" role="tab" aria-selected="true">New Client Sign Up</button>
+                <button type="button" class="ca-tab" data-ca-mode="login" role="tab" aria-selected="false">Client Login</button>
+              </div>
+
+              <form id="ca-signup-form" class="ca-form" novalidate>
+                <div>
+                  <label for="ca-name">Full Name</label>
+                  <input id="ca-name" type="text" autocomplete="name" maxlength="80" placeholder="Enter your full name">
+                </div>
+                <div>
+                  <label for="ca-phone">Mobile Number</label>
+                  <input id="ca-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number">
+                </div>
+                <div>
+                  <label for="ca-location">Your Location / Site Address</label>
+                  <input id="ca-location" type="text" autocomplete="street-address" maxlength="200" placeholder="House no, area, city">
+                  <button type="button" class="ca-loc-btn" id="ca-use-loc">Use my current location</button>
+                </div>
+                <p class="ca-msg" id="ca-signup-msg" role="alert"></p>
+                <button type="submit" class="btn btn-primary" id="ca-signup-submit" style="width:100%;">Sign Up &amp; Open Dashboard</button>
+              </form>
+
+              <form id="ca-login-form" class="ca-form" hidden novalidate>
+                <div>
+                  <label for="cl-phone">Registered Mobile Number</label>
+                  <input id="cl-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10 digit mobile number">
+                </div>
+                <p class="ca-msg" id="ca-login-msg" role="alert"></p>
+                <button type="submit" class="btn btn-primary" id="ca-login-submit" style="width:100%;">Login to Client Dashboard</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -246,7 +319,8 @@
   <script src="catalog.js?v=20261117a"></script>
   <script src="geo.js?v=2"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="cart.js?v=20261113"></script>
+  <script src="cart.js?v=20261117a"></script>
+  <script src="client-auth.js?v=20261117a"></script>
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=20261117d"></script>
   <script src="gallery.js?v=20261117f"></script>

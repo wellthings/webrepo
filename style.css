@@ -525,5 +525,11 @@ body.home footer { background: #07152a; }
   .banner-track { gap: 22px; animation-duration: 75s; }
   .banner-item { font-size: 0.8rem; padding: 2px; gap: 6px; }
 }
+@media (max-width: 560px) {
+  .brand.brand-stroke { padding: 6px 12px; }
+  .brand-name { font-size: 19px; }
+  .header-contact { padding: 7px 10px; font-size: 0.82rem; }
+}
+
 
 

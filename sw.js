@@ -1,8 +1,11 @@
 // Interagood Service Worker for PWA Offline & Asset Caching
-const CACHE_NAME = 'interagood-pwa-v3';
+const CACHE_NAME = 'interagood-pwa-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
+  '/client-dashboard.html',
+  '/client-dashboard.js',
+  '/client-auth.js',
   '/partner-program.html',
   '/dashboard.html',
   '/style.css',

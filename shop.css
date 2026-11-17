@@ -239,3 +239,44 @@
   .ws-actions { grid-template-columns: 1fr; }
   .amz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 }
+
+/* Client Signup & Login Section on Homepage */
+.client-auth-section { padding: 68px 0; background: #f8fafc; border-top: 1px solid var(--line); }
+.client-auth-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; align-items: center; }
+.ca-kicker { display: block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange-dark); margin-bottom: 10px; }
+.ca-copy h2 { margin: 0 0 12px; font-size: clamp(1.55rem, 3vw, 2.2rem); color: var(--navy); text-wrap: balance; }
+.ca-copy > p { margin: 0 0 22px; color: var(--muted); font-size: 1rem; line-height: 1.6; max-width: 52ch; }
+.ca-benefits { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+.ca-benefit-item { display: grid; gap: 2px; }
+.ca-benefit-item strong { color: var(--navy); font-size: 0.96rem; }
+.ca-benefit-item span { color: var(--muted); font-size: 0.86rem; line-height: 1.45; }
+
+.ca-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 10px 28px rgba(10, 25, 47, 0.06); }
+.ca-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #f1f5f9; border-radius: 11px; margin-bottom: 18px; }
+.ca-tab { min-height: 42px; border: 0; border-radius: 8px; background: transparent; color: #475569; font: inherit; font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+.ca-tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(10, 25, 47, 0.1); }
+
+.ca-form { display: grid; gap: 14px; }
+.ca-form label { display: block; font-size: 0.84rem; font-weight: 700; color: var(--navy); margin-bottom: 5px; }
+.ca-form input { width: 100%; min-height: 46px; margin: 0; padding: 11px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; font-size: 0.94rem; color: var(--ink); background: #fff; }
+.ca-form input:focus { outline: 2px solid var(--orange); border-color: var(--orange); }
+.ca-loc-btn { margin-top: 6px; padding: 4px 0; border: 0; background: transparent; color: var(--orange-dark); font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; text-align: left; }
+.ca-loc-btn:disabled { opacity: 0.6; cursor: default; }
+.ca-msg { margin: 0; min-height: 18px; font-size: 0.86rem; font-weight: 600; color: var(--muted); }
+.ca-msg.err { color: #dc2626; }
+.ca-msg.ok { color: #16a34a; }
+
+.ca-signed-card h3 { margin: 0 0 6px; font-size: 1.35rem; color: var(--navy); }
+.ca-signed-meta { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.ca-signed-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ca-logout-link { min-height: 44px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--navy); font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.ca-logout-link:hover { border-color: #cbd5e1; background: #f8fafc; }
+
+@media (max-width: 860px) {
+  .client-auth-section { padding: 48px 0; }
+  .client-auth-grid { grid-template-columns: 1fr; gap: 24px; }
+}
+@media (max-width: 560px) {
+  .ca-card { padding: 18px; }
+}
+

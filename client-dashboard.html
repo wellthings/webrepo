@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Client Dashboard | Interagood</title>
+  <meta name="description" content="Manage your home interior service requests, track partner visits, review your saved cart, and update your site location on Interagood.">
+  <meta name="theme-color" content="#0a192f">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0a192f;
+      --navy-2: #122645;
+      --orange: #f77f00;
+      --orange-dark: #c96500;
+      --orange-soft: #fff4e5;
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --green: #16a34a;
+      --amber: #d97706;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* App Shell: 240px desktop sidebar + fluid main workspace */
+    .cd-shell {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .cd-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .cd-brand {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--orange);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .cd-side-nav {
+      display: grid;
+      gap: 4px;
+    }
+    .cd-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #475569;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.16s cubic-bezier(0.16, 1, 0.3, 1), color 0.16s;
+    }
+    .cd-nav-btn:hover { background: #f1f5f9; color: var(--navy); }
+    .cd-nav-btn.active { background: #fff4e5; color: var(--orange-dark); font-weight: 700; }
+    .cd-nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .cd-nav-count { margin-left: auto; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+    .cd-side-foot {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 6px;
+    }
+    .cd-logout-btn {
+      min-height: 42px;
+      padding: 8px 12px;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      background: #fef2f2;
+      color: #b91c1c;
+      font: inherit;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+    .cd-logout-btn:hover { background: #fee2e2; }
+
+    /* Right Content Column */
+    .cd-workspace {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .cd-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 60px;
+    }
+    .cd-top-left { min-width: 0; }
+    .cd-crumb {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cd-top-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--navy);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cd-top-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+    .cd-mobile-brand { display: none; font-size: 1.08rem; font-weight: 800; color: var(--orange); text-decoration: none; white-space: nowrap; }
+
+    .cd-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.16s cubic-bezier(0.16, 1, 0.3, 1), transform 0.16s;
+    }
+    .cd-btn:active { transform: scale(0.98); }
+    .cd-btn.primary { background: var(--orange); color: #fff; }
+    .cd-btn.primary:hover { background: var(--orange-dark); }
+    .cd-btn.secondary { background: var(--surface); border-color: var(--line); color: var(--navy); }
+    .cd-btn.secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .cd-btn.navy { background: var(--navy); color: #fff; }
+    .cd-btn.navy:hover { background: var(--navy-2); }
+    .cd-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+
+    .cd-main {
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    /* Welcome Strip */
+    .cd-welcome {
+      background: var(--navy);
+      color: #fff;
+      border-radius: 16px;
+      padding: 22px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .cd-welcome h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+      font-weight: 800;
+      color: #fff;
+      text-wrap: balance;
+    }
+    .cd-meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* KPI Strip (Single-elevation hairline cards, tabular-nums) */
+    .cd-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .cd-kpi {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: grid;
+      gap: 4px;
+    }
+    .cd-kpi-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+    .cd-kpi-val { font-size: 1.65rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; line-height: 1.15; }
+    .cd-kpi-note { font-size: 0.78rem; color: var(--muted); }
+
+    /* Content Panel */
+    .cd-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+    .cd-panel-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .cd-panel-head h2 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--navy); }
+    .cd-panel-sub { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    /* Segmented Filter Controls */
+    .cd-segs {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .cd-seg-btn {
+      min-height: 36px;
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: #475569;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .cd-seg-btn.active { background: var(--surface); color: var(--navy); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+
+    /* Orders List (Clean hairline rows, unboxed metadata) */
+    .cd-list { display: grid; gap: 12px; }
+    .cd-order-row {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      background: var(--surface);
+    }
+    .cd-order-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .cd-order-id { font-size: 0.98rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+    .cd-order-meta { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .cd-status-txt { font-size: 0.82rem; font-weight: 700; }
+    .cd-status-txt.st-new { color: var(--amber); }
+    .cd-status-txt.st-contacted { color: #0284c7; }
+    .cd-status-txt.st-closed { color: var(--green); }
+
+    .cd-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .cd-items-table th {
+      text-align: left;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .cd-items-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--ink);
+    }
+    .cd-items-table tr:last-child td { border-bottom: 0; }
+
+    /* Cart Row */
+    .cd-cart-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .cd-cart-info { min-width: 0; display: grid; gap: 2px; }
+    .cd-cart-info strong { font-size: 0.94rem; color: var(--navy); }
+    .cd-cart-info span { font-size: 0.82rem; color: var(--muted); }
+    .cd-rm-btn {
+      min-height: 36px;
+      padding: 6px 12px;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      background: #fef2f2;
+      color: #b91c1c;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex: none;
+    }
+
+    /* Profile & Address Form */
+    .cd-form { display: grid; gap: 14px; max-width: 560px; }
+    .cd-field { display: grid; gap: 6px; }
+    .cd-field label { font-size: 0.84rem; font-weight: 700; color: var(--navy); }
+    .cd-field input {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 0.92rem;
+      color: var(--ink);
+      background: #fff;
+    }
+    .cd-field input:focus { outline: 2px solid var(--orange); border-color: var(--orange); }
+    .cd-field input[readonly] { background: #f8fafc; color: var(--muted); }
+    .cd-link-btn {
+      justify-self: start;
+      padding: 4px 0;
+      border: 0;
+      background: transparent;
+      color: var(--orange-dark);
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .cd-msg { margin: 0; font-size: 0.86rem; font-weight: 600; }
+    .cd-msg.err { color: var(--red); }
+    .cd-msg.ok { color: var(--green); }
+
+    .cd-empty {
+      padding: 28px 18px;
+      text-align: center;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+    .cd-skel {
+      height: 76px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: cdSkel 1.2s ease-in-out infinite;
+    }
+    @keyframes cdSkel { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* Mobile Fixed Bottom Nav (Compact height <= 60px so total sticky <= 15% viewport) */
+    .cd-bottom-nav { display: none; }
+
+    @media (max-width: 860px) {
+      .cd-shell { grid-template-columns: 1fr; }
+      .cd-sidebar { display: none; }
+      .cd-mobile-brand { display: inline-block; }
+      .cd-topbar { padding: 10px 16px; min-height: 54px; }
+      .cd-main { padding: 16px 16px 84px; gap: 14px; }
+      .cd-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .cd-kpi { padding: 12px; }
+      .cd-kpi-val { font-size: 1.3rem; }
+      .cd-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .cd-mob-tab {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+        min-height: 44px;
+      }
+      .cd-mob-tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+      .cd-mob-tab.active { color: var(--orange-dark); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cd-skel { animation: none; }
+      .cd-nav-btn, .cd-btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cd-shell">
+    <aside class="cd-sidebar" aria-label="Client navigation">
+      <a class="cd-brand" href="index.html">Interagood</a>
+      <nav class="cd-side-nav">
+        <button type="button" class="cd-nav-btn active" data-cd-tab="home">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/></svg>
+          <span>Overview</span>
+        </button>
+        <button type="button" class="cd-nav-btn" data-cd-tab="orders">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+          <span>My Orders</span>
+          <span class="cd-nav-count" id="side-orders-count">0</span>
+        </button>
+        <button type="button" class="cd-nav-btn" data-cd-tab="cart">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.2 11.2a2 2 0 002 1.6h9.6a2 2 0 002-1.5L22 7H6.2"/></svg>
+          <span>Saved Cart</span>
+          <span class="cd-nav-count" id="side-cart-count">0</span>
+        </button>
+        <button type="button" class="cd-nav-btn" data-cd-tab="profile">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/></svg>
+          <span>My Profile</span>
+        </button>
+      </nav>
+      <div class="cd-side-foot">
+        <a class="cd-btn secondary" href="index.html#marketplace">Explore Marketplace</a>
+        <button type="button" class="cd-logout-btn" id="side-logout">Log Out</button>
+      </div>
+    </aside>
+
+    <div class="cd-workspace">
+      <header class="cd-topbar">
+        <div class="cd-top-left">
+          <a class="cd-mobile-brand" href="index.html">Interagood</a>
+          <div class="cd-crumb" id="cd-crumb">Client Dashboard / Overview</div>
+          <h2 class="cd-top-title" id="cd-page-title">Overview</h2>
+        </div>
+        <div class="cd-top-actions">
+          <a class="cd-btn primary" href="index.html#services">Book Service</a>
+        </div>
+      </header>
+
+      <main class="cd-main" id="cd-main">
+        <div class="cd-skel"></div>
+        <div class="cd-skel"></div>
+      </main>
+    </div>
+  </div>
+
+  <nav class="cd-bottom-nav" aria-label="Mobile client navigation">
+    <button type="button" class="cd-mob-tab active" data-cd-tab="home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="cd-mob-tab" data-cd-tab="orders">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+      <span>Orders</span>
+    </button>
+    <button type="button" class="cd-mob-tab" data-cd-tab="cart">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.2 11.2a2 2 0 002 1.6h9.6a2 2 0 002-1.5L22 7H6.2"/></svg>
+      <span>Cart</span>
+    </button>
+    <button type="button" class="cd-mob-tab" data-cd-tab="profile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/></svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <script src="config.js?v=20261117f"></script>
+  <script src="geo.js?v=2"></script>
+  <script src="pwa.js?v=20261117f"></script>
+  <script src="client-dashboard.js?v=20261117a"></script>
+</body>
+</html>
