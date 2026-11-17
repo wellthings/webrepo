@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restricted Access | Interagood</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b1f3a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="style.css?v=20261106-g">
+  <link rel="stylesheet" href="partner.css?v=20261114a">
+  <style>
+    body.gate-body { background: #f4f6fa; min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-box { width: 100%; max-width: 440px; }
+    .gate-locked { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 32px 26px; text-align: center; box-shadow: 0 14px 36px rgba(11, 31, 58, 0.08); }
+    .gate-locked h1 { margin: 0 0 8px; font-size: 1.25rem; color: #0b1f3a; }
+    .gate-locked p { margin: 0; color: #64748b; font-size: 0.92rem; line-height: 1.5; }
+    .gate-row-otp { display: flex; gap: 10px; align-items: stretch; }
+    .gate-row-otp .input { flex: 1; }
+    .gate-row-otp .btn-sm { margin: 0; white-space: nowrap; }
+  </style>
+</head>
+<body class="gate-body">
+  <main class="gate-box">
+    <section id="gate-blocked" class="gate-locked" hidden>
+      <h1>Route Unavailable</h1>
+      <p>This sign-in page cannot be opened while an admin session is already active.</p>
+    </section>
+
+    <section id="gate-card" class="signup-card" hidden aria-labelledby="gate-title">
+      <div class="signup-head">
+        <h2 id="gate-title">Control Access</h2>
+        <p>Sign in with your authorized phone number, password and OTP.</p>
+      </div>
+      <form id="gate-form" novalidate autocomplete="off">
+        <div class="field">
+          <label for="gt-phone">Phone</label>
+          <div class="gate-row-otp">
+            <div class="input"><span class="prefix">+91</span><input id="gt-phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off"></div>
+            <button type="button" class="btn-sm" id="gt-send" disabled>Get OTP</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="gt-pass">Password</label>
+          <div class="input">
+            <input id="gt-pass" type="password" maxlength="100" placeholder="Enter password" autocomplete="current-password">
+            <button type="button" class="eye" id="gt-toggle" aria-label="Show password" aria-pressed="false">
+              <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.500-7 10-7 10 7 10 7-3.500 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M3 3l18 18M10.600 6.100A9.600 9.600 0 0112 6c6.500 0 10 6 10 6a17 17 0 01-3.200 3.800M6.600 6.600A16.500 16.500 0 002 12s3.500 6 10 6a9.700 9.700 0 004.200-1M9.900 9.900a3 3 0 004.200 4.200"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="field" id="gt-otp-wrap" hidden>
+          <label for="gt-otp">OTP</label>
+          <div class="input"><input id="gt-otp" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit OTP" autocomplete="one-time-code"></div>
+        </div>
+        <p class="hint" id="gt-msg" role="alert" aria-live="polite"></p>
+        <p class="form-error" id="gt-error" role="alert" hidden></p>
+        <button type="submit" class="btn" id="gt-submit" disabled>Login</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="config.js?v=20261116a"></script>
+  <script>
+    (function () {
+      'use strict';
+      var API = (window.SITE && window.SITE.apiBase) || '';
+      var TOKEN_KEY = 'ig_admin_token';
+      var ACTIVE_KEY = 'ig_admin_session_token';
+      var $ = function (id) { return document.getElementById(id); };
+
+      var card = $('gate-card');
+      var blocked = $('gate-blocked');
+      var form = $('gate-form');
+      var phone = $('gt-phone');
+      var pass = $('gt-pass');
+      var toggle = $('gt-toggle');
+      var otpWrap = $('gt-otp-wrap');
+      var otp = $('gt-otp');
+      var send = $('gt-send');
+      var submit = $('gt-submit');
+      var msg = $('gt-msg');
+      var errBox = $('gt-error');
+      var timer = null;
+      var busy = false;
+
+      function clearStored() {
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+        try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
+      }
+
+      function lockRoute() {
+        if (card) card.remove();
+        if (blocked) blocked.hidden = false;
+      }
+
+      function openRoute() {
+        if (blocked) blocked.hidden = true;
+        if (card) card.hidden = false;
+        if (phone) phone.focus();
+      }
+
+      function say(text, bad) {
+        if (msg) msg.textContent = bad ? '' : (text || '');
+        if (errBox) {
+          errBox.textContent = bad ? (text || '') : '';
+          errBox.hidden = !(bad && text);
+        }
+      }
+
+      function validate() {
+        var phoneOk = /^[6-9]\d{9}$/.test(phone.value);
+        var hasPass = pass.value.length > 0;
+        var hasOtp = /^\d{4,8}$/.test(otp.value.trim());
+        send.disabled = !phoneOk || !!timer;
+        submit.disabled = busy || !(phoneOk && hasPass && hasOtp);
+      }
+
+      function post(path, data) {
+        return fetch(API + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok) throw new Error(d.message || d.error || 'Invalid credentials');
+            return d;
+          });
+        });
+      }
+
+      // Guard: if admin is already logged in (same tab or another tab), keep this route closed
+      var existingToken = '';
+      try {
+        existingToken = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || '';
+      } catch (e) { existingToken = ''; }
+
+      if (existingToken && API) {
+        fetch(API + '/admin/me', {
+          headers: { Authorization: 'Bearer ' + existingToken }
+        })
+          .then(function (r) {
+            if (r.ok) {
+              lockRoute();
+            } else {
+              clearStored();
+              openRoute();
+            }
+          })
+          .catch(function () {
+            // If offline/network fail while token exists, do not expose admin login
+            lockRoute();
+          });
+      } else {
+        openRoute();
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          var showPass = pass.type === 'password';
+          pass.type = showPass ? 'text' : 'password';
+          toggle.setAttribute('aria-pressed', showPass ? 'true' : 'false');
+          toggle.querySelector('.eye-open').hidden = showPass;
+          toggle.querySelector('.eye-off').hidden = !showPass;
+        });
+      }
+
+      phone.addEventListener('input', function () {
+        phone.value = phone.value.replace(/\D/g, '').slice(0, 10);
+        validate();
+      });
+      otp.addEventListener('input', function () {
+        otp.value = otp.value.replace(/\D/g, '').slice(0, 6);
+        validate();
+      });
+      pass.addEventListener('input', validate);
+
+      send.addEventListener('click', function () {
+        say('');
+        send.disabled = true;
+        post('/admin/otp/send', { phone: phone.value })
+          .then(function (d) {
+            otpWrap.hidden = false;
+            var left = d.resend_after || 30;
+            say('If this number is authorized, an OTP has been sent.');
+            send.textContent = 'Resend in ' + left + 's';
+            timer = setInterval(function () {
+              left--;
+              if (left <= 0) {
+                clearInterval(timer);
+                timer = null;
+                send.textContent = 'Resend OTP';
+                validate();
+              } else {
+                send.textContent = 'Resend in ' + left + 's';
+              }
+            }, 1000);
+            otp.focus();
+            validate();
+          })
+          .catch(function (e) {
+            say(e.message || 'Could not send OTP', true);
+            validate();
+          });
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        validate();
+        if (submit.disabled) return;
+
+        busy = true;
+        submit.disabled = true;
+        submit.textContent = 'Verifying...';
+        say('');
+
+        post('/admin/login', {
+          phone: phone.value,
+          password: pass.value,
+          otp: otp.value.trim()
+        })
+          .then(function (d) {
+            try { sessionStorage.setItem(TOKEN_KEY, d.token); } catch (err) {}
+            try { localStorage.setItem(ACTIVE_KEY, d.token); } catch (err) {}
+            location.replace('admin.html');
+          })
+          .catch(function (err) {
+            busy = false;
+            submit.textContent = 'Login';
+            otp.value = '';
+            say(err.message || 'Invalid credentials', true);
+            validate();
+          });
+      });
+
+      validate();
+    })();
+  </script>
+</body>
+</html>

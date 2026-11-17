@@ -1,7 +1,8 @@
 (function () {
   var API = (window.SITE && window.SITE.apiBase) || '';
   var TOKEN_KEY = 'ig_admin_token';
-  var LOGIN_PAGE = 'partner-program.html#login';
+  var ACTIVE_KEY = 'ig_admin_session_token';
+  var EXIT_PAGE = 'index.html';
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
   var ORDER_STATUSES = ['new', 'contacted', 'closed'];
   var SECTION_META = {
@@ -13,8 +14,10 @@
   };
   var $ = function (id) { return document.getElementById(id); };
 
-  var token = sessionStorage.getItem(TOKEN_KEY) || '';
-  if (!token) { location.replace(LOGIN_PAGE); return; }
+  var token = '';
+  try { token = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || ''; } catch (e) {}
+  if (!token) { location.replace(EXIT_PAGE); return; }
+  try { sessionStorage.setItem(TOKEN_KEY, token); localStorage.setItem(ACTIVE_KEY, token); } catch (e) {}
 
   var msg = $('ad-msg');
   var ordersEl = $('panel-orders');
@@ -106,8 +109,9 @@
     options.headers = Object.assign({ Authorization: 'Bearer ' + token }, options.headers || {});
     return fetch(API + path, options).then(function (r) {
       if (r.status === 401) {
-        sessionStorage.removeItem(TOKEN_KEY);
-        location.replace(LOGIN_PAGE);
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+        try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
+        location.replace(EXIT_PAGE);
         throw new Error('Session expired');
       }
       return r.json().catch(function () { return {}; }).then(function (d) {
@@ -404,8 +408,9 @@
   if (fltOnline) fltOnline.addEventListener('change', function () { load(currentSection); });
 
   $('ad-logout').addEventListener('click', function () {
-    sessionStorage.removeItem(TOKEN_KEY);
-    location.replace(LOGIN_PAGE);
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
+    location.replace(EXIT_PAGE);
   });
 
   api('/admin/me')

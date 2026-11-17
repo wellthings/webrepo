@@ -83,21 +83,22 @@
       <section id="step-login" class="signup-card" hidden aria-labelledby="login-title">
         <div class="signup-head">
           <h2 id="login-title">Login</h2>
-          <p>Enter your account details. <button type="button" class="link-btn" id="login-back">Back</button></p>
+          <p>Sign in to your Partner, Supplier or Architect account. <button type="button" class="link-btn" id="login-back">Back</button></p>
         </div>
         <form id="login-form" novalidate autocomplete="off">
           <div class="field">
-            <label for="lg-phone">Phone</label>
+            <label for="lg-phone">Mobile number</label>
             <div class="input"><span class="prefix">+91</span><input id="lg-phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number" autocomplete="off"></div>
-            <button type="button" class="btn-sm" id="lg-send" disabled>Get OTP</button>
           </div>
           <div class="field">
             <label for="lg-pass">Password</label>
-            <div class="input"><input id="lg-pass" type="password" maxlength="100" placeholder="Enter your password" autocomplete="current-password"></div>
-          </div>
-          <div class="field" id="lg-otp-wrap" hidden>
-            <label for="lg-otp">OTP</label>
-            <div class="input"><input id="lg-otp" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit OTP" autocomplete="one-time-code"></div>
+            <div class="input">
+              <input id="lg-pass" type="password" maxlength="100" placeholder="Enter your password" autocomplete="current-password">
+              <button type="button" class="eye" id="lg-toggle-pass" aria-label="Show password" aria-pressed="false">
+                <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.500-7 10-7 10 7 10 7-3.500 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M3 3l18 18M10.600 6.100A9.600 9.600 0 0112 6c6.500 0 10 6 10 6a17 17 0 01-3.200 3.800M6.600 6.600A16.500 16.500 0 002 12s3.500 6 10 6a9.700 9.700 0 004.200-1M9.900 9.900a3 3 0 004.200 4.200"/></svg>
+              </button>
+            </div>
           </div>
           <p class="hint" id="lg-msg" role="alert" aria-live="polite"></p>
           <p class="form-error" id="lg-error" role="alert" hidden></p>
@@ -274,7 +275,7 @@
   <script src="config.js?v=20261116a"></script>
   <script src="partner.js?v=20261114f"></script>
   <script src="profile.js?v=20261116a"></script>
-  <script src="admin-login.js?v=20261116a"></script>
+  <script src="user-login.js?v=20261116b"></script>
   <script src="pwa.js?v=20261116a"></script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 (function () {
   'use strict';
   var API = (window.SITE && window.SITE.apiBase) || '';
-  var TOKEN_KEY = 'ig_admin_token';
   var $ = function (id) { return document.getElementById(id); };
   var form = $('login-form');
   var topTrigger = $('top-login');
@@ -11,13 +10,10 @@
 
   var phone = $('lg-phone');
   var pass = $('lg-pass');
-  var otpWrap = $('lg-otp-wrap');
-  var otp = $('lg-otp');
-  var send = $('lg-send');
+  var togglePass = $('lg-toggle-pass');
   var submit = $('lg-submit');
   var msg = $('lg-msg');
   var errBox = $('lg-error');
-  var timer = null;
   var busy = false;
 
   function show(on) {
@@ -30,7 +26,7 @@
       if ($('step-business')) $('step-business').hidden = true;
       if ($('step-card')) $('step-card').hidden = true;
       say('');
-      phone.focus();
+      if (phone) phone.focus();
       if (location.hash !== '#login') history.replaceState(null, '', '#login');
     } else if (location.hash === '#login') {
       history.replaceState(null, '', location.pathname + location.search);
@@ -58,6 +54,19 @@
   }
   if (location.hash === '#login') show(true);
 
+  if (togglePass && pass) {
+    togglePass.addEventListener('click', function () {
+      var isHidden = pass.type === 'password';
+      pass.type = isHidden ? 'text' : 'password';
+      togglePass.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+      togglePass.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      var openEye = togglePass.querySelector('.eye-open');
+      var offEye = togglePass.querySelector('.eye-off');
+      if (openEye) openEye.hidden = isHidden;
+      if (offEye) offEye.hidden = !isHidden;
+    });
+  }
+
   function say(text, bad) {
     if (msg) {
       msg.textContent = bad ? '' : (text || '');
@@ -70,24 +79,14 @@
   }
 
   function validate() {
-    var phoneOk = /^[6-9]\d{9}$/.test(phone.value);
+    var phoneOk = phone && /^[6-9]\d{9}$/.test(phone.value);
     var hasPass = pass && pass.value.length > 0;
-    var otpVal = otp ? otp.value.trim() : '';
-    var hasOtp = /^\d{4,8}$/.test(otpVal);
-    if (send) send.disabled = !phoneOk || !!timer;
-
-    // If OTP input has characters, require valid 4-8 digit OTP; otherwise Phone + Password
-    var otpOk = otpVal.length === 0 || hasOtp;
-    submit.disabled = busy || !(phoneOk && hasPass && otpOk);
+    submit.disabled = busy || !(phoneOk && hasPass);
   }
 
-  phone.addEventListener('input', function () {
-    phone.value = phone.value.replace(/\D/g, '').slice(0, 10);
-    validate();
-  });
-  if (otp) {
-    otp.addEventListener('input', function () {
-      otp.value = otp.value.replace(/\D/g, '').slice(0, 6);
+  if (phone) {
+    phone.addEventListener('input', function () {
+      phone.value = phone.value.replace(/\D/g, '').slice(0, 10);
       validate();
     });
   }
@@ -100,7 +99,7 @@
       body: JSON.stringify(data)
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok) throw new Error(d.message || d.error || 'Invalid credentials');
+        if (!r.ok) throw new Error(d.message || d.error || 'Invalid mobile number or password');
         return d;
       });
     });
@@ -148,80 +147,19 @@
     }
   }
 
-  if (send) {
-    send.addEventListener('click', function () {
-      say('');
-      send.disabled = true;
-      post('/admin/otp/send', { phone: phone.value })
-        .then(function (d) {
-          if (otpWrap) otpWrap.hidden = false;
-          var left = d.resend_after || 30;
-          say('If this number can log in, an OTP has been sent.');
-          send.textContent = 'Resend in ' + left + 's';
-          timer = setInterval(function () {
-            left--;
-            if (left <= 0) {
-              clearInterval(timer);
-              timer = null;
-              send.textContent = 'Resend OTP';
-              validate();
-            } else {
-              send.textContent = 'Resend in ' + left + 's';
-            }
-          }, 1000);
-          if (otp) otp.focus();
-          validate();
-        })
-        .catch(function (e) {
-          say(e.message || 'Could not send OTP', true);
-          validate();
-        });
-    });
-  }
-
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     validate();
     if (submit.disabled) return;
 
     var phoneVal = phone.value;
-    var phoneOk = /^[6-9]\d{9}$/.test(phoneVal);
     var passVal = pass ? pass.value : '';
-    var otpVal = otp ? otp.value.trim() : '';
 
     busy = true;
     submit.disabled = true;
     submit.textContent = 'Logging in...';
     say('');
 
-    if (otpVal) {
-      if (!phoneOk || !passVal || !/^\d{4,8}$/.test(otpVal)) {
-        busy = false;
-        submit.textContent = 'Login';
-        say('Invalid credentials', true);
-        validate();
-        return;
-      }
-      post('/admin/login', {
-        phone: phoneVal,
-        password: passVal,
-        otp: otpVal
-      })
-        .then(function (d) {
-          sessionStorage.setItem(TOKEN_KEY, d.token);
-          location.href = 'admin.html';
-        })
-        .catch(function (err) {
-          busy = false;
-          submit.textContent = 'Login';
-          if (otp) otp.value = '';
-          say(err.message || 'Invalid credentials', true);
-          validate();
-        });
-      return;
-    }
-
-    // Normal user login (Phone + Password, without OTP)
     post('/login', {
       identifier: phoneVal,
       phone: phoneVal,
@@ -233,7 +171,7 @@
       .catch(function (err) {
         busy = false;
         submit.textContent = 'Login';
-        say(err.message || 'Invalid credentials', true);
+        say(err.message || 'Invalid mobile number or password', true);
         validate();
       });
   });
