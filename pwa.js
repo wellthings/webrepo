@@ -102,11 +102,12 @@
     });
   }
 
-  // 4. Real PayU Hosted Checkout Integration (Server-signed SHA-512 form POST)
+  // 4. PayU Checkout Engine (supports temporary payuTestMode while designing UI; real PayU SHA-512 form POST intact)
   window.InteragoodPayU = {
     initiatePayment: function (options) {
       options = options || {};
-      var apiBase = (window.SITE && window.SITE.apiBase) || '';
+      var site = window.SITE || {};
+      var apiBase = site.apiBase || '';
       var session = null;
       try { session = JSON.parse(sessionStorage.getItem('ig_session') || 'null'); } catch (e) { session = null; }
       var token = options.accessToken || (session && session.accessToken) || '';
@@ -116,6 +117,63 @@
         if (typeof options.onFailure === 'function') {
           options.onFailure({ status: 'failed', message: msg });
         }
+      }
+
+      if (site.payuTestMode) {
+        if (purpose === 'subscription') {
+          if (!token || !apiBase) {
+            fail('Session missing. Please log in again.');
+            return;
+          }
+          fetch(apiBase + '/payments/payu/sandbox-activate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token
+            },
+            body: JSON.stringify({ test_mode: true })
+          })
+            .then(function (r) {
+              return r.json().catch(function () { return {}; }).then(function (d) {
+                if (!r.ok || !d.success) {
+                  throw new Error(d.message || 'Test activation failed.');
+                }
+                return d;
+              });
+            })
+            .then(function (d) {
+              try {
+                if (session) {
+                  session.payment_status = 'paid';
+                  session.payment_active = true;
+                  session.is_online = true;
+                  session.next_due_at = d.next_due_at || session.next_due_at || null;
+                  if (session.profile) {
+                    session.profile.payment_status = 'paid';
+                    session.profile.payment_active = true;
+                    session.profile.is_online = true;
+                    session.profile.next_due_at = d.next_due_at || session.profile.next_due_at || null;
+                  }
+                  sessionStorage.setItem('ig_session', JSON.stringify(session));
+                }
+              } catch (e) {}
+              if (typeof options.onSuccess === 'function') {
+                options.onSuccess({ status: 'success', testMode: true, data: d });
+              } else {
+                window.location.href = 'dashboard.html';
+              }
+            })
+            .catch(function (err) {
+              fail((err && err.message) || 'Could not activate test account.');
+            });
+          return;
+        }
+
+        // Order / sample checkout in temporary test mode
+        if (typeof options.onSuccess === 'function') {
+          options.onSuccess({ status: 'success', testMode: true, txnid: 'test_' + Date.now() });
+        }
+        return;
       }
 
       if (purpose !== 'subscription' || !token) {

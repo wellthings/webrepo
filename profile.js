@@ -559,9 +559,18 @@
       if ($('bc-online')) $('bc-online').setAttribute('aria-checked', isPaid ? 'true' : 'false');
       if ($('bc-online-label')) $('bc-online-label').textContent = isPaid ? 'Online' : 'Offline';
 
+      var isTestMode = !!(window.SITE && window.SITE.payuTestMode);
+      var payNote = $('onboard-pay-note');
+      if (payNote) {
+        payNote.textContent = isTestMode
+          ? 'Test Mode Active: Real PayU payment is temporarily paused so you can test and design the Dashboard freely.'
+          : 'Complete one-time monthly payment via PayU to activate your profile & open your App Dashboard.';
+      }
       var payBtn = $('pay-btn');
       if (payBtn) {
-        payBtn.textContent = isPaid ? 'Go to App Dashboard' : 'Pay ₹' + fee + ' & Activate Dashboard';
+        payBtn.textContent = isPaid
+          ? 'Go to App Dashboard'
+          : (isTestMode ? 'Activate Dashboard (Test Mode · ₹' + fee + ')' : 'Pay ₹' + fee + ' & Activate Dashboard');
         payBtn.disabled = false;
       }
       stepCard.hidden = false;
@@ -579,6 +588,7 @@
         var p = session.profile || {};
         var errEl = $('pay-error');
         if (errEl) errEl.hidden = true;
+        var isTestMode = !!(window.SITE && window.SITE.payuTestMode);
 
         var curDue = session.next_due_at || p.next_due_at || p.payment_due_date || null;
         var curNotExpired = !curDue || isNaN(new Date(curDue).getTime()) || new Date(curDue).getTime() > Date.now();
@@ -591,7 +601,7 @@
           return;
         }
         payBtnEl.disabled = true;
-        payBtnEl.textContent = 'Redirecting to PayU...';
+        payBtnEl.textContent = isTestMode ? 'Activating Test Dashboard...' : 'Redirecting to PayU...';
         window.InteragoodPayU.initiatePayment({
           purpose: 'subscription',
           accessToken: session.accessToken,
@@ -600,9 +610,12 @@
           firstName: p.full_name || session.username || 'Member',
           email: p.email || 'onboarding@interagood.in',
           phone: session.phone || p.phone || '',
+          onSuccess: function () {
+            window.location.href = 'dashboard.html';
+          },
           onFailure: function (failRes) {
             payBtnEl.disabled = false;
-            payBtnEl.textContent = 'Pay ₹' + fee + ' & Activate Dashboard';
+            payBtnEl.textContent = isTestMode ? 'Activate Dashboard (Test Mode · ₹' + fee + ')' : 'Pay ₹' + fee + ' & Activate Dashboard';
             if (errEl) {
               errEl.textContent = (failRes && failRes.message) || 'Payment could not be started. Complete payment to unlock your Dashboard.';
               errEl.hidden = false;

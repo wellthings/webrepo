@@ -21,6 +21,7 @@ window.SITE = {
   appUrl: 'download.html',
   hours: 'Monday to Saturday, 9:00 AM - 6:00 PM (IST)',
   responseTime: 'within 24 to 48 hours',
-  // PayU Hosted Checkout (Merchant key & salt live securely on Railway backend)
+  // PayU Hosted Checkout (set payuTestMode: false when switching back to real PayU payments)
   payuHostedCheckout: true,
+  payuTestMode: true,
 };
