@@ -30,7 +30,9 @@
     var l = d.slice(-10);
     return '+91 ' + l.slice(0, 2) + 'XXX-XX' + l.slice(-3);
   }
-  var partnerSrc = function (c, m) { return C.base + 'partner/' + c.id + '/' + m[0] + '.jpg'; };
+  var partnerSrc = function (c, m) {
+    return m[3] ? (C.base + 'partner/' + m[3] + '.jpg') : (C.base + 'partner/' + c.id + '/' + m[0] + '.jpg');
+  };
   var supplierSrc = function (c, m) { return C.base + 'supplier/' + c.id + '/' + m[0] + '.jpg'; };
 
   // ---------- Live Marketplace Tabs: Work Modules (Partner & Architect samples) + Products (Architect posts) ----------
@@ -104,27 +106,60 @@
     }
   }
 
-  function catLabelForId(catId) {
-    if (!catId || !C.partner) return '';
-    for (var i = 0; i < C.partner.length; i++) {
-      if (C.partner[i].id === catId) return C.partner[i].name;
+  var CAT_ICONS = {
+    hammer: '🔨', zap: '⚡', droplet: '🚿', 'paint-brush': '🎨', layers: '🏠',
+    grid: '🏛️', 'layout-grid': '🪵', maximize: '🪟', square: '🪞', flame: '🛠️',
+    home: '🛋️', palette: '🖼️', wind: '❄️', wall: '🧱', tree: '🌲', tool: '🔩'
+  };
+  var partnerCats = (C.partner || []).slice();
+  var repairBox = document.getElementById('repair-services-box');
+
+  function findCatById(catId) {
+    if (!catId) return null;
+    for (var i = 0; i < partnerCats.length; i++) {
+      if (partnerCats[i].id === catId || String(partnerCats[i].dbId) === String(catId)) return partnerCats[i];
     }
-    return '';
+    return null;
+  }
+
+  function catLabelForId(catId) {
+    var c = findCatById(catId);
+    return c ? c.name : '';
+  }
+
+  function resolveCatIcon(raw, name) {
+    var label = String(name || '').toLowerCase();
+    if (label.includes('wallpaper') || label.includes('panel')) return '🖼️';
+    if (label.includes('wooden floor')) return '🪵';
+    if (label.includes('tile') || label.includes('marble') || label.includes('granite')) return '🏛️';
+    if (label.includes('paint') || label.includes('polish')) return '🎨';
+    if (label.includes('ac ') || label.includes('appliance')) return '❄️';
+    var key = String(raw || '').trim().toLowerCase();
+    if (CAT_ICONS[key]) return CAT_ICONS[key];
+    return /[^\x00-\x7F]/.test(String(raw || '')) ? raw : '🔧';
   }
 
   function sampleMatchesFilter(s) {
     if (state.cat) {
-      var catName = catLabelForId(state.cat).toLowerCase();
+      var cat = findCatById(state.cat);
+      var catName = (cat ? cat.name : '').toLowerCase();
       var hay = [
         s.category_name,
         s.creator && s.creator.category_name,
         s.title,
         s.caption
       ].filter(Boolean).join(' ').toLowerCase();
-      var token = state.cat.toLowerCase();
-      if (hay.indexOf(token) === -1 && (!catName || hay.indexOf(catName.split('&')[0].trim()) === -1)) {
-        return false;
+      var matched = hay.indexOf(String(state.cat).toLowerCase()) !== -1;
+      if (!matched && catName) {
+        var primary = catName.split('(')[0].split('&')[0].trim();
+        if (primary && hay.indexOf(primary) !== -1) matched = true;
       }
+      if (!matched && cat && Array.isArray(cat.keywords)) {
+        for (var k = 0; k < cat.keywords.length; k++) {
+          if (hay.indexOf(cat.keywords[k]) !== -1) { matched = true; break; }
+        }
+      }
+      if (!matched) return false;
     }
     if (state.q) {
       var qHay = [s.title, s.caption, s.category_name, s.creator && s.creator.business_name].filter(Boolean).join(' ').toLowerCase();
@@ -607,9 +642,97 @@
   if (wsClearBtn) {
     wsClearBtn.addEventListener('click', function () {
       state.cat = '';
+      renderServiceGrid();
+      renderRepairServices();
       renderWorkSamples();
       draw();
     });
+  }
+
+  function renderRepairServices() {
+    if (!repairBox) return;
+    var cat = state.cat ? findCatById(state.cat) : null;
+    var repairs = (cat && Array.isArray(cat.repairing_services)) ? cat.repairing_services : [];
+    if (!cat || !repairs.length) {
+      repairBox.hidden = true;
+      repairBox.innerHTML = '';
+      return;
+    }
+    repairBox.hidden = false;
+    repairBox.innerHTML = '';
+
+    var head = el('div', 'repairs-head');
+    var hText = el('div');
+    hText.appendChild(el('h4', '', (cat.icon || '') + ' ' + cat.name + ' — Repairing & Fixing'));
+    hText.appendChild(el('p', '', 'Need a quick repair or installation? Add any service directly to your visit cart.'));
+    head.appendChild(hText);
+    head.appendChild(el('span', 'repairs-count', repairs.length + ' services'));
+    repairBox.appendChild(head);
+
+    var grid = el('div', 'repairs-grid');
+    var previewImg = (cat.modules && cat.modules.length) ? partnerSrc(cat, cat.modules[0]) : 'assets/logo-square.png';
+    repairs.forEach(function (srv) {
+      var item = el('div', 'repair-item');
+      item.appendChild(el('span', 'repair-label', srv));
+      var addBtn = el('button', 'repair-add-btn', '+ Add');
+      addBtn.type = 'button';
+      addBtn.addEventListener('click', function () {
+        if (!window.IGCart) return;
+        window.IGCart.add({
+          cat: cat.id,
+          catName: cat.name,
+          module: srv,
+          label: srv,
+          mode: 'repair',
+          img: previewImg
+        });
+        addBtn.textContent = 'Added ✓';
+        addBtn.classList.add('added');
+        setTimeout(function () {
+          addBtn.textContent = '+ Add';
+          addBtn.classList.remove('added');
+        }, 1200);
+      });
+      item.appendChild(addBtn);
+      grid.appendChild(item);
+    });
+    repairBox.appendChild(grid);
+  }
+
+  function loadPartnerCategories() {
+    if (!API) return;
+    fetch(API + '/categories/partner')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var rows = Array.isArray(d && d.data) ? d.data : [];
+        if (!rows.length) return;
+        var existingById = {};
+        var existingByName = {};
+        (C.partner || []).forEach(function (c) {
+          if (c.dbId) existingById[String(c.dbId)] = c;
+          existingByName[String(c.name || '').toLowerCase()] = c;
+        });
+        partnerCats = rows.map(function (row) {
+          var base = existingById[String(row.id)] || existingByName[String(row.name || '').toLowerCase()] || {};
+          var repairs = Array.isArray(row.repairing_services) && row.repairing_services.length
+            ? row.repairing_services
+            : (base.repairing_services || []);
+          return {
+            id: base.id || ('cat-' + row.id),
+            dbId: row.id,
+            name: row.name,
+            hindi_name: row.hindi_name || base.hindi_name || '',
+            icon_name: row.icon || row.icon_name || base.icon_name || '',
+            icon: resolveCatIcon(row.icon || row.icon_name || base.icon_name, row.name) || base.icon || '🔧',
+            keywords: base.keywords || [String(row.name || '').toLowerCase().split('(')[0].trim()],
+            repairing_services: repairs,
+            modules: base.modules || []
+          };
+        });
+        renderServiceGrid();
+        renderRepairServices();
+      })
+      .catch(function () {});
   }
 
   function loadMarketplace() {
@@ -736,8 +859,23 @@
 
   document.addEventListener('ig:filter', function (e) {
     state.role = e.detail.role; state.cat = e.detail.cat; state.q = e.detail.q;
+    renderRepairServices();
     renderWorkSamples();
     draw();
+  });
+
+  document.addEventListener('ig:select-category', function (e) {
+    var det = e.detail || {};
+    var match = null;
+    for (var i = 0; i < partnerCats.length; i++) {
+      var pc = partnerCats[i];
+      if ((det.dbId && String(pc.dbId) === String(det.dbId)) ||
+          (det.name && String(pc.name || '').toLowerCase() === String(det.name).toLowerCase())) {
+        match = pc;
+        break;
+      }
+    }
+    if (match) selectPartnerCategory(match);
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-swipe]'), function (b) {
@@ -843,30 +981,46 @@
     }).catch(function () { box.textContent = ''; box.appendChild(el('p', '', 'Could not load samples.')); });
   }
 
+  function selectPartnerCategory(c) {
+    var modTab = document.querySelector('[data-mkt-tab="catalog"]');
+    if (modTab) modTab.click();
+    state.role = 'partner';
+    state.cat = c.id;
+    renderServiceGrid();
+    renderRepairServices();
+    renderWorkSamples();
+    draw();
+    var mkt = document.getElementById('marketplace');
+    if (mkt) mkt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function renderServiceGrid() {
     var sg = document.getElementById('service-grid');
-    if (!sg || !C.partner) return;
+    if (!sg || !partnerCats.length) return;
     sg.innerHTML = '';
-    C.partner.forEach(function (c) {
-      var card = el('div', 'service-card');
-      card.style.cursor = 'pointer';
+    partnerCats.forEach(function (c) {
+      var card = el('button', 'service-card' + (state.cat === c.id ? ' active' : ''));
+      card.type = 'button';
       card.appendChild(el('div', 'svc-icon', c.icon || '🏠'));
       card.appendChild(el('h3', '', c.name));
-      card.appendChild(el('p', '', c.modules.slice(0, 3).map(function (m) { return m[1]; }).join(', ')));
+      var repairs = Array.isArray(c.repairing_services) ? c.repairing_services : [];
+      var summaryText = repairs.length
+        ? repairs.slice(0, 2).join(' · ')
+        : (c.modules || []).slice(0, 3).map(function (m) { return m[1]; }).join(', ');
+      card.appendChild(el('p', '', summaryText));
+      if (repairs.length) {
+        card.appendChild(el('span', 'svc-meta', repairs.length + ' repairing & fixing services →'));
+      }
       card.addEventListener('click', function () {
-        var modTab = document.querySelector('[data-mkt-tab="catalog"]');
-        if (modTab) modTab.click();
-        state.role = 'partner'; state.cat = c.id;
-        renderWorkSamples();
-        draw();
-        var mkt = document.getElementById('marketplace');
-        if (mkt) mkt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        selectPartnerCategory(c);
       });
       sg.appendChild(card);
     });
   }
 
   renderServiceGrid();
+  renderRepairServices();
   draw();
+  loadPartnerCategories();
   loadMarketplace();
 })();

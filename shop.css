@@ -233,9 +233,23 @@
 .sup-kind-badge.product { background: #fff3e3; color: #a35a00; }
 .sup-kind-badge.sample { background: #e0f2fe; color: #0369a1; }
 
+/* Repairing & fixing services panel when category is selected */
+.repairs-box { margin: 14px 0 18px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 6px 20px rgba(10, 25, 47, 0.04); }
+.repairs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.repairs-head h4 { margin: 0; font-size: 1rem; color: var(--navy); }
+.repairs-head p { margin: 2px 0 0; color: var(--muted); font-size: 0.82rem; }
+.repairs-count { font-size: 0.78rem; font-weight: 700; color: var(--orange-dark); white-space: nowrap; }
+.repairs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.repair-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+.repair-label { font-size: 0.84rem; font-weight: 600; color: var(--navy); line-height: 1.35; }
+.repair-add-btn { flex: none; padding: 6px 11px; border: 1.5px solid var(--navy); border-radius: 8px; background: #fff; color: var(--navy); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.repair-add-btn:hover { background: var(--navy); color: #fff; }
+.repair-add-btn.added { border-color: #1f9d55; background: #1f9d55; color: #fff; }
+
 @media (max-width: 560px) {
   .ws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ws-grid .mod-body { padding: 10px; }
   .ws-actions { grid-template-columns: 1fr; }
   .amz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .repairs-grid { grid-template-columns: 1fr; }
 }
