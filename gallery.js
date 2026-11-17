@@ -20,6 +20,7 @@ const BANNER_ICONS = {
   square: '🪞',
   mountain: '⛰️',
   package: '📦',
+  wind: '❄️',
 };
 
 function resolveBannerIcon(raw) {
