@@ -47,12 +47,17 @@
     .bill-action-btn:active { transform: scale(0.97); }
 
     /* Daily Upload Countdown Grid */
-    .limit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    @media (max-width: 560px) { .limit-grid { grid-template-columns: 1fr; } }
-    .limit-card { background: var(--app-card); border: 1px solid var(--app-line); border-radius: 16px; padding: 14px 16px; }
-    .limit-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .limit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .limit-card { background: var(--app-card); border: 1px solid var(--app-line); border-radius: 16px; padding: 14px 16px; min-width: 0; }
+    .limit-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
     .limit-title { font-size: 0.8rem; font-weight: 700; color: #475569; }
-    .limit-count { font-size: 1.08rem; font-weight: 800; color: var(--app-navy); font-variant-numeric: tabular-nums; }
+    .limit-count { font-size: 1.08rem; font-weight: 800; color: var(--app-navy); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    @media (max-width: 560px) {
+      .limit-grid { gap: 8px; }
+      .limit-card { padding: 12px; }
+      .limit-title { font-size: 0.72rem; }
+      .limit-count { font-size: 0.94rem; }
+    }
     .limit-sub { font-size: 0.78rem; color: #64748b; margin-top: 6px; font-variant-numeric: tabular-nums; }
     .quota-bar { height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
     .quota-fill { height: 100%; background: var(--app-green); transition: width 0.25s; }
@@ -198,6 +203,6 @@
   <script src="config.js?v=20261117f"></script>
   <script src="catalog.js?v=20261117a"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="dashboard.js?v=20261116a"></script>
+  <script src="dashboard.js?v=20261117a"></script>
 </body>
 </html>
