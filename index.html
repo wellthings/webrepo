@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261117e">
-  <link rel="stylesheet" href="shop.css?v=20261113">
+  <link rel="stylesheet" href="shop.css?v=20261117b">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -24,6 +24,10 @@
       <header class="nav">
         <div class="container nav-inner">
           <a class="brand brand-stroke" href="index.html" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <a class="header-contact" href="#orders" data-orders-open>Orders</a>
+            <a class="header-contact" href="#cart" data-cart-open style="display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;">Cart <span class="cart-count" data-cart-count hidden style="position:static;margin:0;background:var(--orange);color:#fff;">0</span></a>
+          </div>
         </div>
       </header>
 
@@ -41,7 +45,7 @@
           <h1>Design your home your way<br><strong>no brokerage, clear budget.</strong></h1>
           <p>Get a free site visit, a transparent quote and verified partners to build the space you actually want.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="partner-program.html">Get free site visit</a>
+            <a class="btn btn-primary" href="#marketplace">Get free site visit</a>
             <a class="btn ghost" href="#services">Explore services</a>
           </div>
           <div class="hero-trust">
@@ -78,57 +82,63 @@
       <div class="container">
         <div class="section-head" style="margin-bottom:24px;">
           <span class="eyebrow">Live Marketplace</span>
-          <h2>Supplier Products &amp; Architect Designs</h2>
-          <p>Tap any product card for full pricing &amp; privacy-safe Call/Chat, or open any Architect design to calculate your exact budget.</p>
+          <h2>Work Modules &amp; Architect Products</h2>
+          <p>Explore real work samples from verified Partners &amp; Architects modeled for your home, or check Products posted by Architects.</p>
         </div>
 
         <div class="mkt-tabs" role="tablist" aria-label="Marketplace view">
-          <button type="button" class="mkt-tab active" data-mkt-tab="products" role="tab" aria-selected="true">Supplier Products</button>
-          <button type="button" class="mkt-tab" data-mkt-tab="architects" role="tab" aria-selected="false">Architect Designs</button>
-          <button type="button" class="mkt-tab" data-mkt-tab="catalog" role="tab" aria-selected="false">Work Modules</button>
+          <button type="button" class="mkt-tab active" data-mkt-tab="catalog" role="tab" aria-selected="true">Work Modules</button>
+          <button type="button" class="mkt-tab" data-mkt-tab="products" role="tab" aria-selected="false">Products</button>
         </div>
 
-        <div id="mkt-panel-products" class="mkt-panel">
-          <div class="amz-grid" id="amz-products-grid"></div>
-        </div>
+        <div id="mkt-panel-catalog" class="mkt-panel">
+          <div class="ws-block">
+            <div class="browse-head">
+              <div>
+                <h3 style="margin:0;">Partner &amp; Architect Work Samples</h3>
+                <p id="ws-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Real uploaded work modeled for booking — choose New, Repairing or Full interior and add to your cart.</p>
+              </div>
+              <button type="button" class="btn-clear-filter" id="ws-clear-filter" hidden>Show all categories</button>
+            </div>
+            <div class="ws-grid" id="work-samples-grid"></div>
+            <div class="mkt-empty" id="work-samples-empty" hidden>No partner or architect work samples uploaded yet for this filter.</div>
+          </div>
 
-        <div id="mkt-panel-architects" class="mkt-panel" hidden>
-          <div class="arch-grid" id="arch-posts-grid"></div>
-        </div>
-
-        <div id="mkt-panel-catalog" class="mkt-panel" hidden>
-          <div class="browse-head">
-            <div><h3 id="browse-title" style="margin:0;">Popular interior work</h3><p id="browse-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Choose New or Repairing and add to your cart.</p></div>
+          <div class="browse-head" style="margin-top:28px;">
+            <div><h3 id="browse-title" style="margin:0;">Book by Work Module</h3><p id="browse-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Pick a standard module, choose New or Repairing and add to your cart.</p></div>
             <div class="swiper-nav"><button type="button" data-swipe="prev" aria-label="Previous">&#8249;</button><button type="button" data-swipe="next" aria-label="Next">&#8250;</button></div>
           </div>
           <div class="swiper" id="browse-strip"></div>
           <p class="browse-empty" id="browse-empty" hidden>No matching work found.</p>
         </div>
+
+        <div id="mkt-panel-products" class="mkt-panel" hidden>
+          <div class="browse-head" style="margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0;">Architect Products</h3>
+              <p style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Material-included designs and products posted directly by verified Architects.</p>
+            </div>
+          </div>
+          <div class="arch-grid" id="arch-posts-grid"></div>
+          <div class="mkt-empty" id="arch-posts-empty" hidden>No architect products posted yet. Check Work Modules or Supplier Showcase below.</div>
+        </div>
       </div>
     </section>
 
-    <section id="image-gallery" class="image-gallery">
+    <section id="supplier-showcase" class="sup-showcase-section">
       <div class="container">
-        <div class="gallery-head">
-          <h2>Explore our work</h2>
-          <p>See what we can build for your space</p>
+        <div class="section-head" style="margin-bottom:22px;">
+          <span class="eyebrow">Verified Material Suppliers</span>
+          <h2>Supplier Products &amp; Samples</h2>
+          <p>Real materials, products, and work samples uploaded and posted by verified Interagood Suppliers.</p>
         </div>
-        <div class="gallery-wrap" id="gallery-wrap">
-          <div class="gallery-main">
-            <div class="gallery-img-box" id="gallery-img-box">
-              <img id="gallery-main-img" alt="">
-            </div>
-            <div class="gallery-overlay">
-              <a class="btn get-started-btn" href="partner-program.html">Get Started</a>
-              <span class="gallery-name" id="gallery-name"></span>
-            </div>
-          </div>
-          <div class="gallery-portraits" id="gallery-portraits"></div>
+        <div class="sup-filter-row" role="tablist" aria-label="Supplier filter">
+          <button type="button" class="sup-filter-btn active" data-sup-filter="all" role="tab" aria-selected="true">All <span id="sup-count-all"></span></button>
+          <button type="button" class="sup-filter-btn" data-sup-filter="product" role="tab" aria-selected="false">Products <span id="sup-count-prod"></span></button>
+          <button type="button" class="sup-filter-btn" data-sup-filter="sample" role="tab" aria-selected="false">Samples <span id="sup-count-smp"></span></button>
         </div>
-      </div>
-      <div class="gallery-expand" id="gallery-expand">
-        <button class="gallery-expand-close" id="gallery-expand-close" aria-label="Close">&times;</button>
-        <img class="gallery-expand-img" id="gallery-expand-img" alt="">
+        <div class="amz-grid" id="supplier-showcase-grid"></div>
+        <div class="mkt-empty" id="supplier-showcase-empty" hidden>No supplier products or samples posted yet.</div>
       </div>
     </section>
 
@@ -190,7 +200,7 @@
           <h2>Ready to start your interior?</h2>
           <p>Book your free site visit today and get a clear budget for your space.</p>
         </div>
-        <a class="btn btn-primary" href="partner-program.html">Book free site visit</a>
+        <a class="btn btn-primary" href="#services">Book free site visit</a>
       </div>
     </section>
   </main>
@@ -238,7 +248,7 @@
   <script src="pwa.js?v=20261116a"></script>
   <script src="cart.js?v=20261113"></script>
   <script src="app.js?v=20261106-a"></script>
-  <script src="browse.js?v=20261117a"></script>
-  <script src="gallery.js?v=20261117c"></script>
+  <script src="browse.js?v=20261117b"></script>
+  <script src="gallery.js?v=20261117d"></script>
 </body>
 </html>

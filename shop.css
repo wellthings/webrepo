@@ -204,3 +204,38 @@
 .mkt-action-btn.call { background: var(--orange); border-color: var(--orange); color: #fff; }
 .mkt-action-btn.chat { background: #1f9d55; border-color: #1f9d55; color: #fff; }
 
+/* Client Work Samples Grid (Partner & Architect samples modeled as hireable cards) */
+.ws-block { margin-bottom: 10px; }
+.ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 14px; }
+.ws-grid .mod-card { width: 100%; display: flex; flex-direction: column; box-shadow: 0 6px 20px rgba(10, 25, 47, 0.05); }
+.ws-grid .mod-body { display: flex; flex-direction: column; flex: 1; gap: 6px; padding: 12px; }
+.ws-grid .mod-body h3 { margin: 0; font-size: 0.98rem; color: var(--navy); cursor: pointer; }
+.ws-role-pill { position: absolute; z-index: 1; top: 8px; right: 8px; padding: 3px 9px; border-radius: 999px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.02em; }
+.ws-role-pill.partner { background: rgba(11, 31, 58, 0.92); color: #fff; }
+.ws-role-pill.architect { background: rgba(21, 128, 61, 0.94); color: #fff; }
+.ws-creator { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-price { font-size: 0.92rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+.ws-actions { margin-top: auto; display: grid; grid-template-columns: 1fr auto; gap: 6px; padding-top: 4px; }
+.ws-detail-btn { padding: 9px 11px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; color: var(--navy); font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; }
+.ws-detail-btn:hover { border-color: var(--navy); }
+.btn-clear-filter { padding: 7px 14px; border: 1.5px solid var(--orange); border-radius: 999px; background: #fff; color: var(--orange-dark); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-clear-filter:hover { background: var(--orange-soft); }
+
+/* Empty state */
+.mkt-empty { padding: 28px 18px; text-align: center; border: 1.5px dashed #cbd5e1; border-radius: 14px; background: #fff; color: var(--muted); font-size: 0.92rem; }
+
+/* Supplier Showcase Section (replaces Explore our work) */
+.sup-showcase-section { padding: 64px 0 56px; background: #fff; border-top: 1px solid var(--line); }
+.sup-filter-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 22px; }
+.sup-filter-btn { padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; color: var(--navy); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.sup-filter-btn.active { border-color: var(--orange); background: var(--orange); color: #fff; }
+.sup-kind-badge { display: inline-block; align-self: flex-start; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.sup-kind-badge.product { background: #fff3e3; color: #a35a00; }
+.sup-kind-badge.sample { background: #e0f2fe; color: #0369a1; }
+
+@media (max-width: 560px) {
+  .ws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ws-grid .mod-body { padding: 10px; }
+  .ws-actions { grid-template-columns: 1fr; }
+  .amz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
