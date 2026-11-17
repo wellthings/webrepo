@@ -436,7 +436,8 @@ body.home footer { background: #07152a; }
 .top-fixed .nav { position: static; border: 0; background: transparent; backdrop-filter: none; }
 .top-fixed .nav-inner { height: 64px; gap: 14px; display: flex; align-items: center; justify-content: space-between; }
 .category-banner { background: var(--navy); overflow: hidden; border-bottom: 0; }
-.banner-track { display: flex; gap: 32px; padding: 9px 0; width: max-content; animation: marquee 24s linear infinite; }
+.banner-track { display: flex; gap: 32px; padding: 9px 0; width: max-content; animation: marquee 55s linear infinite; }
+.category-banner:hover .banner-track { animation-play-state: paused; }
 .banner-item { display: inline-flex; align-items: center; gap: 7px; padding: 2px 4px; border: 0; background: transparent; color: #fff; font-size: 0.86rem; font-weight: 600; white-space: nowrap; flex: none; letter-spacing: 0.01em; }
 .banner-icon { font-size: 1rem; line-height: 1; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -520,7 +521,7 @@ body.home footer { background: #07152a; }
   .gallery-portraits { flex-direction: row; width: 100; height: 130px; overflow-x: auto; gap: 10px; padding-bottom: 10px; scrollbar-width: none; }
   .gallery-portraits::-webkit-scrollbar { display: none; }
   .gallery-main { min-height: 320px; }
-  .banner-track { gap: 22px; animation-duration: 18s; }
+  .banner-track { gap: 22px; animation-duration: 45s; }
   .banner-item { font-size: 0.8rem; padding: 2px; gap: 6px; }
 }
 
