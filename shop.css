@@ -260,12 +260,12 @@
 .hero .ca-card p.ca-msg.ok, .ca-msg.ok { color: #16a34a; }
 .hero .ca-card p.ca-convenience { margin: 2px 0 0; max-width: none; font-size: 0.84rem; font-weight: 600; color: #475569; text-align: center; line-height: 1.4; }
 
-.ca-terms-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0b1f3a; }
-.ca-form input.ca-terms-check { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: #3b82f6; cursor: pointer; }
+.ca-terms-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; background: transparent; }
+.ca-form input.ca-terms-check { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: #2563eb; cursor: pointer; }
 .ca-terms-text { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; line-height: 1.35; }
-.ca-terms-link { border: 0; background: transparent; padding: 0; margin: 0; font: inherit; font-size: 0.85rem; font-weight: 700; color: #60a5fa; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.ca-terms-link:hover { color: #93c5fd; }
-.ca-form label.ca-terms-and { display: inline; margin: 0; font-size: 0.85rem; font-weight: 600; color: #ffffff; cursor: pointer; user-select: none; }
+.ca-terms-link { border: 0; background: transparent; padding: 0; margin: 0; font: inherit; font-size: 0.85rem; font-weight: 700; color: #2563eb; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ca-terms-link:hover { color: #1d4ed8; }
+.ca-form label.ca-terms-and { display: inline; margin: 0; font-size: 0.85rem; font-weight: 600; color: #000000; cursor: pointer; user-select: none; }
 .ca-card .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
 
 .ca-legal-backdrop { position: fixed; inset: 0; z-index: 9999; background: rgba(11, 31, 58, 0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
