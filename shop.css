@@ -256,11 +256,12 @@
 .ca-loc-btn { margin-top: 5px; padding: 4px 0; border: 0; background: transparent; color: var(--orange-dark); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-align: left; }
 .ca-loc-btn:disabled { opacity: 0.6; cursor: default; }
 .hero .ca-card p.ca-msg, .ca-msg { margin: 0; min-height: 16px; max-width: none; font-size: 0.84rem; font-weight: 600; color: var(--muted); line-height: 1.4; }
+.hero .ca-card p.ca-msg:empty, .ca-msg:empty { display: none; }
 .hero .ca-card p.ca-msg.err, .ca-msg.err { color: #dc2626; }
 .hero .ca-card p.ca-msg.ok, .ca-msg.ok { color: #16a34a; }
 .hero .ca-card p.ca-convenience { margin: 2px 0 0; max-width: none; font-size: 0.84rem; font-weight: 600; color: #475569; text-align: center; line-height: 1.4; }
 
-.ca-terms-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; background: transparent; }
+.ca-terms-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; margin: 6px 0 -6px; background: transparent; }
 .ca-form input.ca-terms-check { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: #2563eb; cursor: pointer; }
 .ca-terms-text { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; line-height: 1.35; }
 .ca-terms-link { border: 0; background: transparent; padding: 0; margin: 0; font: inherit; font-size: 0.85rem; font-weight: 700; color: #2563eb; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
