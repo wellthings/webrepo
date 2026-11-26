@@ -188,6 +188,10 @@
     function renderSessionState() {
       var c = readJson(CLIENT_KEY);
       var hasSession = !!(c && c.token);
+      if (hasSession && !/client-dashboard\.html/i.test(location.pathname)) {
+        location.replace('client-dashboard.html');
+        return;
+      }
       if (signedCard) signedCard.hidden = !hasSession;
       if (formsCard) formsCard.hidden = hasSession;
       if (hasSession) {

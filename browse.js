@@ -210,8 +210,15 @@
       fullBtn.type = 'button';
       fullBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        mode = 'full_interior';
-        btns.forEach(function (o) { o.classList.toggle('on', o === fullBtn); });
+        if (/client-dashboard\.html/i.test(location.pathname)) {
+          document.dispatchEvent(new CustomEvent('ig:open-full-interior', { detail: { cat: c ? c.id : '', catName: catTitle, title: s.title || '' } }));
+        } else {
+          try {
+            var sess = JSON.parse(localStorage.getItem('ig_client'));
+            if (sess && sess.token) { location.href = 'client-dashboard.html#full-interior'; return; }
+          } catch (err) {}
+          location.href = 'inspection.html';
+        }
       });
       btns.push(fullBtn);
       row.appendChild(fullBtn);
@@ -706,8 +713,20 @@
     var mode = 'new', btns = [];
     if (withModes) {
       var row = el('div', 'mode-row');
-      var full = el('a', 'mode', 'Full interior');
-      full.href = 'inspection.html?cat=' + encodeURIComponent(c.id);
+      var full = el('button', 'mode', 'Full interior');
+      full.type = 'button';
+      full.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (/client-dashboard\.html/i.test(location.pathname)) {
+          document.dispatchEvent(new CustomEvent('ig:open-full-interior', { detail: { cat: c.id, catName: c.name, module: m[0], label: m[1] } }));
+        } else {
+          try {
+            var sess = JSON.parse(localStorage.getItem('ig_client'));
+            if (sess && sess.token) { location.href = 'client-dashboard.html#full-interior'; return; }
+          } catch (err) {}
+          location.href = 'inspection.html';
+        }
+      });
       row.appendChild(full);
       [['repair', 'Repairing'], ['new', 'New']].forEach(function (x) {
         var b = el('button', 'mode' + (x[0] === mode ? ' on' : ''), x[1]);
@@ -735,30 +754,10 @@
     return card;
   }
 
-  // ---------- inspection page ----------
+  // ---------- inspection page (intentionally left blank for future Full Interior flow) ----------
   var root = document.getElementById('insp-root');
   if (root) {
-    var only = new URLSearchParams(location.search).get('cat');
-    var q = document.getElementById('insp-search');
-    function drawInsp() {
-      var text = q ? q.value.trim().toLowerCase() : '';
-      root.textContent = '';
-      var shown = 0;
-      C.partner.forEach(function (c) {
-        if (only && c.id !== only) return;
-        var mods = c.modules.filter(function (m) { return !text || (m[1] + ' ' + c.name).toLowerCase().indexOf(text) !== -1; });
-        if (!mods.length) return;
-        var g = el('section', 'insp-group'); g.appendChild(el('h2', '', c.icon + ' ' + c.name));
-        var grid = el('div', 'insp-grid');
-        mods.forEach(function (m) { grid.appendChild(moduleCard(c, m, false)); shown++; });
-        g.appendChild(grid); root.appendChild(g);
-      });
-      if (!shown) root.appendChild(el('p', 'browse-empty', 'No matching services. Try a different search.'));
-      var all = document.getElementById('insp-all');
-      if (all) all.hidden = !only;
-    }
-    if (q) q.addEventListener('input', drawInsp);
-    drawInsp();
+    root.textContent = '';
     return;
   }
 
