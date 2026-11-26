@@ -41,14 +41,18 @@
       line-height: 1.55;
     }
 
-    /* App Shell: docked 240px sidebar + fluid workspace + persistent bottom bar */
+    /* App Shell: collapsible navigation drawer + fluid responsive workspace + persistent bottom bar */
     .cd-shell {
-      display: grid;
-      grid-template-columns: 240px minmax(0, 1fr);
+      display: flex;
+      flex-direction: column;
       min-height: 100vh;
     }
 
     .cd-sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(280px, 84vw);
+      z-index: 70;
       background: #0b1f3a;
       color: #e2e8f0;
       border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -56,16 +60,21 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      z-index: 40;
+      overflow-y: auto;
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.24s;
+      box-shadow: 12px 0 36px rgba(10, 25, 47, 0.32);
+    }
+    .cd-sidebar.open {
+      transform: translateX(0);
+      visibility: visible;
     }
     .cd-brand {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 10px;
+      padding: 6px 8px;
       border: 0;
       background: transparent;
       font: inherit;
@@ -86,17 +95,21 @@
       color: #94a3b8;
     }
     .cd-side-close {
-      display: none;
-      width: 34px;
-      height: 34px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex: none;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.08);
       color: #fff;
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       line-height: 1;
       cursor: pointer;
+      transition: background 0.15s;
     }
+    .cd-side-close:hover { background: rgba(255, 255, 255, 0.16); }
     .cd-side-nav {
       display: grid;
       gap: 6px;
@@ -182,11 +195,13 @@
     }
     .cd-side-backdrop.open { display: block; }
 
-    /* Right Workspace */
+    /* Workspace */
     .cd-workspace {
       display: flex;
       flex-direction: column;
       min-width: 0;
+      flex: 1;
+      overflow-x: clip;
       padding-bottom: 66px;
     }
     .cd-topbar {
@@ -210,7 +225,7 @@
       min-width: 0;
     }
     .cd-menu-btn {
-      display: none;
+      display: inline-flex;
       width: 40px;
       height: 40px;
       flex: none;
@@ -221,7 +236,9 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
     }
+    .cd-menu-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
     .cd-menu-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
     .cd-crumb {
       font-size: 0.74rem;
@@ -475,7 +492,7 @@
     .cd-bottom-nav {
       position: fixed;
       bottom: 0;
-      left: 240px;
+      left: 0;
       right: 0;
       z-index: 45;
       height: 64px;
@@ -536,26 +553,20 @@
     .cd-tab-badge[hidden] { display: none; }
 
     @media (max-width: 860px) {
-      .cd-shell { grid-template-columns: 1fr; }
-      .cd-sidebar {
-        position: fixed;
-        inset: 0 auto 0 0;
-        width: 260px;
-        z-index: 70;
-        transform: translateX(-105%);
-        transition: transform 0.22s ease;
-        box-shadow: 12px 0 36px rgba(10, 25, 47, 0.28);
-      }
-      .cd-sidebar.open { transform: translateX(0); }
-      .cd-side-close { display: inline-grid; place-items: center; }
-      .cd-menu-btn { display: inline-flex; }
       .cd-topbar { padding: 10px 14px; min-height: 54px; }
-      .cd-user-chip { max-width: 150px; padding: 5px 10px; font-size: 0.74rem; }
-      .cd-bottom-nav { left: 0; height: 60px; }
-      #cd-tab-view { padding: 14px 14px 20px; }
+      .cd-user-chip { max-width: 155px; padding: 5px 10px; font-size: 0.74rem; }
+      .cd-bottom-nav { height: 60px; }
+      .cd-workspace { padding-bottom: 62px; }
+      #cd-tab-view { padding: 14px 14px 24px; }
       #cd-home-view .hero-inner { padding: 34px 0; text-align: left; }
       #cd-home-view .hero-actions, #cd-home-view .hero-trust { justify-content: flex-start; }
       #cd-home-view .hero p { margin: 0 0 22px; }
+      .cd-panel { padding: 16px; }
+    }
+    @media (max-width: 560px) {
+      .cd-panel-head { flex-direction: column; align-items: flex-start; }
+      .cd-items-table { font-size: 0.78rem; }
+      .cd-items-table th, .cd-items-table td { padding: 6px 4px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .cd-skel { animation: none; }
@@ -567,7 +578,7 @@
   <div class="cd-side-backdrop" id="cd-side-backdrop" aria-hidden="true"></div>
 
   <div class="cd-shell">
-    <aside class="cd-sidebar" id="cd-sidebar" aria-label="Control panel sidebar">
+    <aside class="cd-sidebar" id="cd-sidebar" aria-label="Control panel navigation drawer" aria-hidden="true">
       <div class="cd-brand">
         <button type="button" class="cd-brand" data-cd-tab="home" style="padding:0;">
           <div>
@@ -575,7 +586,7 @@
             <small>Client Control Panel</small>
           </div>
         </button>
-        <button type="button" class="cd-side-close" id="cd-side-close" aria-label="Close sidebar">&times;</button>
+        <button type="button" class="cd-side-close" id="cd-side-close" aria-label="Close navigation drawer">&times;</button>
       </div>
 
       <nav class="cd-side-nav">
@@ -601,7 +612,7 @@
     <div class="cd-workspace">
       <header class="cd-topbar">
         <div class="cd-top-left">
-          <button type="button" class="cd-menu-btn" id="cd-menu-toggle" aria-label="Open menu">
+          <button type="button" class="cd-menu-btn" id="cd-menu-toggle" aria-label="Toggle navigation drawer" aria-expanded="false" aria-controls="cd-sidebar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
           </button>
           <div>
@@ -852,6 +863,6 @@
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=20261126a"></script>
   <script src="gallery.js?v=20261117f"></script>
-  <script src="client-dashboard.js?v=20261126a"></script>
+  <script src="client-dashboard.js?v=20261126b"></script>
 </body>
 </html>

@@ -663,11 +663,20 @@
     }
   }
 
-  function closeSidebarDrawer() {
+  function setDrawerOpen(isOpen) {
     var sb = document.getElementById('cd-sidebar');
     var bd = document.getElementById('cd-side-backdrop');
-    if (sb) sb.classList.remove('open');
-    if (bd) bd.classList.remove('open');
+    var mt = document.getElementById('cd-menu-toggle');
+    if (sb) {
+      sb.classList.toggle('open', isOpen);
+      sb.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    }
+    if (bd) bd.classList.toggle('open', isOpen);
+    if (mt) mt.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+
+  function closeSidebarDrawer() {
+    setDrawerOpen(false);
   }
 
   function setTab(nextTab, scrollSectionId) {
@@ -733,12 +742,14 @@
   if (menuToggle) {
     menuToggle.addEventListener('click', function () {
       var sb = document.getElementById('cd-sidebar');
-      if (sb) sb.classList.toggle('open');
-      if (sideBackdrop) sideBackdrop.classList.toggle('open');
+      setDrawerOpen(!(sb && sb.classList.contains('open')));
     });
   }
   if (sideClose) sideClose.addEventListener('click', closeSidebarDrawer);
   if (sideBackdrop) sideBackdrop.addEventListener('click', closeSidebarDrawer);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeSidebarDrawer();
+  });
 
   var sideLogout = document.getElementById('side-logout');
   if (sideLogout) sideLogout.addEventListener('click', logout);
