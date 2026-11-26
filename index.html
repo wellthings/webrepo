@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261117h">
-  <link rel="stylesheet" href="shop.css?v=20261117j">
+  <link rel="stylesheet" href="shop.css?v=20261126a">
 </head>
 <body class="home">
   <div class="top-fixed" id="top-fixed">
@@ -81,8 +81,18 @@
               </div>
               <div>
                 <label for="ca-location">Your Location / Site Address</label>
-                <input id="ca-location" type="text" autocomplete="street-address" maxlength="200" placeholder="House no, area, city">
-                <button type="button" class="ca-loc-btn" id="ca-use-loc">Use my current location</button>
+                <div class="ca-loc-wrap">
+                  <span class="ca-loc-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                  </span>
+                  <input id="ca-location" type="text" autocomplete="off" maxlength="220" placeholder="Search city, area, road">
+                  <button type="button" class="ca-loc-clear" id="ca-loc-clear" hidden aria-label="Clear address">&times;</button>
+                  <div class="ca-loc-suggestions" id="ca-loc-suggestions" hidden role="listbox" aria-label="Address suggestions"></div>
+                </div>
+                <button type="button" class="ca-loc-btn" id="ca-use-loc">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="7"/></svg>
+                  <span>Use my current location</span>
+                </button>
               </div>
               <p class="ca-msg" id="ca-signup-msg" role="alert"></p>
               <div class="ca-terms-row">
@@ -305,10 +315,10 @@
   <script src="catalog.js?v=20261117a"></script>
   <script src="geo.js?v=2"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="cart.js?v=20261117a"></script>
-  <script src="client-auth.js?v=20261117c"></script>
+  <script src="cart.js?v=20261126a"></script>
+  <script src="client-auth.js?v=20261126a"></script>
   <script src="app.js?v=20261106-a"></script>
-  <script src="browse.js?v=20261117d"></script>
+  <script src="browse.js?v=20261126a"></script>
   <script src="gallery.js?v=20261117f"></script>
 </body>
 </html>

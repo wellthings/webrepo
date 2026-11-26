@@ -22,7 +22,7 @@
       }).catch(function () {});
     }, 500);
   }
-  function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); render(); updateBadges(); syncCart(); }
+  function save(list) { localStorage.setItem(KEY, JSON.stringify(list)); render(); updateBadges(); syncCart(); document.dispatchEvent(new CustomEvent('ig:cart-changed')); }
 
   function add(item) {
     var list = items().filter(function (i) { return !(i.cat === item.cat && i.module === item.module && i.mode === item.mode); });
@@ -261,6 +261,8 @@
         orderNo = res && res.order_no;
         rememberOrder(sentItems, orderNo);
         localStorage.removeItem(KEY); updateBadges();
+        document.dispatchEvent(new CustomEvent('ig:cart-changed'));
+        document.dispatchEvent(new CustomEvent('ig:order-placed', { detail: { order_no: orderNo } }));
         step = 'done'; render();
       }).catch(function (err) {
         go.disabled = false;
@@ -298,9 +300,19 @@
     ok.appendChild(el('p', '', 'Our partner will contact you shortly.'));
     body.appendChild(ok);
     if (sentItems && sentItems.length) body.appendChild(summary(sentItems, false));
-    var dashLink = el('a', 'btn', 'Open Client Dashboard');
-    dashLink.href = 'client-dashboard.html';
-    body.appendChild(dashLink);
+    if (!/client-dashboard\.html/i.test(location.pathname)) {
+      var dashLink = el('a', 'btn', 'Open Client Dashboard');
+      dashLink.href = 'client-dashboard.html';
+      body.appendChild(dashLink);
+    } else {
+      var viewOrdersBtn = el('button', 'btn', 'View Order Status');
+      viewOrdersBtn.type = 'button';
+      viewOrdersBtn.addEventListener('click', function () {
+        close();
+        document.dispatchEvent(new CustomEvent('ig:switch-tab', { detail: { tab: 'orders' } }));
+      });
+      body.appendChild(viewOrdersBtn);
+    }
     var done = el('button', 'btn-alt', 'Close'); done.type = 'button';
     done.style.width = '100%';
     done.addEventListener('click', close);

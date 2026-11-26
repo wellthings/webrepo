@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Client Dashboard | Interagood</title>
-  <meta name="description" content="Manage your home interior service requests, track partner visits, review your saved cart, and update your site location on Interagood.">
+  <title>Client Control Panel | Interagood</title>
+  <meta name="description" content="Manage your home interior services, browse live marketplace work modules, track partner orders, cart, profile and e-agreement inside your Interagood control panel.">
   <meta name="theme-color" content="#0a192f">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20261117h">
+  <link rel="stylesheet" href="shop.css?v=20261126a">
   <style>
     :root {
       --navy: #0a192f;
@@ -30,16 +32,16 @@
     }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    body {
+    body.cd-body {
       margin: 0;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--ink);
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
-    /* App Shell: 240px desktop sidebar + fluid main workspace */
+    /* App Shell: docked 240px sidebar + fluid workspace + persistent bottom bar */
     .cd-shell {
       display: grid;
       grid-template-columns: 240px minmax(0, 1fr);
@@ -47,120 +49,252 @@
     }
 
     .cd-sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--line);
-      padding: 20px 14px;
+      background: #0b1f3a;
+      color: #e2e8f0;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 20px 14px 24px;
       display: flex;
       flex-direction: column;
       gap: 20px;
       position: sticky;
       top: 0;
       height: 100vh;
+      z-index: 40;
     }
     .cd-brand {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      padding: 4px 10px;
-      font-size: 1.25rem;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      font-size: 1.3rem;
       font-weight: 800;
       letter-spacing: -0.02em;
       color: var(--orange);
-      text-decoration: none;
+      cursor: pointer;
+      text-align: left;
       white-space: nowrap;
+    }
+    .cd-brand small {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .cd-side-close {
+      display: none;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
     }
     .cd-side-nav {
       display: grid;
-      gap: 4px;
+      gap: 6px;
     }
     .cd-nav-btn {
       display: flex;
       align-items: center;
       gap: 10px;
       width: 100%;
-      min-height: 44px;
+      min-height: 46px;
       padding: 10px 12px;
       border: 0;
       border-radius: 10px;
       background: transparent;
-      color: #475569;
+      color: #cbd5e1;
       font: inherit;
       font-size: 0.9rem;
       font-weight: 600;
       text-align: left;
       cursor: pointer;
-      text-decoration: none;
       white-space: nowrap;
-      transition: background 0.16s cubic-bezier(0.16, 1, 0.3, 1), color 0.16s;
+      transition: background 0.16s, color 0.16s;
     }
-    .cd-nav-btn:hover { background: #f1f5f9; color: var(--navy); }
-    .cd-nav-btn.active { background: #fff4e5; color: var(--orange-dark); font-weight: 700; }
+    .cd-nav-btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .cd-nav-btn.active { background: var(--orange); color: #fff; font-weight: 700; }
     .cd-nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-    .cd-nav-count { margin-left: auto; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+    .cd-nav-count {
+      margin-left: auto;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      font-size: 0.74rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .cd-nav-btn.active .cd-nav-count { background: rgba(11, 31, 58, 0.25); }
     .cd-side-foot {
       margin-top: auto;
       padding-top: 14px;
-      border-top: 1px solid var(--line);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
       display: grid;
-      gap: 6px;
+      gap: 8px;
     }
     .cd-logout-btn {
-      min-height: 42px;
-      padding: 8px 12px;
-      border: 1px solid #fecaca;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 9px 14px;
+      border: 1px solid rgba(248, 113, 113, 0.45);
       border-radius: 10px;
-      background: #fef2f2;
-      color: #b91c1c;
+      background: rgba(220, 38, 38, 0.16);
+      color: #fecaca;
       font: inherit;
-      font-size: 0.86rem;
+      font-size: 0.88rem;
       font-weight: 700;
       cursor: pointer;
-      text-align: center;
+      width: 100%;
     }
-    .cd-logout-btn:hover { background: #fee2e2; }
+    .cd-logout-btn:hover { background: rgba(220, 38, 38, 0.28); color: #fff; }
+    .cd-logout-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .cd-panel .cd-logout-btn {
+      background: #fef2f2;
+      color: #b91c1c;
+      border-color: #fecaca;
+      width: auto;
+    }
+    .cd-panel .cd-logout-btn:hover { background: #fee2e2; color: #991b1b; }
 
-    /* Right Content Column */
+    .cd-side-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 65;
+      background: rgba(10, 25, 47, 0.56);
+    }
+    .cd-side-backdrop.open { display: block; }
+
+    /* Right Workspace */
     .cd-workspace {
       display: flex;
       flex-direction: column;
       min-width: 0;
+      padding-bottom: 66px;
     }
     .cd-topbar {
       position: sticky;
       top: 0;
       z-index: 30;
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--line);
-      padding: 12px 24px;
+      padding: 10px 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      min-height: 60px;
+      gap: 14px;
+      min-height: 58px;
     }
-    .cd-top-left { min-width: 0; }
-    .cd-crumb {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-weight: 600;
+    .cd-top-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 12px;
+      min-width: 0;
+    }
+    .cd-menu-btn {
+      display: none;
+      width: 40px;
+      height: 40px;
+      flex: none;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--navy);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .cd-menu-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
+    .cd-crumb {
+      font-size: 0.74rem;
+      color: var(--muted);
+      font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .cd-top-title {
       margin: 0;
-      font-size: 1.05rem;
+      font-size: 1.02rem;
       font-weight: 800;
       color: var(--navy);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .cd-top-actions { display: flex; align-items: center; gap: 10px; flex: none; }
-    .cd-mobile-brand { display: none; font-size: 1.08rem; font-weight: 800; color: var(--orange); text-decoration: none; white-space: nowrap; }
+    .cd-user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8fafc;
+      color: var(--navy);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      max-width: 250px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cd-user-chip span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cd-user-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      flex: none;
+    }
+
+    .cd-main {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+    }
+
+    /* Full website Home View inside Control Panel */
+    #cd-home-view { width: 100%; }
+    #cd-home-view .hero-inner {
+      grid-template-columns: 1fr;
+      padding: 46px 0;
+      max-width: 780px;
+    }
+    #cd-home-view .hero h1 { font-size: clamp(1.9rem, 4vw, 3rem); }
+    #cd-home-view footer { background: #07152a; color: #b8c4d6; }
+
+    /* Control Panel Tab View (Orders / Cart / Profile / Agreement) */
+    #cd-tab-view {
+      max-width: 1080px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
 
     .cd-btn {
       display: inline-flex;
@@ -177,74 +311,15 @@
       cursor: pointer;
       text-decoration: none;
       white-space: nowrap;
-      transition: background 0.16s cubic-bezier(0.16, 1, 0.3, 1), transform 0.16s;
+      transition: background 0.16s, transform 0.16s;
     }
     .cd-btn:active { transform: scale(0.98); }
     .cd-btn.primary { background: var(--orange); color: #fff; }
     .cd-btn.primary:hover { background: var(--orange-dark); }
     .cd-btn.secondary { background: var(--surface); border-color: var(--line); color: var(--navy); }
     .cd-btn.secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .cd-btn.navy { background: var(--navy); color: #fff; }
-    .cd-btn.navy:hover { background: var(--navy-2); }
     .cd-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
 
-    .cd-main {
-      max-width: 1120px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px;
-      display: grid;
-      gap: 20px;
-    }
-
-    /* Welcome Strip */
-    .cd-welcome {
-      background: var(--navy);
-      color: #fff;
-      border-radius: 16px;
-      padding: 22px 24px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .cd-welcome h1 {
-      margin: 0 0 6px;
-      font-size: clamp(1.25rem, 2.5vw, 1.6rem);
-      font-weight: 800;
-      color: #fff;
-      text-wrap: balance;
-    }
-    .cd-meta-line {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.86rem;
-      color: #cbd5e1;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* KPI Strip (Single-elevation hairline cards, tabular-nums) */
-    .cd-kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .cd-kpi {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 16px 18px;
-      display: grid;
-      gap: 4px;
-    }
-    .cd-kpi-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-    .cd-kpi-val { font-size: 1.65rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; line-height: 1.15; }
-    .cd-kpi-note { font-size: 0.78rem; color: var(--muted); }
-
-    /* Content Panel */
     .cd-panel {
       background: var(--surface);
       border: 1px solid var(--line);
@@ -262,10 +337,9 @@
       padding-bottom: 12px;
       border-bottom: 1px solid #f1f5f9;
     }
-    .cd-panel-head h2 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--navy); }
+    .cd-panel-head h2 { margin: 0; font-size: 1.08rem; font-weight: 800; color: var(--navy); }
     .cd-panel-sub { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-    /* Segmented Filter Controls */
     .cd-segs {
       display: inline-flex;
       flex-wrap: wrap;
@@ -290,7 +364,6 @@
     }
     .cd-seg-btn.active { background: var(--surface); color: var(--navy); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
 
-    /* Orders List (Clean hairline rows, unboxed metadata) */
     .cd-list { display: grid; gap: 12px; }
     .cd-order-row {
       border: 1px solid var(--line);
@@ -314,11 +387,7 @@
     .cd-status-txt.st-contacted { color: #0284c7; }
     .cd-status-txt.st-closed { color: var(--green); }
 
-    .cd-items-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.86rem;
-    }
+    .cd-items-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
     .cd-items-table th {
       text-align: left;
       font-size: 0.76rem;
@@ -327,14 +396,9 @@
       padding: 6px 8px;
       border-bottom: 1px solid var(--line);
     }
-    .cd-items-table td {
-      padding: 8px;
-      border-bottom: 1px solid #f1f5f9;
-      color: var(--ink);
-    }
+    .cd-items-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: var(--ink); }
     .cd-items-table tr:last-child td { border-bottom: 0; }
 
-    /* Cart Row */
     .cd-cart-row {
       display: flex;
       align-items: center;
@@ -362,13 +426,13 @@
       flex: none;
     }
 
-    /* Profile & Address Form */
-    .cd-form { display: grid; gap: 14px; max-width: 560px; }
-    .cd-field { display: grid; gap: 6px; }
-    .cd-field label { font-size: 0.84rem; font-weight: 700; color: var(--navy); }
+    .cd-form { display: grid; gap: 14px; max-width: 580px; }
+    .cd-field { display: grid; gap: 6px; position: relative; }
+    .cd-field label { font-size: 0.84rem; font-weight: 700; color: var(--navy); margin-bottom: 0; }
     .cd-field input {
       width: 100%;
       min-height: 44px;
+      margin-bottom: 0;
       padding: 10px 12px;
       border: 1px solid #cbd5e1;
       border-radius: 10px;
@@ -377,19 +441,8 @@
       color: var(--ink);
       background: #fff;
     }
-    .cd-field input:focus { outline: 2px solid var(--orange); border-color: var(--orange); }
+    .cd-field input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.14); }
     .cd-field input[readonly] { background: #f8fafc; color: var(--muted); }
-    .cd-link-btn {
-      justify-self: start;
-      padding: 4px 0;
-      border: 0;
-      background: transparent;
-      color: var(--orange-dark);
-      font: inherit;
-      font-size: 0.84rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
     .cd-msg { margin: 0; font-size: 0.86rem; font-weight: 600; }
     .cd-msg.err { color: var(--red); }
     .cd-msg.ok { color: var(--green); }
@@ -414,115 +467,375 @@
     }
     @keyframes cdSkel { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-    /* Mobile Fixed Bottom Nav (Compact height <= 60px so total sticky <= 15% viewport) */
-    .cd-bottom-nav { display: none; }
+    .cd-agreement-body { display: grid; gap: 10px; color: #334155; font-size: 0.92rem; line-height: 1.6; }
+    .cd-agreement-body h3 { margin: 8px 0 2px; font-size: 0.98rem; color: var(--navy); }
+    .cd-agreement-body p { margin: 0; }
+
+    /* Persistent Bottom Bar (Desktop & Mobile): Home, Orders, Cart, Profile */
+    .cd-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 240px;
+      right: 0;
+      z-index: 45;
+      height: 64px;
+      padding-bottom: env(safe-area-inset-bottom);
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -4px 18px rgba(10, 25, 47, 0.06);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .cd-mob-tab {
+      position: relative;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 44px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .cd-mob-tab:hover { color: var(--navy); background: #f8fafc; }
+    .cd-mob-tab svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .cd-mob-tab.active { color: var(--orange-dark); }
+    .cd-mob-tab.active::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 22%;
+      right: 22%;
+      height: 3px;
+      border-radius: 0 0 3px 3px;
+      background: var(--orange);
+    }
+    .cd-tab-badge {
+      position: absolute;
+      top: 6px;
+      margin-left: 22px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 800;
+      line-height: 18px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .cd-tab-badge[hidden] { display: none; }
 
     @media (max-width: 860px) {
       .cd-shell { grid-template-columns: 1fr; }
-      .cd-sidebar { display: none; }
-      .cd-mobile-brand { display: inline-block; }
-      .cd-topbar { padding: 10px 16px; min-height: 54px; }
-      .cd-main { padding: 16px 16px 84px; gap: 14px; }
-      .cd-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .cd-kpi { padding: 12px; }
-      .cd-kpi-val { font-size: 1.3rem; }
-      .cd-bottom-nav {
+      .cd-sidebar {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 40;
-        height: 60px;
-        background: rgba(255, 255, 255, 0.96);
-        backdrop-filter: blur(8px);
-        border-top: 1px solid var(--line);
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        inset: 0 auto 0 0;
+        width: 260px;
+        z-index: 70;
+        transform: translateX(-105%);
+        transition: transform 0.22s ease;
+        box-shadow: 12px 0 36px rgba(10, 25, 47, 0.28);
       }
-      .cd-mob-tab {
-        border: 0;
-        background: transparent;
-        color: var(--muted);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        font: inherit;
-        font-size: 0.72rem;
-        font-weight: 700;
-        cursor: pointer;
-        min-height: 44px;
-      }
-      .cd-mob-tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-      .cd-mob-tab.active { color: var(--orange-dark); }
+      .cd-sidebar.open { transform: translateX(0); }
+      .cd-side-close { display: inline-grid; place-items: center; }
+      .cd-menu-btn { display: inline-flex; }
+      .cd-topbar { padding: 10px 14px; min-height: 54px; }
+      .cd-user-chip { max-width: 150px; padding: 5px 10px; font-size: 0.74rem; }
+      .cd-bottom-nav { left: 0; height: 60px; }
+      #cd-tab-view { padding: 14px 14px 20px; }
+      #cd-home-view .hero-inner { padding: 34px 0; text-align: left; }
+      #cd-home-view .hero-actions, #cd-home-view .hero-trust { justify-content: flex-start; }
+      #cd-home-view .hero p { margin: 0 0 22px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .cd-skel { animation: none; }
-      .cd-nav-btn, .cd-btn { transition: none; }
+      .cd-nav-btn, .cd-btn, .cd-sidebar { transition: none; }
     }
   </style>
 </head>
-<body>
+<body class="home cd-body">
+  <div class="cd-side-backdrop" id="cd-side-backdrop" aria-hidden="true"></div>
+
   <div class="cd-shell">
-    <aside class="cd-sidebar" aria-label="Client navigation">
-      <a class="cd-brand" href="index.html">Interagood</a>
-      <nav class="cd-side-nav">
-        <button type="button" class="cd-nav-btn active" data-cd-tab="home">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/></svg>
-          <span>Overview</span>
+    <aside class="cd-sidebar" id="cd-sidebar" aria-label="Control panel sidebar">
+      <div class="cd-brand">
+        <button type="button" class="cd-brand" data-cd-tab="home" style="padding:0;">
+          <div>
+            Interagood
+            <small>Client Control Panel</small>
+          </div>
         </button>
+        <button type="button" class="cd-side-close" id="cd-side-close" aria-label="Close sidebar">&times;</button>
+      </div>
+
+      <nav class="cd-side-nav">
         <button type="button" class="cd-nav-btn" data-cd-tab="orders">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
-          <span>My Orders</span>
+          <span>Order Status</span>
           <span class="cd-nav-count" id="side-orders-count">0</span>
         </button>
-        <button type="button" class="cd-nav-btn" data-cd-tab="cart">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.2 11.2a2 2 0 002 1.6h9.6a2 2 0 002-1.5L22 7H6.2"/></svg>
-          <span>Saved Cart</span>
-          <span class="cd-nav-count" id="side-cart-count">0</span>
-        </button>
-        <button type="button" class="cd-nav-btn" data-cd-tab="profile">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"/></svg>
-          <span>My Profile</span>
+        <button type="button" class="cd-nav-btn" data-cd-tab="agreement">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          <span>E-Agreement</span>
         </button>
       </nav>
+
       <div class="cd-side-foot">
-        <a class="cd-btn secondary" href="index.html#marketplace">Explore Marketplace</a>
-        <button type="button" class="cd-logout-btn" id="side-logout">Log Out</button>
+        <button type="button" class="cd-logout-btn" id="side-logout">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span>Log Out</span>
+        </button>
       </div>
     </aside>
 
     <div class="cd-workspace">
       <header class="cd-topbar">
         <div class="cd-top-left">
-          <a class="cd-mobile-brand" href="index.html">Interagood</a>
-          <div class="cd-crumb" id="cd-crumb">Client Dashboard / Overview</div>
-          <h2 class="cd-top-title" id="cd-page-title">Overview</h2>
+          <button type="button" class="cd-menu-btn" id="cd-menu-toggle" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <div>
+            <div class="cd-crumb" id="cd-crumb">Control Panel / Home</div>
+            <h2 class="cd-top-title" id="cd-page-title">Home</h2>
+          </div>
         </div>
-        <div class="cd-top-actions">
-          <a class="cd-btn primary" href="index.html#services">Book Service</a>
-        </div>
+        <button type="button" class="cd-user-chip" id="cd-user-chip" data-cd-tab="profile" title="Edit profile">
+          <i class="cd-user-dot" aria-hidden="true"></i>
+          <span id="cd-user-label">My Account</span>
+        </button>
       </header>
 
       <main class="cd-main" id="cd-main">
-        <div class="cd-skel"></div>
-        <div class="cd-skel"></div>
+        <!-- HOME TAB: Full Live Website Content (Without Signup Form & Without Partner Program Footer Link) -->
+        <div id="cd-home-view">
+          <div class="category-banner" id="category-banner" aria-label="Service categories">
+            <div class="banner-track" id="banner-track"></div>
+          </div>
+
+          <section class="hero">
+            <div class="container hero-inner">
+              <div class="hero-text">
+                <span class="hero-kicker">Interiors, made personal</span>
+                <h1>Design your home your way<br><strong>no brokerage, clear budget.</strong></h1>
+                <p>Get a free site visit, a transparent quote and verified partners to build the space you actually want.</p>
+                <div class="hero-actions">
+                  <a class="btn btn-primary" href="#marketplace">Get free site visit</a>
+                  <a class="btn ghost" href="#services" style="border-color:rgba(255,255,255,0.55);color:#fff;">Explore services</a>
+                </div>
+                <div class="hero-trust">
+                  <span>★ 4.9</span><span>1,000+ homes</span><span>✓ Verified partners</span><span>₹ Transparent pricing</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="services" class="services">
+            <div class="container">
+              <div class="section-head">
+                <span class="eyebrow">What you need</span>
+                <h2>Services built for your space</h2>
+                <p>Pick a service, see verified partners near you and start your project.</p>
+              </div>
+              <div class="service-grid" id="service-grid"></div>
+            </div>
+          </section>
+
+          <section id="marketplace" class="mkt-section">
+            <div class="container">
+              <div class="section-head" style="margin-bottom:24px;">
+                <span class="eyebrow">Live Marketplace</span>
+                <h2>Work Modules &amp; Architect Products</h2>
+                <p>Explore real work samples from verified Partners &amp; Architects modeled for your home, or check Products posted by Architects.</p>
+              </div>
+
+              <div class="mkt-tabs" role="tablist" aria-label="Marketplace view">
+                <button type="button" class="mkt-tab active" data-mkt-tab="catalog" role="tab" aria-selected="true">Work Modules</button>
+                <button type="button" class="mkt-tab" data-mkt-tab="products" role="tab" aria-selected="false">Products</button>
+              </div>
+
+              <div id="mkt-panel-catalog" class="mkt-panel">
+                <div class="ws-block">
+                  <div class="browse-head">
+                    <div>
+                      <h3 style="margin:0;">Partner &amp; Architect Work Samples</h3>
+                      <p id="ws-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Real uploaded work modeled for booking — choose New, Repairing or Full interior and add to your cart.</p>
+                    </div>
+                    <button type="button" class="btn-clear-filter" id="ws-clear-filter" hidden>Show all categories</button>
+                  </div>
+                  <div class="ws-grid" id="work-samples-grid"></div>
+                  <div class="mkt-empty" id="work-samples-empty" hidden>No partner or architect work samples uploaded yet for this filter.</div>
+                </div>
+
+                <div class="browse-head" style="margin-top:28px;">
+                  <div>
+                    <h3 id="browse-title" style="margin:0;">Book by Work Module</h3>
+                    <p id="browse-sub" style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Pick a standard module, choose New or Repairing and add to your cart.</p>
+                  </div>
+                  <div class="swiper-nav"><button type="button" data-swipe="prev" aria-label="Previous">&#8249;</button><button type="button" data-swipe="next" aria-label="Next">&#8250;</button></div>
+                </div>
+                <div class="swiper" id="browse-strip"></div>
+                <p class="browse-empty" id="browse-empty" hidden>No matching work found.</p>
+              </div>
+
+              <div id="mkt-panel-products" class="mkt-panel" hidden>
+                <div class="browse-head" style="margin-bottom:14px;">
+                  <div>
+                    <h3 style="margin:0;">Architect Products</h3>
+                    <p style="margin:2px 0 0;color:var(--muted);font-size:0.86rem;">Material-included designs and products posted directly by verified Architects.</p>
+                  </div>
+                </div>
+                <div class="arch-grid" id="arch-posts-grid"></div>
+                <div class="mkt-empty" id="arch-posts-empty" hidden>No architect products posted yet. Check Work Modules or Supplier Showcase below.</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="supplier-showcase" class="sup-showcase-section">
+            <div class="container">
+              <div class="section-head" style="margin-bottom:22px;">
+                <span class="eyebrow">Verified Material Suppliers</span>
+                <h2>Supplier Products &amp; Samples</h2>
+                <p>Real materials, products, and work samples uploaded and posted by verified Interagood Suppliers.</p>
+              </div>
+              <div class="sup-filter-row" role="tablist" aria-label="Supplier filter">
+                <button type="button" class="sup-filter-btn active" data-sup-filter="all" role="tab" aria-selected="true">All <span id="sup-count-all"></span></button>
+                <button type="button" class="sup-filter-btn" data-sup-filter="product" role="tab" aria-selected="false">Products <span id="sup-count-prod"></span></button>
+                <button type="button" class="sup-filter-btn" data-sup-filter="sample" role="tab" aria-selected="false">Samples <span id="sup-count-smp"></span></button>
+              </div>
+              <div class="amz-grid" id="supplier-showcase-grid"></div>
+              <div class="mkt-empty" id="supplier-showcase-empty" hidden>No supplier products or samples posted yet.</div>
+            </div>
+          </section>
+
+          <section class="how-it-works alt">
+            <div class="container">
+              <div class="section-head center">
+                <span class="eyebrow">How it works</span>
+                <h2>From idea to finished space</h2>
+              </div>
+              <div class="steps-grid">
+                <div class="step-card">
+                  <span class="step-num">01</span>
+                  <h3>Tell us your need</h3>
+                  <p>Choose your service and share your address.</p>
+                </div>
+                <div class="step-card">
+                  <span class="step-num">02</span>
+                  <h3>Free site visit</h3>
+                  <p>A verified partner visits and plans with you.</p>
+                </div>
+                <div class="step-card">
+                  <span class="step-num">03</span>
+                  <h3>Clear budget</h3>
+                  <p>Get a transparent quote with no hidden charges.</p>
+                </div>
+                <div class="step-card">
+                  <span class="step-num">04</span>
+                  <h3>Work begins</h3>
+                  <p>Skilled partners build your space on time.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="trust">
+            <div class="container">
+              <div class="section-head center">
+                <span class="eyebrow">Trusted by homeowners</span>
+                <h2>Good people. Clear work. Better spaces.</h2>
+              </div>
+              <div class="trust-stats">
+                <div class="stat"><strong>1,000+</strong><span>Homes delivered</span></div>
+                <div class="stat"><strong>95%</strong><span>Customers return</span></div>
+                <div class="stat"><strong>✓ Verified</strong><span>Skilled partners</span></div>
+                <div class="stat"><strong>₹ Zero</strong><span>Brokerage fee</span></div>
+              </div>
+              <div class="trust-grid">
+                <article class="trust-card"><span class="trust-icon">★</span><h3>Honest client reviews</h3><p>Real feedback and ratings help you choose with confidence.</p></article>
+                <article class="trust-card"><span class="trust-icon">⌂</span><h3>1,000+ professionals</h3><p>Explore designers and experienced specialists.</p></article>
+                <article class="trust-card"><span class="trust-icon">◎</span><h3>Growing city coverage</h3><p>Discover interior services and suppliers in more cities.</p></article>
+                <article class="trust-card"><span class="trust-icon">✓</span><h3>Skilled, verified partners</h3><p>Find experienced professionals for work that matters.</p></article>
+              </div>
+            </div>
+          </section>
+
+          <section class="cta">
+            <div class="container cta-inner">
+              <div>
+                <h2>Ready to start your interior?</h2>
+                <p>Book your free site visit today and get a clear budget for your space.</p>
+              </div>
+              <a class="btn btn-primary" href="#services">Book free site visit</a>
+            </div>
+          </section>
+
+          <footer>
+            <div class="container">
+              <div class="foot-grid">
+                <div class="foot-about">
+                  <a class="brand brand-footer" href="#cd-home-view" aria-label="Interagood home"><span class="brand-name">Interagood</span></a>
+                  <p>Interagood brings clients, skilled partners and trusted suppliers together for better interior projects.</p>
+                  <p><strong>Business:</strong> <span data-company>Wellthings</span></p>
+                  <p data-address-row><strong>Location:</strong> <span data-address></span></p>
+                </div>
+                <div>
+                  <h4>Follow us</h4>
+                  <ul class="social-list">
+                    <li><a data-social="instagram" style="--c:#e1306c"><i>&#128247;</i>Instagram</a></li>
+                    <li><a data-social="facebook" style="--c:#1877f2"><i>&#128205;</i>Facebook</a></li>
+                    <li><a data-social="youtube" style="--c:#ff0000"><i>&#9654;</i>YouTube</a></li>
+                    <li><a data-social="linkedin" style="--c:#0a66c2"><i>&#128188;</i>LinkedIn</a></li>
+                    <li><a data-social="whatsapp" style="--c:#25d366"><i>&#128172;</i>WhatsApp</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4>Information</h4>
+                  <ul>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                    <li><a href="terms.html">Terms &amp; Conditions</a></li>
+                    <li><a href="refund.html">Refund &amp; Cancellation</a></li>
+                    <li><a href="shipping.html">Service Delivery</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="copy">
+                <span>&copy; <span data-year>2026</span> Interagood, a product of <span data-company>Wellthings</span>. All rights reserved.</span>
+                <span><a data-email href="mailto:support@interagood.in">support@interagood.in</a></span>
+              </div>
+            </div>
+          </footer>
+        </div>
+
+        <!-- TAB VIEWS: Orders / Cart / Profile / E-Agreement -->
+        <div id="cd-tab-view" hidden></div>
       </main>
     </div>
   </div>
 
-  <nav class="cd-bottom-nav" aria-label="Mobile client navigation">
+  <!-- Persistent Bottom Bar (Desktop & Mobile): Home, Orders, Cart, Profile -->
+  <nav class="cd-bottom-nav" aria-label="Primary control panel navigation">
     <button type="button" class="cd-mob-tab active" data-cd-tab="home">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5.5h4V20"/></svg>
       <span>Home</span>
     </button>
     <button type="button" class="cd-mob-tab" data-cd-tab="orders">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+      <span class="cd-tab-badge" id="bottom-orders-count" hidden>0</span>
       <span>Orders</span>
     </button>
     <button type="button" class="cd-mob-tab" data-cd-tab="cart">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.2 11.2a2 2 0 002 1.6h9.6a2 2 0 002-1.5L22 7H6.2"/></svg>
+      <span class="cd-tab-badge" id="bottom-cart-count" hidden>0</span>
       <span>Cart</span>
     </button>
     <button type="button" class="cd-mob-tab" data-cd-tab="profile">
@@ -532,8 +845,13 @@
   </nav>
 
   <script src="config.js?v=20261117f"></script>
+  <script src="catalog.js?v=20261117a"></script>
   <script src="geo.js?v=2"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="client-dashboard.js?v=20261117a"></script>
+  <script src="cart.js?v=20261126a"></script>
+  <script src="app.js?v=20261106-a"></script>
+  <script src="browse.js?v=20261126a"></script>
+  <script src="gallery.js?v=20261117f"></script>
+  <script src="client-dashboard.js?v=20261126a"></script>
 </body>
 </html>

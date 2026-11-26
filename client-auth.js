@@ -222,36 +222,197 @@
       });
     });
 
-    // Prefill saved GPS / typed location if available
+    // Only prefill if user previously selected a searched location; otherwise leave empty so "Search city, area, road" shows cleanly
     var savedLoc = readJson(LOC_KEY);
-    if (locEl && savedLoc && savedLoc.address && !locEl.value) {
-      locEl.value = savedLoc.address;
+    var selectedSearch = (savedLoc && savedLoc.address && savedLoc.source === 'search') ? savedLoc : null;
+    var locClearBtn = document.getElementById('ca-loc-clear');
+    var locSug = document.getElementById('ca-loc-suggestions');
+
+    function syncClearBtn() {
+      if (locClearBtn && locEl) locClearBtn.hidden = !locEl.value.trim();
+    }
+
+    if (locEl && selectedSearch) {
+      locEl.value = selectedSearch.address;
+    }
+    syncClearBtn();
+
+    function setUseLocLabel(text) {
+      if (!useLocBtn) return;
+      var span = useLocBtn.querySelector('span');
+      if (span) span.textContent = text;
+      else useLocBtn.textContent = text;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function formatSearchAddress(item) {
+      var a = (item && item.address) || {};
+      var road = [a.house_number, a.road || a.pedestrian].filter(Boolean).join(' ');
+      var area = a.neighbourhood || a.suburb || a.residential || a.quarter || a.hamlet || a.village || '';
+      var city = a.city || a.town || a.city_district || a.state_district || a.county || '';
+      var state = a.state || '';
+      var pin = a.postcode || '';
+      var seen = {};
+      var parts = [road, area, city, state, pin].filter(function (p) {
+        if (!p || seen[p]) return false;
+        seen[p] = 1;
+        return true;
+      });
+      var full = parts.length ? parts.join(', ') : (item.display_name || '');
+      var main = [road || area || item.name, city].filter(Boolean).filter(function (v, idx, arr) {
+        return arr.indexOf(v) === idx;
+      }).join(', ') || full;
+      return { main: main, sub: full, full: full };
     }
 
     if (useLocBtn && locEl) {
       useLocBtn.addEventListener('click', function () {
         useLocBtn.disabled = true;
-        useLocBtn.textContent = 'Detecting location...';
+        setUseLocLabel('Detecting current location...');
         if (signupMsg) { signupMsg.textContent = ''; signupMsg.className = 'ca-msg'; }
         document.dispatchEvent(new CustomEvent('ig:location-request'));
       });
       document.addEventListener('ig:location', function (e) {
-        if (useLocBtn) {
-          useLocBtn.disabled = false;
-          useLocBtn.textContent = 'Use my current location';
-        }
-        if (e && e.detail && e.detail.address && locEl && document.activeElement !== locEl) {
+        useLocBtn.disabled = false;
+        setUseLocLabel('Use my current location');
+        if (e && e.detail && e.detail.address && locEl) {
           locEl.value = e.detail.address;
+          selectedSearch = {
+            address: e.detail.address,
+            lat: e.detail.lat,
+            lng: e.detail.lng,
+            source: e.detail.source || 'gps',
+            ts: Date.now()
+          };
+          syncClearBtn();
+          if (locSug) locSug.hidden = true;
         }
       });
       document.addEventListener('ig:location-error', function () {
-        if (useLocBtn) {
-          useLocBtn.disabled = false;
-          useLocBtn.textContent = 'Use my current location';
-        }
+        useLocBtn.disabled = false;
+        setUseLocLabel('Use my current location');
         if (signupMsg) {
           signupMsg.className = 'ca-msg err';
-          signupMsg.textContent = 'Could not detect GPS location. Please type your area & city.';
+          signupMsg.textContent = 'Could not detect GPS location. Please search your city, area or road.';
+        }
+      });
+    }
+
+    var searchTimer = null;
+    var activeSugIndex = -1;
+    var lastFetchSeq = 0;
+
+    function hideSuggestions() {
+      if (!locSug) return;
+      locSug.hidden = true;
+      activeSugIndex = -1;
+    }
+
+    function pickSuggestion(btn) {
+      if (!btn || !locEl) return;
+      var addr = btn.getAttribute('data-display') || '';
+      var lat = parseFloat(btn.getAttribute('data-lat'));
+      var lng = parseFloat(btn.getAttribute('data-lng'));
+      locEl.value = addr;
+      selectedSearch = {
+        address: addr,
+        lat: isNaN(lat) ? undefined : lat,
+        lng: isNaN(lng) ? undefined : lng,
+        source: 'search',
+        ts: Date.now()
+      };
+      saveJson(LOC_KEY, selectedSearch);
+      syncClearBtn();
+      hideSuggestions();
+    }
+
+    if (locClearBtn && locEl) {
+      locClearBtn.addEventListener('click', function () {
+        locEl.value = '';
+        selectedSearch = null;
+        syncClearBtn();
+        hideSuggestions();
+        locEl.focus();
+      });
+    }
+
+    if (locEl && locSug) {
+      locEl.addEventListener('input', function () {
+        var q = locEl.value.trim();
+        syncClearBtn();
+        if (!selectedSearch || selectedSearch.address !== q) {
+          selectedSearch = null;
+        }
+        clearTimeout(searchTimer);
+        if (q.length < 3) {
+          hideSuggestions();
+          return;
+        }
+        var seq = ++lastFetchSeq;
+        locSug.innerHTML = '<div class="ca-sug-status">Searching locations...</div>';
+        locSug.hidden = false;
+        searchTimer = setTimeout(function () {
+          fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=in&accept-language=en&limit=6&q=' + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (seq !== lastFetchSeq) return;
+              if (!Array.isArray(data) || !data.length) {
+                locSug.innerHTML = '<div class="ca-sug-status">No matching address found. Try nearby landmark or city.</div>';
+                locSug.hidden = false;
+                return;
+              }
+              activeSugIndex = -1;
+              locSug.innerHTML = data.map(function (item) {
+                var fmt = formatSearchAddress(item);
+                return (
+                  '<button type="button" class="ca-sug-item" role="option" data-display="' + escapeHtml(fmt.full) + '" data-lat="' + escapeHtml(item.lat) + '" data-lng="' + escapeHtml(item.lon) + '">' +
+                  '<span class="ca-sug-main">' + escapeHtml(fmt.main) + '</span>' +
+                  '<span class="ca-sug-sub">' + escapeHtml(fmt.sub) + '</span>' +
+                  '</button>'
+                );
+              }).join('');
+              locSug.hidden = false;
+              Array.prototype.slice.call(locSug.querySelectorAll('.ca-sug-item')).forEach(function (btn) {
+                btn.addEventListener('click', function () { pickSuggestion(btn); });
+              });
+            })
+            .catch(function () {
+              if (seq === lastFetchSeq) hideSuggestions();
+            });
+        }, 280);
+      });
+
+      locEl.addEventListener('keydown', function (e) {
+        if (locSug.hidden) return;
+        var items = Array.prototype.slice.call(locSug.querySelectorAll('.ca-sug-item'));
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeSugIndex = (activeSugIndex + 1) % items.length;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeSugIndex = (activeSugIndex - 1 + items.length) % items.length;
+        } else if (e.key === 'Enter' && activeSugIndex >= 0) {
+          e.preventDefault();
+          pickSuggestion(items[activeSugIndex]);
+          return;
+        } else if (e.key === 'Escape') {
+          hideSuggestions();
+          return;
+        } else {
+          return;
+        }
+        items.forEach(function (el, idx) { el.classList.toggle('active', idx === activeSugIndex); });
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!locEl.contains(e.target) && !locSug.contains(e.target) && (!locClearBtn || !locClearBtn.contains(e.target))) {
+          hideSuggestions();
         }
       });
     }
@@ -271,6 +432,27 @@
       if (!el) return;
       el.textContent = text || '';
       el.className = 'ca-msg' + (isErr ? ' err' : text ? ' ok' : '');
+    }
+
+    function resolveCoordsForSignup(addrText) {
+      var latestLoc = readJson(LOC_KEY) || {};
+      if (selectedSearch && selectedSearch.address === addrText && typeof selectedSearch.lat === 'number' && typeof selectedSearch.lng === 'number') {
+        return Promise.resolve({ lat: selectedSearch.lat, lng: selectedSearch.lng });
+      }
+      if (latestLoc.address === addrText && typeof latestLoc.lat === 'number' && typeof latestLoc.lng === 'number') {
+        return Promise.resolve({ lat: latestLoc.lat, lng: latestLoc.lng });
+      }
+      return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&accept-language=en&q=' + encodeURIComponent(addrText))
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          if (Array.isArray(list) && list.length) {
+            var lat = parseFloat(list[0].lat);
+            var lng = parseFloat(list[0].lon);
+            if (!isNaN(lat) && !isNaN(lng)) return { lat: lat, lng: lng };
+          }
+          return null;
+        })
+        .catch(function () { return null; });
     }
 
     if (signupForm) {
@@ -297,59 +479,62 @@
           return;
         }
         if (locVal.length < 2) {
-          setMsg(signupMsg, 'Please enter your area and city.', true);
+          setMsg(signupMsg, 'Please search or enter your city, area or road.', true);
           if (locEl) locEl.focus();
           return;
-        }
-
-        var latestLoc = readJson(LOC_KEY) || {};
-        var payload = {
-          name: nameVal,
-          phone: phoneVal,
-          otpToken: 'test_token_' + phoneVal,
-          location_name: locVal
-        };
-        if (latestLoc.address === locVal && typeof latestLoc.lat === 'number' && typeof latestLoc.lng === 'number') {
-          payload.latitude = latestLoc.lat;
-          payload.longitude = latestLoc.lng;
         }
 
         signupBtn.disabled = true;
         signupBtn.textContent = 'Creating your control panel...';
         setMsg(signupMsg, '', false);
 
-        fetch(API + '/client/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-          .then(function (r) {
-            return r.json().catch(function () { return {}; }).then(function (d) {
-              if (!r.ok) throw new Error(d.message || d.error || 'Could not sign up. Please try again.');
-              return d;
-            });
+        resolveCoordsForSignup(locVal).then(function (coords) {
+          var payload = {
+            name: nameVal,
+            phone: phoneVal,
+            otpToken: 'test_token_' + phoneVal,
+            location_name: locVal
+          };
+          if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+            payload.latitude = coords.lat;
+            payload.longitude = coords.lng;
+          }
+          return fetch(API + '/client/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
           })
-          .then(function (d) {
-            if (latestLoc.address !== locVal) {
-              saveJson(LOC_KEY, { address: locVal, source: 'manual', ts: Date.now() });
-            }
-            saveJson(CLIENT_KEY, {
-              id: d.client && d.client.id,
-              token: d.token,
-              name: (d.client && d.client.name) || nameVal,
-              phone: (d.client && d.client.phone) || phoneVal,
-              location_name: (d.client && d.client.location_name) || locVal,
-              created_at: d.client && d.client.created_at
+            .then(function (r) {
+              return r.json().catch(function () { return {}; }).then(function (d) {
+                if (!r.ok) throw new Error(d.message || d.error || 'Could not sign up. Please try again.');
+                return d;
+              });
+            })
+            .then(function (d) {
+              saveJson(LOC_KEY, {
+                address: locVal,
+                lat: coords ? coords.lat : undefined,
+                lng: coords ? coords.lng : undefined,
+                source: (selectedSearch && selectedSearch.source) || 'search',
+                ts: Date.now()
+              });
+              saveJson(CLIENT_KEY, {
+                id: d.client && d.client.id,
+                token: d.token,
+                name: (d.client && d.client.name) || nameVal,
+                phone: (d.client && d.client.phone) || phoneVal,
+                location_name: (d.client && d.client.location_name) || locVal,
+                created_at: d.client && d.client.created_at
+              });
+              return syncLocalCartToServer(d.token).then(function () {
+                location.href = 'client-dashboard.html';
+              });
             });
-            return syncLocalCartToServer(d.token).then(function () {
-              location.href = 'client-dashboard.html';
-            });
-          })
-          .catch(function (err) {
-            signupBtn.textContent = 'Create your control panel';
-            syncSignupButtonState();
-            setMsg(signupMsg, (err && err.message) || 'Could not complete signup.', true);
-          });
+        }).catch(function (err) {
+          signupBtn.textContent = 'Create your control panel';
+          syncSignupButtonState();
+          setMsg(signupMsg, (err && err.message) || 'Could not complete signup.', true);
+        });
       });
     }
 
