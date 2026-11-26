@@ -176,7 +176,7 @@
       var activeCatName = catLabelForId(state.cat);
       wsSub.textContent = activeCatName
         ? 'Showing ' + activeCatName + ' work samples & booking modules.'
-        : 'Real uploaded Partner & Architect work modeled for booking — choose New, Repairing or Full interior and add to your cart.';
+        : 'Real uploaded Partner & Architect work modeled for booking — choose New or Repairing and add to your cart.';
     }
 
     var filtered = liveData.work_samples.filter(sampleMatchesFilter);
@@ -206,22 +206,6 @@
 
       var mode = 'new', btns = [];
       var row = el('div', 'mode-row');
-      var fullBtn = el('button', 'mode', 'Full interior');
-      fullBtn.type = 'button';
-      fullBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (/client-dashboard\.html/i.test(location.pathname)) {
-          document.dispatchEvent(new CustomEvent('ig:open-full-interior', { detail: { cat: c ? c.id : '', catName: catTitle, title: s.title || '' } }));
-        } else {
-          try {
-            var sess = JSON.parse(localStorage.getItem('ig_client'));
-            if (sess && sess.token) { location.href = 'client-dashboard.html#full-interior'; return; }
-          } catch (err) {}
-          location.href = 'inspection.html';
-        }
-      });
-      btns.push(fullBtn);
-      row.appendChild(fullBtn);
 
       [['repair', 'Repairing'], ['new', 'New']].forEach(function (x) {
         var b = el('button', 'mode' + (x[0] === mode ? ' on' : ''), x[1]);
@@ -713,21 +697,6 @@
     var mode = 'new', btns = [];
     if (withModes) {
       var row = el('div', 'mode-row');
-      var full = el('button', 'mode', 'Full interior');
-      full.type = 'button';
-      full.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (/client-dashboard\.html/i.test(location.pathname)) {
-          document.dispatchEvent(new CustomEvent('ig:open-full-interior', { detail: { cat: c.id, catName: c.name, module: m[0], label: m[1] } }));
-        } else {
-          try {
-            var sess = JSON.parse(localStorage.getItem('ig_client'));
-            if (sess && sess.token) { location.href = 'client-dashboard.html#full-interior'; return; }
-          } catch (err) {}
-          location.href = 'inspection.html';
-        }
-      });
-      row.appendChild(full);
       [['repair', 'Repairing'], ['new', 'New']].forEach(function (x) {
         var b = el('button', 'mode' + (x[0] === mode ? ' on' : ''), x[1]);
         b.type = 'button'; b.setAttribute('data-mode', x[0]);
@@ -745,7 +714,7 @@
     var add = el('button', 'add-btn', 'Add'); add.type = 'button';
     add.addEventListener('click', function () {
       if (!window.IGCart) return;
-      window.IGCart.add({ cat: c.id, catName: c.name, module: m[0], label: m[1], mode: withModes ? mode : 'full_interior', img: partnerSrc(c, m) });
+      window.IGCart.add({ cat: c.id, catName: c.name, module: m[0], label: m[1], mode: withModes ? mode : 'new', img: partnerSrc(c, m) });
       add.textContent = 'Added'; add.classList.add('added');
       setTimeout(function () { add.textContent = 'Add'; add.classList.remove('added'); }, 1200);
     });

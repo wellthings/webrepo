@@ -3,36 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Full Interior | Interagood</title>
-  <meta name="description" content="Full home and commercial interior planning with Interagood.">
+  <title>Services | Interagood</title>
   <script>
     try {
       var _igc = JSON.parse(localStorage.getItem('ig_client'));
-      if (_igc && _igc.token) location.replace('client-dashboard.html#full-interior');
-    } catch (e) {}
+      location.replace(_igc && _igc.token ? 'client-dashboard.html' : 'index.html#services');
+    } catch (e) {
+      location.replace('index.html#services');
+    }
   </script>
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="stylesheet" href="style.css?v=20261117h">
-  <link rel="stylesheet" href="shop.css?v=20261126a">
 </head>
-<body class="home">
-  <header class="nav">
-    <div class="container nav-inner">
-      <span class="brand" aria-label="Interagood"><span class="brand-name">Interagood</span></span>
-      <a class="header-contact" href="#" data-cart-open>Cart <span class="cart-count" data-cart-count hidden style="position:static;margin-left:4px">0</span></a>
-    </div>
-  </header>
-
-  <main class="page-simple">
-    <div class="container">
-      <div id="insp-root" style="min-height:60vh;"></div>
-    </div>
-  </main>
-
-  <script src="config.js?v=20261117f"></script>
-  <script src="catalog.js?v=20261117a"></script>
-  <script src="geo.js?v=2"></script>
-  <script src="cart.js?v=20261126a"></script>
-  <script src="browse.js?v=20261126b"></script>
-</body>
+<body></body>
 </html>

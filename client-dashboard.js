@@ -9,7 +9,7 @@
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
   var ORDER_STATUS = { new: 'Order under process', contacted: 'Partner assigned', closed: 'Completed' };
   var ASSIGN_STATUS = { unassigned: 'Finding partner', assigned: 'Partner assigned', completed: 'Completed', cancelled: 'Cancelled' };
-  var TAB_TITLES = { home: 'Home', orders: 'Orders', cart: 'Cart', profile: 'Profile', agreement: 'E-Agreement', full_interior: 'Full Interior' };
+  var TAB_TITLES = { home: 'Home', orders: 'Orders', cart: 'Cart', profile: 'Profile', agreement: 'E-Agreement' };
 
   function readJson(k) {
     try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; }
@@ -44,7 +44,7 @@
   }
 
   var state = {
-    tab: location.hash === '#full-interior' ? 'full_interior' : 'home',
+    tab: 'home',
     orderFilter: 'all',
     loading: true,
     client: {
@@ -346,10 +346,6 @@
       '<div class="cd-agreement-body" id="cd-agreement-body">' + bodyHtml + '</div>' +
       '</section>'
     );
-  }
-
-  function renderFullInterior() {
-    return '<section class="cd-panel" style="min-height:62vh;" aria-label="Full Interior"></section>';
   }
 
   function loadAgreementIfNeeded() {
@@ -730,7 +726,6 @@
     else if (state.tab === 'cart') tabView.innerHTML = renderCart();
     else if (state.tab === 'profile') tabView.innerHTML = renderProfile();
     else if (state.tab === 'agreement') tabView.innerHTML = renderAgreement();
-    else if (state.tab === 'full_interior') tabView.innerHTML = renderFullInterior();
 
     bindTabHandlers();
   }
@@ -779,10 +774,6 @@
         setTab(e.detail.tab);
       });
     }
-  });
-
-  document.addEventListener('ig:open-full-interior', function () {
-    setTab('full_interior');
   });
 
   updateUserHeader();
