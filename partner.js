@@ -22,10 +22,20 @@
     if (text !== undefined) hintEl.textContent = text;
   }
 
+  var phoneSeq = 0, usernameSeq = 0, usernameRetryTimer = null, usernameLastChecked = '', usernameHadError = false;
+
   function api(path, options) {
     return fetch(API + path, options).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (data) {
-        if (!res.ok) { var err = new Error(data.message || 'Something went wrong. Please try again.'); err.status = res.status; throw err; }
+      return res.text().then(function (txt) {
+        var data = {};
+        if (txt) {
+          try { data = JSON.parse(txt); } catch (e) { data = { message: txt }; }
+        }
+        if (!res.ok) {
+          var err = new Error(data.message || 'Something went wrong. Please try again.');
+          err.status = res.status;
+          throw err;
+        }
         return data;
       });
     });
@@ -35,7 +45,9 @@
   }
   function debounce(fn, ms) {
     var t;
-    return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); };
+    var wrapped = function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); };
+    wrapped.cancel = function () { clearTimeout(t); };
+    return wrapped;
   }
 
   // role selection -> opens Video Call KYC Guide before Signup
@@ -77,17 +89,27 @@
   });
 
   function resetForm() {
+    phoneSeq++;
+    usernameSeq++;
+    usernameLastChecked = '';
+    usernameHadError = false;
+    if (checkPhone && checkPhone.cancel) checkPhone.cancel();
+    if (checkUsername && checkUsername.cancel) checkUsername.cancel();
+    clearTimeout(usernameRetryTimer);
     state.phoneOk = state.usernameOk = state.passwordOk = false;
     state.verified = true;
     state.otpToken = 'test_token';
     $('signup-form').reset();
     ['phone', 'otp', 'username', 'password'].forEach(function (n) { var f = document.querySelector('[data-field="' + n + '"]'); if (f) f.classList.remove('ok', 'bad'); });
-    if (el.phoneHint) el.phoneHint.textContent = '';
+    if (el.phoneHint) el.phoneHint.textContent = 'Enter any 10-digit number (OTP is turned off for testing).';
     if (el.otpHint) el.otpHint.textContent = '';
+    if (el.usernameHint) el.usernameHint.textContent = 'Letters, numbers, dot or underscore. At least 3 characters.';
+    if (el.passwordHint) el.passwordHint.textContent = 'At least 6 characters, mixing letters and numbers.';
     el.phone.disabled = false;
     if (el.otpField) el.otpField.hidden = true;
     if (el.send) { el.send.hidden = true; el.send.disabled = true; }
     setAccountFieldsEnabled(true);
+    el.create.textContent = 'Create account';
     el.error.hidden = true;
     refresh();
   }
@@ -98,13 +120,15 @@
 
   // phone: digits only, live availability check + OTP bypass for testing
   var checkPhone = debounce(function (phone) {
-    api('/availability?phone=' + phone).then(function (d) {
-      if (el.phone.value !== phone) return;
-      state.phoneOk = d.available;
+    var seq = ++phoneSeq;
+    var qs = '/availability?phone=' + encodeURIComponent(phone) + (state.role ? '&role=' + encodeURIComponent(state.role) : '');
+    api(qs).then(function (d) {
+      if (seq !== phoneSeq || el.phone.value !== phone) return;
+      state.phoneOk = !!d.available;
       mark(el.phone, el.phoneHint, d.available ? 'ok' : 'bad', d.available ? 'Number is ready (OTP disabled for test).' : 'This number is already registered. You can still test with another number.');
       refresh();
     }).catch(function () {
-      if (el.phone.value !== phone) return;
+      if (seq !== phoneSeq || el.phone.value !== phone) return;
       state.phoneOk = true;
       mark(el.phone, el.phoneHint, 'ok', 'Number accepted (Test mode - OTP bypassed).');
       refresh();
@@ -136,24 +160,80 @@
   if (el.send) el.send.hidden = true;
 
   // username
-  var checkUsername = debounce(function (name) {
-    api('/availability?username=' + encodeURIComponent(name)).then(function (d) {
-      if (el.username.value.trim() !== name) return;
-      state.usernameOk = d.available;
+  function runUsernameCheck(name, attempt) {
+    var seq = ++usernameSeq;
+    clearTimeout(usernameRetryTimer);
+    usernameHadError = false;
+    var qs = '/availability?username=' + encodeURIComponent(name) + (state.role ? '&role=' + encodeURIComponent(state.role) : '');
+    api(qs).then(function (d) {
+      if (seq !== usernameSeq || el.username.value.trim() !== name) return;
+      usernameLastChecked = name;
+      usernameHadError = false;
+      state.usernameOk = !!d.available;
       mark(el.username, el.usernameHint, d.available ? 'ok' : 'bad', d.available ? 'Username is available.' : 'This username is taken. Try another one.');
       refresh();
-    }).catch(function () {
-      mark(el.username, el.usernameHint, 'bad', 'Could not check the username. Please try again.');
+    }).catch(function (err) {
+      if (seq !== usernameSeq || el.username.value.trim() !== name) return;
+      state.usernameOk = false;
+      refresh();
+      var tries = attempt || 0;
+      if (tries < 2 && (!err || !err.status || err.status === 429 || err.status >= 500)) {
+        mark(el.username, el.usernameHint, '', 'Checking availability...');
+        usernameRetryTimer = setTimeout(function () {
+          if (el.username.value.trim() === name) runUsernameCheck(name, tries + 1);
+        }, 1200);
+        return;
+      }
+      usernameLastChecked = '';
+      usernameHadError = true;
+      var msg = (err && err.status === 429)
+        ? 'Too many checks right now. Wait a few seconds and try again.'
+        : 'Could not check the username. Please try again.';
+      mark(el.username, el.usernameHint, 'bad', msg);
     });
-  }, 400);
-  el.username.addEventListener('input', function () {
+  }
+  var checkUsername = debounce(function (name) {
+    runUsernameCheck(name, 0);
+  }, 350);
+  function handleUsernameChange(forceImmediate) {
     var v = el.username.value.trim();
+    clearTimeout(usernameRetryTimer);
+    if (!v) {
+      usernameSeq++;
+      usernameLastChecked = '';
+      usernameHadError = false;
+      checkUsername.cancel();
+      state.usernameOk = false;
+      refresh();
+      return mark(el.username, el.usernameHint, '', 'Letters, numbers, dot or underscore. At least 3 characters.');
+    }
+    if (!/^[A-Za-z0-9._]{3,60}$/.test(v)) {
+      usernameSeq++;
+      usernameLastChecked = '';
+      usernameHadError = false;
+      checkUsername.cancel();
+      state.usernameOk = false;
+      refresh();
+      return mark(el.username, el.usernameHint, 'bad', 'Use at least 3 letters, numbers, dot or underscore.');
+    }
+    if (forceImmediate && usernameLastChecked === v && !usernameHadError) return;
+    usernameLastChecked = '';
+    usernameHadError = false;
     state.usernameOk = false;
     refresh();
-    if (!v) return mark(el.username, el.usernameHint, '', 'Letters, numbers, dot or underscore. At least 3 characters.');
-    if (!/^[A-Za-z0-9._]{3,60}$/.test(v)) return mark(el.username, el.usernameHint, 'bad', 'Use at least 3 letters, numbers, dot or underscore.');
     mark(el.username, el.usernameHint, '', 'Checking availability...');
-    checkUsername(v);
+    if (forceImmediate) {
+      checkUsername.cancel();
+      runUsernameCheck(v, 0);
+    } else {
+      checkUsername(v);
+    }
+  }
+  el.username.addEventListener('input', function () { handleUsernameChange(false); });
+  el.username.addEventListener('change', function () { handleUsernameChange(true); });
+  el.username.addEventListener('blur', function () {
+    var v = el.username.value.trim();
+    if (v && /^[A-Za-z0-9._]{3,60}$/.test(v) && (usernameHadError || usernameLastChecked !== v)) handleUsernameChange(true);
   });
 
   // password
