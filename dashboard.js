@@ -889,59 +889,89 @@
     var compCount = state.orders.filter(function (o) { return o.status === 'completed'; }).length;
     var list = state.orders.filter(function (o) { return o.status === state.orderFilter; });
     var MODE_TXT = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
-    var STATUS_BADGE = { pending: 'Awaiting Acceptance', in_progress: 'Accepted', completed: 'Completed' };
+    var STATUS_BADGE = { pending: 'New Contract', in_progress: 'Accepted', completed: 'Completed' };
 
     var html = '<section class="app-section">' +
-      '<div class="app-sec-head"><h2>Assigned Orders</h2><span class="app-sec-meta">' + state.orders.length + ' total</span></div>' +
+      '<div class="app-sec-head"><h2>Order Contracts</h2><span class="app-sec-meta">' + state.orders.length + ' total</span></div>' +
       '<div class="order-segs" role="tablist">' +
-      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Pending (' + pendingCount + ')</button>' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Accept (' + pendingCount + ')</button>' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'in_progress' ? 'active' : '') + '" data-ord-flt="in_progress">Accepted (' + progCount + ')</button>' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'completed' ? 'active' : '') + '" data-ord-flt="completed">Complete (' + compCount + ')</button>' +
       '</div>';
 
     if (!list.length) {
-      var emptyLabel = state.orderFilter === 'in_progress' ? 'accepted' : state.orderFilter.replace('_', ' ');
-      html += '<div class="app-empty">No ' + esc(emptyLabel) + ' orders right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
+      var emptyLabel = state.orderFilter === 'pending' ? 'new contract offers' : (state.orderFilter === 'in_progress' ? 'accepted contracts' : 'completed orders');
+      html += '<div class="app-empty">No ' + esc(emptyLabel) + ' right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
     } else {
       list.forEach(function (o) {
-        var units = Array.isArray(o.units) ? o.units : [];
+        var units = Array.isArray(o.units) && o.units.length
+          ? o.units
+          : [{ work_unit: o.work_type || 'Interior Work', work_type: o.work_type || 'Service', requirement_type: 'new' }];
         var hasCoords = o.latitude != null && o.longitude != null && !isNaN(Number(o.latitude)) && !isNaN(Number(o.longitude));
         var mapHtml = hasCoords
-          ? ' <a href="https://www.google.com/maps?q=' + encodeURIComponent(Number(o.latitude) + ',' + Number(o.longitude)) + '" target="_blank" rel="noopener noreferrer">(Open Map)</a>'
+          ? ' · <a href="https://www.google.com/maps?q=' + encodeURIComponent(Number(o.latitude) + ',' + Number(o.longitude)) + '" target="_blank" rel="noopener noreferrer">View Map</a>'
           : '';
+        var whenStr = '';
+        if (o.assigned_at) {
+          var dt = new Date(o.assigned_at);
+          if (!isNaN(dt)) whenStr = dt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+        }
         var phoneHtml = o.client_phone
-          ? '<div class="order-read-line"><span>Client Phone</span><a href="tel:+91' + esc(String(o.client_phone).replace(/[^0-9+]/g, '')) + '">+91 ' + esc(o.client_phone) + '</a></div>'
+          ? '<div class="order-read-line"><span>Client Mobile</span><a href="tel:+91' + esc(String(o.client_phone).replace(/[^0-9+]/g, '')) + '">+91 ' + esc(o.client_phone) + '</a></div>'
           : '';
-        var unitsHtml = units.length
-          ? '<div class="order-unit-list">' + units.map(function (u) {
-              var m = MODE_TXT[u.requirement_type] || u.requirement_type || 'New';
-              return '<span class="order-unit-chip">' + esc(u.work_unit || u.work_type || 'Unit') + ' · ' + esc(u.work_type || '') + ' (' + esc(m) + ')</span>';
-            }).join('') + '</div>'
-          : '';
+        var rowsHtml = units.map(function (u) {
+          var m = MODE_TXT[u.requirement_type] || u.requirement_type || 'New';
+          return '<tr><td>' + esc(u.work_unit || u.work_type || '-') + '</td><td>' + esc(u.work_type || '-') + '</td><td>' + esc(m) + '</td></tr>';
+        }).join('');
 
-        html += '<div class="order-row">' +
-          '<div class="order-row-top">' +
-          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-          '<strong>' + (o.order_no ? 'Order #' + esc(o.order_no) : esc(o.work_type || 'Project')) + '</strong>' +
+        var confirmOpen = state.confirmDeclineId === o.id;
+        var actionsHtml = '';
+        if (o.status === 'pending') {
+          if (confirmOpen) {
+            actionsHtml = '<div class="order-actions">' +
+              '<div class="contract-confirm-box">' +
+              '<span>Decline this contract and return it to Admin?</span>' +
+              '<div class="contract-confirm-btns">' +
+              '<button type="button" class="btn-decline-yes" data-ord-id="' + esc(o.id) + '" data-ord-next="declined">Confirm Decline</button>' +
+              '<button type="button" class="btn-decline-no" data-decline-cancel="' + esc(o.id) + '">Cancel</button>' +
+              '</div></div></div>';
+          } else {
+            actionsHtml = '<div class="order-actions">' +
+              '<button type="button" class="order-act-btn order-accept-btn" data-ord-id="' + esc(o.id) + '" data-ord-next="in_progress">Accept</button>' +
+              '<button type="button" class="order-act-btn order-decline-btn" data-decline-ask="' + esc(o.id) + '">Decline</button>' +
+              '</div>';
+          }
+        } else if (o.status === 'in_progress') {
+          actionsHtml = '<div class="order-actions single">' +
+            '<button type="button" class="order-act-btn primary" data-ord-id="' + esc(o.id) + '" data-ord-next="completed">Mark Complete</button>' +
+            '</div>';
+        }
+
+        html += '<article class="order-row">' +
+          '<div class="contract-head">' +
+          '<div>' +
+          '<div class="contract-kicker">Work Contract · ' + esc(o.contract_id || ('CTR-' + String(o.id).slice(0, 8).toUpperCase())) + '</div>' +
+          '<div class="contract-title">' +
+          '<span>' + (o.order_no ? 'Order #' + esc(o.order_no) : esc(o.work_type || 'Project')) + '</span>' +
           (o.is_combo ? '<span class="order-combo-badge">COMBO BUNDLE</span>' : '') +
+          '</div>' +
+          (whenStr ? '<div class="contract-sub">Assigned ' + esc(whenStr) + '</div>' : '') +
           '</div>' +
           '<span class="order-status-pill ' + esc(o.status) + '">' + esc(STATUS_BADGE[o.status] || o.status) + '</span>' +
           '</div>' +
-          '<div class="order-read-box">' +
-          '<div class="order-read-line"><span>Client</span><strong>' + esc(o.client_name || 'Interagood Client') + '</strong></div>' +
-          '<div class="order-read-line"><span>Site Address</span><strong>' + esc(o.location_name || 'Client Site') + '</strong>' + mapHtml + '</div>' +
+          '<div class="contract-body">' +
+          '<div class="contract-sec">' +
+          '<h3 class="contract-sec-title">1. Client Details</h3>' +
+          '<div class="order-read-line"><span>Client Name</span><strong>' + esc(o.client_name || 'Interagood Client') + '</strong></div>' +
+          '<div class="order-read-line"><span>Site Address</span><strong>' + esc(o.location_name || 'Client Site') + mapHtml + '</strong></div>' +
           phoneHtml +
-          '<div class="order-read-line"><span>Work</span><strong>' + esc(o.work_type || 'Interior Work') + '</strong></div>' +
-          unitsHtml +
           '</div>' +
-          '<div class="order-actions">' +
-          (o.status === 'pending'
-            ? '<button type="button" class="order-act-btn order-accept-btn" data-ord-id="' + esc(o.id) + '" data-ord-next="in_progress">Accept Order</button>'
-            : '') +
-          (o.status === 'in_progress'
-            ? '<button type="button" class="order-act-btn primary" data-ord-id="' + esc(o.id) + '" data-ord-next="completed">Mark Complete</button>'
-            : '') +
-          '</div></div>';
+          '<div class="contract-sec">' +
+          '<h3 class="contract-sec-title">2. Order &amp; Work Details (' + units.length + ' Unit' + (units.length > 1 ? 's' : '') + ')</h3>' +
+          '<table class="contract-table"><thead><tr><th>Work Unit</th><th>Category</th><th>Mode</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+          '</div>' +
+          actionsHtml +
+          '</div></article>';
       });
     }
     html += '</section>';
@@ -949,7 +979,22 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-ord-flt]'), function (btn) {
       btn.addEventListener('click', function () {
+        state.confirmDeclineId = null;
         state.orderFilter = btn.getAttribute('data-ord-flt');
+        renderOrders();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-decline-ask]'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.confirmDeclineId = btn.getAttribute('data-decline-ask');
+        renderOrders();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-decline-cancel]'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.confirmDeclineId = null;
         renderOrders();
       });
     });
@@ -959,22 +1004,30 @@
         var id = btn.getAttribute('data-ord-id'), next = btn.getAttribute('data-ord-next');
         var origText = btn.textContent;
         btn.disabled = true;
-        btn.textContent = next === 'in_progress' ? 'Accepting...' : 'Updating...';
+        btn.textContent = next === 'in_progress' ? 'Accepting...' : (next === 'declined' ? 'Declining...' : 'Updating...');
         api('/users/' + session.uuid + '/orders/' + id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: next })
         }).then(function () {
-          state.orders.forEach(function (o) {
-            if (o.id === id) {
-              o.status = next;
-              if (next === 'in_progress' || next === 'completed') o.accepted = true;
-            }
-          });
-          if (next === 'in_progress') state.orderFilter = 'in_progress';
-          updateOrderTabBadge();
-          renderOrders();
-          showToast(next === 'in_progress' ? 'Order accepted! Client can now see your business details.' : 'Order marked completed!', false);
+          state.confirmDeclineId = null;
+          if (next === 'declined') {
+            state.orders = state.orders.filter(function (o) { return o.id !== id; });
+            updateOrderTabBadge();
+            renderOrders();
+            showToast('Contract declined and returned to Admin.', false);
+          } else {
+            state.orders.forEach(function (o) {
+              if (o.id === id) {
+                o.status = next;
+                if (next === 'in_progress' || next === 'completed') o.accepted = true;
+              }
+            });
+            if (next === 'in_progress') state.orderFilter = 'in_progress';
+            updateOrderTabBadge();
+            renderOrders();
+            showToast(next === 'in_progress' ? 'Contract accepted! Returned to client under Assigned orders.' : 'Order marked completed!', false);
+          }
           return fetchAllData().then(function () {
             if (state.activeTab === 'orders') renderOrders();
           });

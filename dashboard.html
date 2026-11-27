@@ -96,23 +96,38 @@
     .order-segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; background: #e2e8f0; border-radius: 12px; margin-bottom: 14px; }
     .order-seg-btn { min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #475569; font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .order-seg-btn.active { background: #fff; color: var(--app-navy); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
-    .order-row { border: 1px solid var(--app-line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; margin-bottom: 12px; background: #fff; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
-    .order-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .order-combo-badge { padding: 2px 8px; border-radius: 999px; background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.03em; }
+    .order-row { border: 1.5px solid #cbd5e1; border-radius: 16px; overflow: hidden; margin-bottom: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06); }
+    .contract-head { background: linear-gradient(135deg, #0b1f3a 0%, #16335c 100%); color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .contract-kicker { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #93c5fd; margin-bottom: 2px; }
+    .contract-title { font-size: 1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .contract-sub { font-size: 0.78rem; color: #cbd5e1; margin-top: 2px; }
+    .order-combo-badge { padding: 2px 8px; border-radius: 999px; background: #f58220; color: #fff; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.03em; }
     .order-status-pill { padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
     .order-status-pill.pending { background: #fef3c7; color: #92400e; }
     .order-status-pill.in_progress { background: #dcfce7; color: #166534; }
     .order-status-pill.completed { background: #e0f2fe; color: #075985; }
-    .order-read-box { background: #f8fafc; border: 1px solid var(--app-line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; font-size: 0.86rem; color: #334155; }
-    .order-read-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
-    .order-read-line span { color: #64748b; font-weight: 700; min-width: 82px; font-size: 0.8rem; }
-    .order-read-line strong, .order-read-line a { color: var(--app-navy); }
-    .order-unit-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-    .order-unit-chip { padding: 4px 10px; border-radius: 8px; background: #fff; border: 1px solid #cbd5e1; color: var(--app-navy); font-size: 0.78rem; font-weight: 700; }
-    .order-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-    .order-act-btn { min-height: 42px; padding: 9px 16px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer; color: var(--app-navy); }
+    .contract-body { padding: 14px 16px; display: grid; gap: 12px; }
+    .contract-sec { background: #f8fafc; border: 1px solid var(--app-line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+    .contract-sec-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: #475569; margin: 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+    .order-read-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 0.86rem; }
+    .order-read-line span { color: #64748b; font-weight: 600; font-size: 0.8rem; }
+    .order-read-line strong, .order-read-line a { color: var(--app-navy); text-align: right; }
+    .contract-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .contract-table th { text-align: left; font-size: 0.74rem; color: #64748b; font-weight: 700; padding: 6px 4px; border-bottom: 1px solid #e2e8f0; }
+    .contract-table td { padding: 7px 4px; border-bottom: 1px solid #f1f5f9; color: var(--app-navy); font-weight: 600; }
+    .contract-table tr:last-child td { border-bottom: 0; }
+    .order-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 2px; }
+    .order-actions.single { grid-template-columns: 1fr; }
+    .order-act-btn { min-height: 44px; padding: 10px 16px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #fff; font: inherit; font-size: 0.88rem; font-weight: 800; cursor: pointer; color: var(--app-navy); }
     .order-act-btn.primary { background: var(--app-green); border-color: var(--app-green); color: #fff; }
-    .order-accept-btn { width: 100%; background: var(--app-green); border-color: var(--app-green); color: #fff; box-shadow: 0 3px 10px rgba(31, 157, 85, 0.25); }
+    .order-accept-btn { background: var(--app-green); border-color: var(--app-green); color: #fff; box-shadow: 0 3px 10px rgba(31, 157, 85, 0.25); }
+    .order-decline-btn { background: #fff5f5; border-color: #fca5a5; color: #b91c1c; }
+    .order-decline-btn:hover { background: #fee2e2; }
+    .contract-confirm-box { grid-column: 1 / -1; background: #fff5f5; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.84rem; font-weight: 700; color: #991b1b; }
+    .contract-confirm-btns { display: flex; gap: 8px; }
+    .contract-confirm-btns button { min-height: 36px; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+    .btn-decline-yes { border: 0; background: #dc2626; color: #fff; }
+    .btn-decline-no { border: 1px solid #cbd5e1; background: #fff; color: var(--app-navy); }
 
     /* Profile View */
     .prof-list { display: grid; gap: 10px; }
@@ -219,6 +234,6 @@
   <script src="config.js?v=20261117f"></script>
   <script src="catalog.js?v=20261117a"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="dashboard.js?v=20261126a"></script>
+  <script src="dashboard.js?v=20261126b"></script>
 </body>
 </html>

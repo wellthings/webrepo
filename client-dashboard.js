@@ -7,7 +7,7 @@
   var LOC_KEY = 'ig_loc';
 
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
-  var ORDER_STATUS = { new: 'Order under process', contacted: 'Order assigned', closed: 'Completed' };
+  var ORDER_STATUS = { new: 'Order under process', contacted: 'Order assigned', closed: 'Completed', cancelled: 'Cancelled' };
   var ASSIGN_STATUS = {
     unassigned: 'Finding partner',
     pending: 'Finding partner',
@@ -54,6 +54,7 @@
   var state = {
     tab: 'home',
     orderFilter: 'all',
+    confirmCancelId: null,
     loading: true,
     client: {
       id: clientSess.id || '',
@@ -173,9 +174,10 @@
 
   function orderEffectiveStatus(o) {
     if (!o) return 'new';
+    if (o.status === 'cancelled' || o.cancelled_by_client) return 'cancelled';
     if (o.status === 'closed') return 'closed';
     var hasAcc = !!o.has_accepted_assignment || (Array.isArray(o.order_assignments) && o.order_assignments.some(function (a) { return !!a.accepted; }));
-    if (o.status === 'contacted' || hasAcc) return 'contacted';
+    if (hasAcc || o.status === 'contacted') return 'contacted';
     return 'new';
   }
 
@@ -202,7 +204,7 @@
       if (!a) return;
       if (a.id) assignById[a.id] = a;
       if (a.work_type && !assignByWork[a.work_type]) assignByWork[a.work_type] = a;
-      if (a.accepted && a.assigned_pro) {
+      if (st !== 'cancelled' && a.accepted && a.assigned_pro) {
         var pro = a.assigned_pro;
         var key = (a.id || '') + ':' + (pro.username || '');
         if (!seenProKeys[key]) {
@@ -224,7 +226,9 @@
       var a = (it.assignment_id && assignById[it.assignment_id]) || assignByWork[workType] || null;
       var statusCell = '';
 
-      if (st === 'closed') {
+      if (st === 'cancelled') {
+        statusCell = 'Cancelled';
+      } else if (st === 'closed') {
         statusCell = 'Completed';
         if (a && a.assigned_pro) {
           statusCell += '<span class="cd-pro-sub">' + esc(a.assigned_pro.business_name || '') +
@@ -250,16 +254,36 @@
       );
     }).join('');
 
-    var assignedBanner = acceptedPros.length
-      ? '<div class="cd-assigned-box">' +
+    var statusBanner = '';
+    if (st === 'cancelled') {
+      statusBanner = '<div class="cd-cancelled-box">✕ Order Cancelled — Assignment was reversed across the system.</div>';
+    } else if (acceptedPros.length) {
+      statusBanner = '<div class="cd-assigned-box">' +
         '<div class="cd-assigned-head">✓ Order Assigned</div>' +
         acceptedPros.map(function (p) {
           return '<div class="cd-assigned-item"><strong>' + esc(p.business_name) + '</strong>' +
             (p.username ? ' (<span>@' + esc(p.username) + '</span>)' : '') +
             ' · ' + esc(p.role) + ' — <span style="color:#475569;">' + esc(p.work_type) + '</span></div>';
         }).join('') +
-        '</div>'
-      : '';
+        '</div>';
+    }
+
+    var cancelHtml = '';
+    if (st === 'contacted' || st === 'new') {
+      if (state.confirmCancelId === o.id) {
+        cancelHtml = '<div class="cd-cancel-row">' +
+          '<div class="cd-cancel-confirm">' +
+          '<span>Cancel this order completely? Partner assignment will be reversed.</span>' +
+          '<div class="cd-cancel-confirm-btns">' +
+          '<button type="button" class="cd-cancel-yes" data-ord-cancel-yes="' + esc(o.id) + '">Confirm Cancel</button>' +
+          '<button type="button" class="cd-cancel-no" data-ord-cancel-no="' + esc(o.id) + '">Keep Order</button>' +
+          '</div></div></div>';
+      } else if (st === 'contacted') {
+        cancelHtml = '<div class="cd-cancel-row">' +
+          '<button type="button" class="cd-cancel-btn" data-ord-cancel-ask="' + esc(o.id) + '">Cancel Order</button>' +
+          '</div>';
+      }
+    }
 
     return (
       '<article class="cd-order-row">' +
@@ -273,12 +297,13 @@
       '</div>' +
       '<span class="cd-status-txt st-' + esc(st) + '">' + esc(ORDER_STATUS[st] || 'Order under process') + '</span>' +
       '</div>' +
-      assignedBanner +
+      statusBanner +
       (items.length
         ? '<table class="cd-items-table"><thead><tr><th>Category</th><th>Work Unit</th><th>Type</th><th>Partner Status</th></tr></thead><tbody>' +
           rowsHtml +
           '</tbody></table>'
         : '') +
+      cancelHtml +
       '</article>'
     );
   }
@@ -288,7 +313,8 @@
       all: state.orders.length,
       new: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'new'; }).length,
       contacted: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'contacted'; }).length,
-      closed: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'closed'; }).length
+      closed: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'closed'; }).length,
+      cancelled: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'cancelled'; }).length
     };
     var filtered = state.orderFilter === 'all'
       ? state.orders
@@ -303,6 +329,7 @@
       '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'new' ? 'active' : '') + '" data-ord-flt="new">Under Process (' + counts.new + ')</button>' +
       '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'contacted' ? 'active' : '') + '" data-ord-flt="contacted">Assigned (' + counts.contacted + ')</button>' +
       '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'closed' ? 'active' : '') + '" data-ord-flt="closed">Completed (' + counts.closed + ')</button>' +
+      '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'cancelled' ? 'active' : '') + '" data-ord-flt="cancelled">Cancelled (' + counts.cancelled + ')</button>' +
       '</div>' +
       '</div>';
 
@@ -608,8 +635,52 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-ord-flt]'), function (btn) {
       btn.addEventListener('click', function () {
+        state.confirmCancelId = null;
         state.orderFilter = btn.getAttribute('data-ord-flt') || 'all';
         render();
+        apiFetch('/client/orders').then(function (d) {
+          if (d && Array.isArray(d.data)) {
+            state.orders = d.data;
+            updateCounts();
+            if (state.tab === 'orders') render();
+          }
+        }).catch(function () {});
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ord-cancel-ask]'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.confirmCancelId = btn.getAttribute('data-ord-cancel-ask');
+        render();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ord-cancel-no]'), function (btn) {
+      btn.addEventListener('click', function () {
+        state.confirmCancelId = null;
+        render();
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ord-cancel-yes]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var orderId = btn.getAttribute('data-ord-cancel-yes');
+        btn.disabled = true;
+        btn.textContent = 'Cancelling...';
+        apiFetch('/client/orders/' + encodeURIComponent(orderId) + '/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(function () {
+          state.confirmCancelId = null;
+          showToast('Order cancelled and partner assignment reversed.', false);
+          return fetchDashboardData().then(function () {
+            render();
+          });
+        }).catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Confirm Cancel';
+          showToast((err && err.message) || 'Could not cancel order.', true);
+        });
       });
     });
 

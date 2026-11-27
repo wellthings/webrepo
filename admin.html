@@ -115,6 +115,8 @@
     .ad-pro-pill.accepted { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .ad-pro-pill.completed { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
     .st-busy { background: #fee2e2; color: #b91c1c; }
+    .st-cancelled { background: #fee2e2; color: #991b1b; }
+    .ad-declined-pill { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
     .ad-busy-order { padding: 10px 12px; border-radius: 10px; border: 1px solid #fecaca; background: #fff5f5; display: grid; gap: 4px; font-size: 0.85rem; }
 
     body.ad.drawer-collapsed .ad-drawer { display: none; }
@@ -221,6 +223,7 @@
               <option value="new">New</option>
               <option value="contacted">Contacted</option>
               <option value="closed">Closed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </label>
         </div>
@@ -246,6 +249,6 @@
 
   <script src="config.js?v=20261117f"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="admin.js?v=20261126a"></script>
+  <script src="admin.js?v=20261126b"></script>
 </body>
 </html>

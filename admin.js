@@ -161,6 +161,10 @@
 
   function statusPicker(order) {
     var wrap = el('span', 'ad-right');
+    if (order.status === 'cancelled' || order.cancelled_by_client) {
+      wrap.appendChild(el('span', 'ad-tag st-cancelled', 'Cancelled by Client'));
+      return wrap;
+    }
     wrap.appendChild(el('span', 'ad-tag st-' + order.status, order.status));
     var select = el('select', 'ad-select');
     select.setAttribute('aria-label', 'Order status');
@@ -210,6 +214,7 @@
       var catPart = u.category_name ? ' · ' + u.category_name : '';
       var opt = el('option', '', '[' + roleTag + '] ' + namePart + catPart);
       opt.value = u.id;
+      opt.setAttribute('data-username', u.username || '');
       sel.appendChild(opt);
     });
     return sel;
@@ -302,6 +307,7 @@
     var mergedMap = mergedByOrder[order.id];
 
     var unitsList = el('div', 'ad-units-list');
+    var isOrderCancelled = order.status === 'cancelled' || !!order.cancelled_by_client;
 
     if (!rawItems.length) {
       unitsList.appendChild(el('div', 'ad-empty', 'No units found on this order.'));
@@ -314,9 +320,9 @@
             return cand && cand.partner_id && cand.status !== 'cancelled' && cand.work_type === item.work_type;
           }) || null;
         }
-        var isAssigned = !!(a && a.partner_id && a.status !== 'cancelled' && a.status !== 'unassigned');
-        if (isAssigned && mergedMap[itemKey]) delete mergedMap[itemKey];
-        var isMerged = !isAssigned && !!mergedMap[itemKey];
+        var isAssigned = !isOrderCancelled && !!(a && a.partner_id && a.status !== 'cancelled' && a.status !== 'unassigned');
+        if ((isAssigned || isOrderCancelled) && mergedMap[itemKey]) delete mergedMap[itemKey];
+        var isMerged = !isOrderCancelled && !isAssigned && !!mergedMap[itemKey];
 
         var uCard = el('div', 'ad-unit-card' + (isMerged ? ' is-merged' : '') + (isAssigned ? ' is-assigned' : ''));
         var uMain = el('div', 'ad-unit-main');
@@ -329,14 +335,20 @@
         uMain.appendChild(uInfo);
 
         var uActions = el('div', 'ad-unit-actions');
-        if (isAssigned) {
+        if (isOrderCancelled) {
+          uActions.appendChild(el('span', 'ad-declined-pill', 'Order Cancelled & Reversed'));
+        } else if (isAssigned) {
           var pill = assignPillInfo(a);
           uActions.appendChild(el('span', 'ad-pro-pill ' + pill.cls, pill.text));
+        } else if (a && a.last_declined) {
+          var ld = a.last_declined;
+          uActions.appendChild(el('span', 'ad-declined-pill',
+            'Declined by @' + (ld.username || '-') + (ld.business_name ? ' (' + ld.business_name + ')' : '') + ' — Ready to Re-assign'));
         }
 
         var btnAssign = el('button', 'ad-u-btn primary', openUnitAssign[itemKey] ? 'Close' : 'Assign');
         btnAssign.type = 'button';
-        btnAssign.disabled = isAssigned || !!item._synthetic;
+        btnAssign.disabled = isOrderCancelled || isAssigned || !!item._synthetic;
         if (isAssigned) btnAssign.title = 'Unit is already assigned';
         btnAssign.addEventListener('click', function () {
           openUnitAssign[itemKey] = !openUnitAssign[itemKey];
@@ -345,7 +357,7 @@
 
         var btnMerge = el('button', 'ad-u-btn merge' + (isMerged ? ' active' : ''), isMerged ? 'Merged ✓' : 'Merge');
         btnMerge.type = 'button';
-        btnMerge.disabled = isAssigned || !!item._synthetic;
+        btnMerge.disabled = isOrderCancelled || isAssigned || !!item._synthetic;
         if (isAssigned) btnMerge.title = 'Already assigned unit cannot be merged';
         btnMerge.addEventListener('click', function () {
           if (mergedMap[itemKey]) delete mergedMap[itemKey];
@@ -359,7 +371,7 @@
         uMain.appendChild(uActions);
         uCard.appendChild(uMain);
 
-        if (!isAssigned && !item._synthetic && openUnitAssign[itemKey]) {
+        if (!isOrderCancelled && !isAssigned && !item._synthetic && openUnitAssign[itemKey]) {
           var pop = el('div', 'ad-assign-pop');
           var sel = buildProsSelect('Pick free Partner / Architect for ' + (item.work_unit || item.work_type) + '...');
           var confirmBtn = el('button', 'ad-u-btn primary', 'Confirm Assign');
@@ -369,6 +381,8 @@
 
           confirmBtn.addEventListener('click', function () {
             var pid = sel.value;
+            var opt = sel.options[sel.selectedIndex];
+            var puname = opt ? (opt.getAttribute('data-username') || '') : '';
             if (!pid) { say('Select a free online Partner or Architect first.', true); return; }
             confirmBtn.disabled = true;
             cancelBtn.disabled = true;
@@ -376,8 +390,9 @@
             submitAssignment(order, {
               item_id: item.id,
               partner_id: pid,
+              partner_username: puname || undefined,
               work_type: item.work_type
-            }, 'Assigning unit...')
+            }, 'Verifying username & assigning contract...')
               .then(function () {
                 openUnitAssign[itemKey] = false;
               })
@@ -405,7 +420,7 @@
     }
     unitsWrap.appendChild(unitsList);
 
-    var mergedKeys = Object.keys(mergedMap);
+    var mergedKeys = isOrderCancelled ? [] : Object.keys(mergedMap);
     if (mergedKeys.length > 0) {
       var comboBar = el('div', 'ad-combo-bar');
       var comboTop = el('div', 'ad-combo-top');
@@ -441,14 +456,17 @@
 
       comboBtn.addEventListener('click', function () {
         var pid = comboSel.value;
+        var opt = comboSel.options[comboSel.selectedIndex];
+        var puname = opt ? (opt.getAttribute('data-username') || '') : '';
         if (!pid) { say('Select a free online Partner or Architect for this combo.', true); return; }
         comboBtn.disabled = true;
         comboSel.disabled = true;
         clearBtn.disabled = true;
         submitAssignment(order, {
           item_ids: selectedIds,
-          partner_id: pid
-        }, 'Creating combo assignment...')
+          partner_id: pid,
+          partner_username: puname || undefined
+        }, 'Verifying username & creating combo contract...')
           .catch(function (e) {
             say(e.message, true);
             comboBtn.disabled = false;
