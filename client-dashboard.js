@@ -7,8 +7,16 @@
   var LOC_KEY = 'ig_loc';
 
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
-  var ORDER_STATUS = { new: 'Order under process', contacted: 'Partner assigned', closed: 'Completed' };
-  var ASSIGN_STATUS = { unassigned: 'Finding partner', assigned: 'Partner assigned', completed: 'Completed', cancelled: 'Cancelled' };
+  var ORDER_STATUS = { new: 'Order under process', contacted: 'Order assigned', closed: 'Completed' };
+  var ASSIGN_STATUS = {
+    unassigned: 'Finding partner',
+    pending: 'Finding partner',
+    assigned: 'Finding partner',
+    accepted: 'Order assigned',
+    in_progress: 'Order assigned',
+    completed: 'Completed',
+    cancelled: 'Cancelled'
+  };
   var TAB_TITLES = { home: 'Home', orders: 'Orders', cart: 'Cart', profile: 'Profile', agreement: 'E-Agreement' };
 
   function readJson(k) {
@@ -163,28 +171,95 @@
     });
   }
 
+  function orderEffectiveStatus(o) {
+    if (!o) return 'new';
+    if (o.status === 'closed') return 'closed';
+    var hasAcc = !!o.has_accepted_assignment || (Array.isArray(o.order_assignments) && o.order_assignments.some(function (a) { return !!a.accepted; }));
+    if (o.status === 'contacted' || hasAcc) return 'contacted';
+    return 'new';
+  }
+
   function renderOrderCardHtml(o) {
-    var st = o.status || 'new';
-    var items = Array.isArray(o.items) ? o.items : [];
-    var assignMap = {};
-    (o.order_assignments || []).forEach(function (a) {
-      assignMap[a.work_type] = a.status;
+    var st = orderEffectiveStatus(o);
+    var items = (Array.isArray(o.order_items) && o.order_items.length)
+      ? o.order_items.map(function (it) {
+          return {
+            category: it.work_type || it.category || '-',
+            module: it.work_unit || it.module || '-',
+            mode: it.requirement_type || it.mode || 'new',
+            assignment_id: it.assignment_id || null
+          };
+        })
+      : (Array.isArray(o.items) ? o.items : []);
+
+    var assigns = Array.isArray(o.order_assignments) ? o.order_assignments : [];
+    var assignById = {};
+    var assignByWork = {};
+    var acceptedPros = [];
+    var seenProKeys = {};
+
+    assigns.forEach(function (a) {
+      if (!a) return;
+      if (a.id) assignById[a.id] = a;
+      if (a.work_type && !assignByWork[a.work_type]) assignByWork[a.work_type] = a;
+      if (a.accepted && a.assigned_pro) {
+        var pro = a.assigned_pro;
+        var key = (a.id || '') + ':' + (pro.username || '');
+        if (!seenProKeys[key]) {
+          seenProKeys[key] = 1;
+          acceptedPros.push({
+            work_type: a.work_type || 'Interior Work',
+            role: pro.role === 'architect' ? 'Architect' : 'Partner',
+            business_name: pro.business_name || pro.username || 'Verified Pro',
+            username: pro.username || ''
+          });
+        }
+      }
     });
 
     var rowsHtml = items.map(function (it) {
       var workType = it.category || '-';
       var unit = it.module || '-';
       var mode = MODE_LABEL[it.mode] || it.mode || 'New';
-      var aSt = assignMap[workType] ? (ASSIGN_STATUS[assignMap[workType]] || assignMap[workType]) : (ORDER_STATUS[st] || 'Order under process');
+      var a = (it.assignment_id && assignById[it.assignment_id]) || assignByWork[workType] || null;
+      var statusCell = '';
+
+      if (st === 'closed') {
+        statusCell = 'Completed';
+        if (a && a.assigned_pro) {
+          statusCell += '<span class="cd-pro-sub">' + esc(a.assigned_pro.business_name || '') +
+            (a.assigned_pro.username ? ' (@' + esc(a.assigned_pro.username) + ')' : '') + '</span>';
+        }
+      } else if (a && a.accepted && a.assigned_pro) {
+        var roleLabel = a.assigned_pro.role === 'architect' ? 'Architect' : 'Partner';
+        statusCell = '<strong>Order Assigned</strong><span class="cd-pro-sub">' +
+          esc(a.assigned_pro.business_name || a.assigned_pro.username || roleLabel) +
+          (a.assigned_pro.username ? ' (@' + esc(a.assigned_pro.username) + ')' : '') +
+          ' · ' + esc(roleLabel) + '</span>';
+      } else {
+        statusCell = esc(ASSIGN_STATUS.pending);
+      }
+
       return (
         '<tr>' +
         '<td>' + esc(workType) + '</td>' +
         '<td>' + esc(unit) + '</td>' +
         '<td>' + esc(mode) + '</td>' +
-        '<td>' + esc(aSt) + '</td>' +
+        '<td>' + statusCell + '</td>' +
         '</tr>'
       );
     }).join('');
+
+    var assignedBanner = acceptedPros.length
+      ? '<div class="cd-assigned-box">' +
+        '<div class="cd-assigned-head">✓ Order Assigned</div>' +
+        acceptedPros.map(function (p) {
+          return '<div class="cd-assigned-item"><strong>' + esc(p.business_name) + '</strong>' +
+            (p.username ? ' (<span>@' + esc(p.username) + '</span>)' : '') +
+            ' · ' + esc(p.role) + ' — <span style="color:#475569;">' + esc(p.work_type) + '</span></div>';
+        }).join('') +
+        '</div>'
+      : '';
 
     return (
       '<article class="cd-order-row">' +
@@ -198,6 +273,7 @@
       '</div>' +
       '<span class="cd-status-txt st-' + esc(st) + '">' + esc(ORDER_STATUS[st] || 'Order under process') + '</span>' +
       '</div>' +
+      assignedBanner +
       (items.length
         ? '<table class="cd-items-table"><thead><tr><th>Category</th><th>Work Unit</th><th>Type</th><th>Partner Status</th></tr></thead><tbody>' +
           rowsHtml +
@@ -210,13 +286,13 @@
   function renderOrders() {
     var counts = {
       all: state.orders.length,
-      new: state.orders.filter(function (o) { return o.status === 'new'; }).length,
-      contacted: state.orders.filter(function (o) { return o.status === 'contacted'; }).length,
-      closed: state.orders.filter(function (o) { return o.status === 'closed'; }).length
+      new: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'new'; }).length,
+      contacted: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'contacted'; }).length,
+      closed: state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'closed'; }).length
     };
     var filtered = state.orderFilter === 'all'
       ? state.orders
-      : state.orders.filter(function (o) { return o.status === state.orderFilter; });
+      : state.orders.filter(function (o) { return orderEffectiveStatus(o) === state.orderFilter; });
 
     var html =
       '<section class="cd-panel">' +
@@ -683,6 +759,15 @@
     state.tab = nextTab;
     closeSidebarDrawer();
     if (nextTab === 'agreement') loadAgreementIfNeeded();
+    if (nextTab === 'orders') {
+      apiFetch('/client/orders').then(function (d) {
+        if (d && Array.isArray(d.data)) {
+          state.orders = d.data;
+          updateCounts();
+          if (state.tab === 'orders') render();
+        }
+      }).catch(function () {});
+    }
     render();
     if (nextTab === 'home' && scrollSectionId) {
       setTimeout(function () {

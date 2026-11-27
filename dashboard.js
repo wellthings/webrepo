@@ -195,6 +195,14 @@
     lbl.className = 'app-online-txt ' + (state.isOnline ? 'on' : 'off');
   }
 
+  function updateOrderTabBadge() {
+    var badge = $('tab-order-badge');
+    if (!badge) return;
+    var pendingCount = state.orders.filter(function (o) { return o.status === 'pending'; }).length;
+    badge.textContent = String(pendingCount);
+    badge.hidden = pendingCount <= 0;
+  }
+
   function setOnlineState(next) {
     var prev = state.isOnline;
     state.isOnline = next;
@@ -314,6 +322,7 @@
     ]).then(function () {
       if (!state.quota.products) recomputeLocalQuotas();
       updateTopBar();
+      updateOrderTabBadge();
     });
   }
 
@@ -874,29 +883,64 @@
   }
 
   function renderOrders() {
+    updateOrderTabBadge();
     var pendingCount = state.orders.filter(function (o) { return o.status === 'pending'; }).length;
     var progCount = state.orders.filter(function (o) { return o.status === 'in_progress'; }).length;
     var compCount = state.orders.filter(function (o) { return o.status === 'completed'; }).length;
     var list = state.orders.filter(function (o) { return o.status === state.orderFilter; });
+    var MODE_TXT = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
+    var STATUS_BADGE = { pending: 'Awaiting Acceptance', in_progress: 'Accepted', completed: 'Completed' };
 
     var html = '<section class="app-section">' +
       '<div class="app-sec-head"><h2>Assigned Orders</h2><span class="app-sec-meta">' + state.orders.length + ' total</span></div>' +
       '<div class="order-segs" role="tablist">' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Pending (' + pendingCount + ')</button>' +
-      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'in_progress' ? 'active' : '') + '" data-ord-flt="in_progress">Progress (' + progCount + ')</button>' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'in_progress' ? 'active' : '') + '" data-ord-flt="in_progress">Accepted (' + progCount + ')</button>' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'completed' ? 'active' : '') + '" data-ord-flt="completed">Complete (' + compCount + ')</button>' +
       '</div>';
 
     if (!list.length) {
-      html += '<div class="app-empty">No ' + esc(state.orderFilter.replace('_', ' ')) + ' orders right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
+      var emptyLabel = state.orderFilter === 'in_progress' ? 'accepted' : state.orderFilter.replace('_', ' ');
+      html += '<div class="app-empty">No ' + esc(emptyLabel) + ' orders right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
     } else {
       list.forEach(function (o) {
+        var units = Array.isArray(o.units) ? o.units : [];
+        var hasCoords = o.latitude != null && o.longitude != null && !isNaN(Number(o.latitude)) && !isNaN(Number(o.longitude));
+        var mapHtml = hasCoords
+          ? ' <a href="https://www.google.com/maps?q=' + encodeURIComponent(Number(o.latitude) + ',' + Number(o.longitude)) + '" target="_blank" rel="noopener noreferrer">(Open Map)</a>'
+          : '';
+        var phoneHtml = o.client_phone
+          ? '<div class="order-read-line"><span>Client Phone</span><a href="tel:+91' + esc(String(o.client_phone).replace(/[^0-9+]/g, '')) + '">+91 ' + esc(o.client_phone) + '</a></div>'
+          : '';
+        var unitsHtml = units.length
+          ? '<div class="order-unit-list">' + units.map(function (u) {
+              var m = MODE_TXT[u.requirement_type] || u.requirement_type || 'New';
+              return '<span class="order-unit-chip">' + esc(u.work_unit || u.work_type || 'Unit') + ' · ' + esc(u.work_type || '') + ' (' + esc(m) + ')</span>';
+            }).join('') + '</div>'
+          : '';
+
         html += '<div class="order-row">' +
-          '<div class="order-row-top"><strong>' + (o.order_no ? 'Order #' + esc(o.order_no) : esc(o.work_type || 'Project')) + '</strong><span class="app-sec-meta">' + esc(o.status.replace('_', ' ').toUpperCase()) + '</span></div>' +
-          '<div class="app-item-desc">Work: ' + esc(o.work_type) + ' · Location: ' + esc(o.location_name || 'Client Site') + '</div>' +
+          '<div class="order-row-top">' +
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+          '<strong>' + (o.order_no ? 'Order #' + esc(o.order_no) : esc(o.work_type || 'Project')) + '</strong>' +
+          (o.is_combo ? '<span class="order-combo-badge">COMBO BUNDLE</span>' : '') +
+          '</div>' +
+          '<span class="order-status-pill ' + esc(o.status) + '">' + esc(STATUS_BADGE[o.status] || o.status) + '</span>' +
+          '</div>' +
+          '<div class="order-read-box">' +
+          '<div class="order-read-line"><span>Client</span><strong>' + esc(o.client_name || 'Interagood Client') + '</strong></div>' +
+          '<div class="order-read-line"><span>Site Address</span><strong>' + esc(o.location_name || 'Client Site') + '</strong>' + mapHtml + '</div>' +
+          phoneHtml +
+          '<div class="order-read-line"><span>Work</span><strong>' + esc(o.work_type || 'Interior Work') + '</strong></div>' +
+          unitsHtml +
+          '</div>' +
           '<div class="order-actions">' +
-          (o.status === 'pending' ? '<button type="button" class="order-act-btn" data-ord-id="' + esc(o.id) + '" data-ord-next="in_progress">Start Progress</button>' : '') +
-          (o.status !== 'completed' ? '<button type="button" class="order-act-btn primary" data-ord-id="' + esc(o.id) + '" data-ord-next="completed">Mark Complete</button>' : '') +
+          (o.status === 'pending'
+            ? '<button type="button" class="order-act-btn order-accept-btn" data-ord-id="' + esc(o.id) + '" data-ord-next="in_progress">Accept Order</button>'
+            : '') +
+          (o.status === 'in_progress'
+            ? '<button type="button" class="order-act-btn primary" data-ord-id="' + esc(o.id) + '" data-ord-next="completed">Mark Complete</button>'
+            : '') +
           '</div></div>';
       });
     }
@@ -913,17 +957,30 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-ord-next]'), function (btn) {
       btn.addEventListener('click', function () {
         var id = btn.getAttribute('data-ord-id'), next = btn.getAttribute('data-ord-next');
+        var origText = btn.textContent;
         btn.disabled = true;
+        btn.textContent = next === 'in_progress' ? 'Accepting...' : 'Updating...';
         api('/users/' + session.uuid + '/orders/' + id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: next })
         }).then(function () {
-          state.orders.forEach(function (o) { if (o.id === id) o.status = next; });
+          state.orders.forEach(function (o) {
+            if (o.id === id) {
+              o.status = next;
+              if (next === 'in_progress' || next === 'completed') o.accepted = true;
+            }
+          });
+          if (next === 'in_progress') state.orderFilter = 'in_progress';
+          updateOrderTabBadge();
           renderOrders();
-          showToast('Order updated!', false);
+          showToast(next === 'in_progress' ? 'Order accepted! Client can now see your business details.' : 'Order marked completed!', false);
+          return fetchAllData().then(function () {
+            if (state.activeTab === 'orders') renderOrders();
+          });
         }).catch(function (err) {
           btn.disabled = false;
+          btn.textContent = origText;
           showToast(err.message, true);
         });
       });

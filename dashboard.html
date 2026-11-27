@@ -96,11 +96,23 @@
     .order-segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; background: #e2e8f0; border-radius: 12px; margin-bottom: 14px; }
     .order-seg-btn { min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #475569; font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .order-seg-btn.active { background: #fff; color: var(--app-navy); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
-    .order-row { border: 1px solid var(--app-line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; margin-bottom: 10px; background: #fff; }
-    .order-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .order-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-    .order-act-btn { min-height: 40px; padding: 8px 14px; border-radius: 9px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; color: var(--app-navy); }
+    .order-row { border: 1px solid var(--app-line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; margin-bottom: 12px; background: #fff; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
+    .order-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .order-combo-badge { padding: 2px 8px; border-radius: 999px; background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.03em; }
+    .order-status-pill { padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+    .order-status-pill.pending { background: #fef3c7; color: #92400e; }
+    .order-status-pill.in_progress { background: #dcfce7; color: #166534; }
+    .order-status-pill.completed { background: #e0f2fe; color: #075985; }
+    .order-read-box { background: #f8fafc; border: 1px solid var(--app-line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; font-size: 0.86rem; color: #334155; }
+    .order-read-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+    .order-read-line span { color: #64748b; font-weight: 700; min-width: 82px; font-size: 0.8rem; }
+    .order-read-line strong, .order-read-line a { color: var(--app-navy); }
+    .order-unit-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .order-unit-chip { padding: 4px 10px; border-radius: 8px; background: #fff; border: 1px solid #cbd5e1; color: var(--app-navy); font-size: 0.78rem; font-weight: 700; }
+    .order-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+    .order-act-btn { min-height: 42px; padding: 9px 16px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer; color: var(--app-navy); }
     .order-act-btn.primary { background: var(--app-green); border-color: var(--app-green); color: #fff; }
+    .order-accept-btn { width: 100%; background: var(--app-green); border-color: var(--app-green); color: #fff; box-shadow: 0 3px 10px rgba(31, 157, 85, 0.25); }
 
     /* Profile View */
     .prof-list { display: grid; gap: 10px; }
@@ -135,9 +147,12 @@
     /* Fixed App Bottom Navigation Bar (4 Tabs: Home, Order, Profile, Card) */
     .app-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--app-line); }
     .app-bottom-inner { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: 64px; }
-    .app-tab-btn { border: 0; background: transparent; color: #64748b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; font: inherit; min-height: 44px; padding: 4px; }
+    .app-tab-btn { position: relative; border: 0; background: transparent; color: #64748b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; font: inherit; min-height: 44px; padding: 4px; }
+    .app-tab-badge { position: absolute; top: 5px; margin-left: 24px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--app-orange); color: #fff; font-size: 0.68rem; font-weight: 800; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+    .app-tab-badge[hidden] { display: none; }
     .app-tab-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .app-tab-btn span { font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+    .app-tab-badge { font-size: 0.68rem !important; }
     .app-tab-btn.active { color: var(--app-orange); }
     .app-tab-btn.active svg { stroke: var(--app-orange); stroke-width: 2.3; }
   </style>
@@ -187,6 +202,7 @@
       </button>
       <button type="button" class="app-tab-btn" data-tab="orders">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+        <span class="app-tab-badge" id="tab-order-badge" hidden>0</span>
         <span>Order</span>
       </button>
       <button type="button" class="app-tab-btn" data-tab="profile">
@@ -203,6 +219,6 @@
   <script src="config.js?v=20261117f"></script>
   <script src="catalog.js?v=20261117a"></script>
   <script src="pwa.js?v=20261117f"></script>
-  <script src="dashboard.js?v=20261117a"></script>
+  <script src="dashboard.js?v=20261126a"></script>
 </body>
 </html>

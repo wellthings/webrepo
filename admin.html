@@ -79,6 +79,44 @@
     .ad-sample-item img { width: 100%; height: 96px; object-fit: cover; display: block; }
     .ad-sample-item div { padding: 6px 8px; font-size: 0.76rem; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* Highlighted Client Section & Unit / Merge / Combo Assign UI */
+    .ad-order-card { padding: 0; overflow: hidden; }
+    .ad-client-hero { background: linear-gradient(135deg, #edf4ff 0%, #f8fbff 100%); border-bottom: 1.5px solid #cfe0fa; padding: 16px 18px; }
+    .ad-client-hero .ad-top { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(11, 31, 58, 0.08); }
+    .ad-units-wrap { padding: 16px 18px 18px; }
+    .ad-units-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .ad-units-head .ad-sub { margin: 0; }
+    .ad-units-list { display: grid; gap: 10px; }
+    .ad-unit-card { border: 1.5px solid var(--line); border-radius: 12px; background: #f8fafc; padding: 12px 14px; display: grid; gap: 10px; transition: border-color 0.15s, background 0.15s; }
+    .ad-unit-card.is-merged { border-color: var(--orange); background: #fff7ed; box-shadow: 0 0 0 2px rgba(247, 127, 0, 0.14); }
+    .ad-unit-card.is-assigned { background: #fff; border-color: #cbd5e1; }
+    .ad-unit-main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .ad-unit-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+    .ad-unit-title { font-size: 0.95rem; font-weight: 800; color: var(--navy); }
+    .ad-unit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .ad-u-btn { min-height: 36px; padding: 6px 14px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: #fff; color: var(--navy); font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+    .ad-u-btn:hover:not(:disabled) { border-color: var(--navy); background: #f1f5f9; }
+    .ad-u-btn.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .ad-u-btn.primary:hover:not(:disabled) { background: #16335c; }
+    .ad-u-btn.merge.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .ad-u-btn.combo { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .ad-u-btn.combo:hover:not(:disabled) { background: var(--orange-dark); border-color: var(--orange-dark); }
+    .ad-u-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ad-assign-pop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px dashed #94a3b8; }
+    .ad-assign-pop select { flex: 1; min-width: 210px; }
+    .ad-combo-bar { margin-top: 12px; padding: 14px; border-radius: 12px; border: 1.5px solid var(--orange); background: #fff7ed; display: grid; gap: 10px; }
+    .ad-combo-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .ad-combo-title { font-size: 0.88rem; font-weight: 800; color: #9a3412; }
+    .ad-combo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ad-combo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .ad-combo-controls select { flex: 1; min-width: 220px; }
+    .ad-pro-pill { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; }
+    .ad-pro-pill.pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .ad-pro-pill.accepted { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .ad-pro-pill.completed { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    .st-busy { background: #fee2e2; color: #b91c1c; }
+    .ad-busy-order { padding: 10px 12px; border-radius: 10px; border: 1px solid #fecaca; background: #fff5f5; display: grid; gap: 4px; font-size: 0.85rem; }
+
     body.ad.drawer-collapsed .ad-drawer { display: none; }
 
     @media (max-width: 900px) {
@@ -121,6 +159,14 @@
           <span>Orders</span>
         </span>
         <span class="ad-nav-count" id="cnt-orders">-</span>
+      </button>
+
+      <button type="button" class="ad-nav-item" id="nav-busy" data-section="busy">
+        <span class="ad-nav-left">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>Busy</span>
+        </span>
+        <span class="ad-nav-count" id="cnt-busy">-</span>
       </button>
 
       <button type="button" class="ad-nav-item" id="nav-architect" data-section="architect">
@@ -198,8 +244,8 @@
     </main>
   </div>
 
-  <script src="config.js?v=20261104d"></script>
-  <script src="pwa.js?v=20261113"></script>
-  <script src="admin.js?v=20261116b"></script>
+  <script src="config.js?v=20261117f"></script>
+  <script src="pwa.js?v=20261117f"></script>
+  <script src="admin.js?v=20261126a"></script>
 </body>
 </html>
