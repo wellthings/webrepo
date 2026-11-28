@@ -71,6 +71,8 @@
     products: [],
     samples: [],
     orders: [],
+    ordersError: '',
+    ordersLoading: false,
     orderFilter: 'pending',
     quota: {
       samples: { totalUsed: 0, imagesUsed: 0, videosUsed: 0, maxTotal: SAMPLE_LIMITS.total, maxImages: SAMPLE_LIMITS.image, maxVideos: SAMPLE_LIMITS.video },
@@ -98,12 +100,46 @@
     setTimeout(function () { if (el.parentNode) el.remove(); }, 3600);
   }
 
-  function api(path, options) {
+  var refreshInFlight = null;
+  function refreshAuthTokens() {
+    if (refreshInFlight) return refreshInFlight;
+    if (!session || !session.refreshToken || session.refreshToken === 'test_refresh') {
+      return Promise.reject(new Error('Session expired'));
+    }
+    refreshInFlight = fetch(API + '/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: session.refreshToken })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok || !d.accessToken) throw new Error('Session expired');
+        session.accessToken = d.accessToken;
+        if (d.refreshToken) session.refreshToken = d.refreshToken;
+        try { sessionStorage.setItem('ig_session', JSON.stringify(session)); } catch (e) {}
+        return d.accessToken;
+      });
+    }).finally(function () {
+      refreshInFlight = null;
+    });
+    return refreshInFlight;
+  }
+
+  function api(path, options, _retried) {
     if (isLocalTest) return Promise.resolve({ success: true, data: session.profile || null });
     options = options || {};
-    options.headers = Object.assign({ Authorization: 'Bearer ' + session.accessToken }, options.headers || {});
-    return fetch(API + path, options).then(function (r) {
+    var headers = Object.assign({ Authorization: 'Bearer ' + session.accessToken }, options.headers || {});
+    var reqOpts = Object.assign({}, options, { headers: headers });
+    return fetch(API + path, reqOpts).then(function (r) {
       if (r.status === 401) {
+        if (!_retried && session && session.refreshToken && session.refreshToken !== 'test_refresh') {
+          return refreshAuthTokens().then(function () {
+            return api(path, options, true);
+          }).catch(function () {
+            sessionStorage.removeItem('ig_session');
+            location.replace('partner-program.html#login');
+            throw new Error('Session expired');
+          });
+        }
         sessionStorage.removeItem('ig_session');
         location.replace('partner-program.html#login');
         throw new Error('Session expired');
@@ -318,12 +354,45 @@
       }),
       api('/users/' + session.uuid + '/orders').then(function (d) {
         state.orders = (d && Array.isArray(d.data)) ? d.data : [];
-      }).catch(function () {})
+        state.ordersError = '';
+      }).catch(function (err) {
+        state.ordersError = (err && err.message) || 'Could not load assigned orders.';
+      })
     ]).then(function () {
       if (!state.quota.products) recomputeLocalQuotas();
       updateTopBar();
       updateOrderTabBadge();
     });
+  }
+
+  var ordersFetchInFlight = null;
+  function fetchOrdersOnly(explicit) {
+    if (isLocalTest) {
+      state.orders = loadLocal('orders');
+      state.ordersError = '';
+      updateOrderTabBadge();
+      if (state.activeTab === 'orders') renderOrders();
+      return Promise.resolve();
+    }
+    if (ordersFetchInFlight) return ordersFetchInFlight;
+    if (explicit) {
+      state.ordersLoading = true;
+      if (state.activeTab === 'orders') renderOrders();
+    }
+    ordersFetchInFlight = api('/users/' + session.uuid + '/orders').then(function (d) {
+      state.orders = (d && Array.isArray(d.data)) ? d.data : [];
+      state.ordersError = '';
+      updateOrderTabBadge();
+      if (state.activeTab === 'orders') renderOrders();
+    }).catch(function (err) {
+      state.ordersError = (err && err.message) || 'Could not load assigned orders.';
+      if (explicit) showToast(state.ordersError, true);
+      if (state.activeTab === 'orders') renderOrders();
+    }).finally(function () {
+      state.ordersLoading = false;
+      ordersFetchInFlight = null;
+    });
+    return ordersFetchInFlight;
   }
 
   // ---- Bottom Sheet Helpers ----
@@ -889,19 +958,27 @@
     var compCount = state.orders.filter(function (o) { return o.status === 'completed'; }).length;
     var list = state.orders.filter(function (o) { return o.status === state.orderFilter; });
     var MODE_TXT = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
-    var STATUS_BADGE = { pending: 'New Contract', in_progress: 'Accepted', completed: 'Completed' };
+    var STATUS_BADGE = { pending: 'Assigned · New', in_progress: 'Accepted', completed: 'Completed' };
 
     var html = '<section class="app-section">' +
-      '<div class="app-sec-head"><h2>Order Contracts</h2><span class="app-sec-meta">' + state.orders.length + ' total</span></div>' +
+      '<div class="app-sec-head"><h2>Order Contracts</h2>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<span class="app-sec-meta">' + state.orders.length + ' total</span>' +
+      '<button type="button" class="orders-refresh-btn" id="btn-refresh-orders"' + (state.ordersLoading ? ' disabled' : '') + '>' + (state.ordersLoading ? 'Syncing...' : 'Refresh') + '</button>' +
+      '</div></div>' +
       '<div class="order-segs" role="tablist">' +
-      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Accept (' + pendingCount + ')</button>' +
+      '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'pending' ? 'active' : '') + '" data-ord-flt="pending">Assigned (' + pendingCount + ')</button>' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'in_progress' ? 'active' : '') + '" data-ord-flt="in_progress">Accepted (' + progCount + ')</button>' +
       '<button type="button" class="order-seg-btn ' + (state.orderFilter === 'completed' ? 'active' : '') + '" data-ord-flt="completed">Complete (' + compCount + ')</button>' +
       '</div>';
 
+    if (state.ordersError) {
+      html += '<div class="orders-err-box"><span>' + esc(state.ordersError) + '</span><button type="button" class="orders-refresh-btn" id="btn-retry-orders">Retry</button></div>';
+    }
+
     if (!list.length) {
-      var emptyLabel = state.orderFilter === 'pending' ? 'new contract offers' : (state.orderFilter === 'in_progress' ? 'accepted contracts' : 'completed orders');
-      html += '<div class="app-empty">No ' + esc(emptyLabel) + ' right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.</div>';
+      var emptyLabel = state.orderFilter === 'pending' ? 'assigned orders awaiting accept/decline' : (state.orderFilter === 'in_progress' ? 'accepted contracts' : 'completed orders');
+      html += '<div class="app-empty">' + (state.ordersLoading ? 'Checking for assigned orders...' : ('No ' + esc(emptyLabel) + ' right now. Keep your <strong>Online</strong> toggle active to receive Admin assignments.')) + '</div>';
     } else {
       list.forEach(function (o) {
         var units = Array.isArray(o.units) && o.units.length
@@ -976,6 +1053,17 @@
     }
     html += '</section>';
     $('app-content').innerHTML = html;
+
+    if ($('btn-refresh-orders')) {
+      $('btn-refresh-orders').addEventListener('click', function () {
+        fetchOrdersOnly(true);
+      });
+    }
+    if ($('btn-retry-orders')) {
+      $('btn-retry-orders').addEventListener('click', function () {
+        fetchOrdersOnly(true);
+      });
+    }
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-ord-flt]'), function (btn) {
       btn.addEventListener('click', function () {
@@ -1135,11 +1223,24 @@
 
   Array.prototype.forEach.call(document.querySelectorAll('.app-tab-btn'), function (b) {
     b.addEventListener('click', function () {
-      state.activeTab = b.getAttribute('data-tab');
+      var nextTab = b.getAttribute('data-tab');
+      state.activeTab = nextTab;
       render();
+      if (nextTab === 'orders') {
+        fetchOrdersOnly(true);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
+
+  // Auto-sync incoming Admin assignments when user returns to app or every 20s while visible
+  window.addEventListener('focus', function () { fetchOrdersOnly(false); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') fetchOrdersOnly(false);
+  });
+  setInterval(function () {
+    if (document.visibilityState === 'visible') fetchOrdersOnly(false);
+  }, 20000);
 
   // ---- Init ----
   updateTopBar();
