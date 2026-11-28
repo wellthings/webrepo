@@ -2,6 +2,9 @@
   var API = (window.SITE && window.SITE.apiBase) || '';
   var TOKEN_KEY = 'ig_admin_token';
   var ACTIVE_KEY = 'ig_admin_session_token';
+  var META_KEY = 'ig_admin_meta';
+  var IDLE_TIMEOUT_MS = 60 * 1000;
+  var CHANNEL_NAME = 'ig_admin_presence';
   var EXIT_PAGE = 'index.html';
   var MODE_LABEL = { new: 'New', repair: 'Repairing', full_interior: 'Full interior' };
   var ORDER_STATUSES = ['new', 'contacted', 'closed'];
@@ -15,10 +18,196 @@
   };
   var $ = function (id) { return document.getElementById(id); };
 
+  function readMeta() {
+    try {
+      var raw = localStorage.getItem(META_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function writeMeta(meta) {
+    try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {}
+  }
+
+  function clearStoredAuth() {
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
+    try { localStorage.removeItem(META_KEY); } catch (e) {}
+  }
+
+  function revokeTokenOnServer(tok) {
+    if (!tok || !API) return;
+    try {
+      if (navigator.sendBeacon) {
+        var blob = new Blob([JSON.stringify({ token: tok })], { type: 'application/json' });
+        if (navigator.sendBeacon(API + '/admin/logout', blob)) return;
+      }
+    } catch (e) {}
+    try {
+      fetch(API + '/admin/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+        body: JSON.stringify({ token: tok }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  var loggingOut = false;
+  function performLogout(redirect) {
+    if (loggingOut) return;
+    loggingOut = true;
+    var tok = '';
+    try { tok = token || sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || ''; } catch (e) {}
+    clearStoredAuth();
+    revokeTokenOnServer(tok);
+    if (typeof BroadcastChannel === 'function') {
+      try {
+        var bcOut = new BroadcastChannel(CHANNEL_NAME);
+        bcOut.postMessage({ type: 'force_logout' });
+        bcOut.close();
+      } catch (e) {}
+    }
+    if (redirect !== false) location.replace(EXIT_PAGE);
+  }
+
+  function isSessionExpired(meta) {
+    if (!meta || !meta.lastActive) return true;
+    var now = Date.now();
+    if (now - Number(meta.lastActive) >= IDLE_TIMEOUT_MS) return true;
+    if (meta.hiddenAt && (now - Number(meta.hiddenAt) >= IDLE_TIMEOUT_MS)) return true;
+    if (meta.closedAt && (now - Number(meta.closedAt) >= IDLE_TIMEOUT_MS)) return true;
+    return false;
+  }
+
   var token = '';
   try { token = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || ''; } catch (e) {}
-  if (!token) { location.replace(EXIT_PAGE); return; }
-  try { sessionStorage.setItem(TOKEN_KEY, token); localStorage.setItem(ACTIVE_KEY, token); } catch (e) {}
+  var bootMeta = readMeta();
+  if (!token || isSessionExpired(bootMeta)) {
+    performLogout(true);
+    return;
+  }
+  try {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(ACTIVE_KEY, token);
+    bootMeta.lastActive = Date.now();
+    bootMeta.hiddenAt = null;
+    bootMeta.closedAt = null;
+    writeMeta(bootMeta);
+  } catch (e) {}
+
+  var awayTimer = null;
+  var presenceChannel = null;
+
+  function checkExpiryNow() {
+    if (loggingOut) return true;
+    var curTok = '';
+    try { curTok = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || ''; } catch (e) {}
+    if (!curTok || isSessionExpired(readMeta())) {
+      performLogout(true);
+      return true;
+    }
+    return false;
+  }
+
+  function armAwayTimer(elapsedMs) {
+    if (awayTimer) clearTimeout(awayTimer);
+    var wait = Math.max(150, IDLE_TIMEOUT_MS - (elapsedMs || 0) + 150);
+    awayTimer = setTimeout(checkExpiryNow, wait);
+  }
+
+  function markAway() {
+    if (loggingOut) return;
+    var m = readMeta() || { lastActive: Date.now() };
+    var now = Date.now();
+    if (!m.hiddenAt) m.hiddenAt = now;
+    writeMeta(m);
+    armAwayTimer(now - Number(m.hiddenAt));
+  }
+
+  function markActive() {
+    if (loggingOut) return;
+    if (checkExpiryNow()) return;
+    if (document.visibilityState === 'hidden') return;
+    if (awayTimer) { clearTimeout(awayTimer); awayTimer = null; }
+    var m = readMeta() || {};
+    m.lastActive = Date.now();
+    m.hiddenAt = null;
+    m.closedAt = null;
+    writeMeta(m);
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') markAway();
+    else markActive();
+  });
+  window.addEventListener('blur', markAway);
+  window.addEventListener('focus', markActive);
+  window.addEventListener('pageshow', function () {
+    if (!checkExpiryNow() && document.visibilityState === 'visible') markActive();
+  });
+  window.addEventListener('pagehide', function () {
+    if (loggingOut) return;
+    var m = readMeta() || { lastActive: Date.now() };
+    m.closedAt = Date.now();
+    if (!m.hiddenAt) m.hiddenAt = Date.now();
+    writeMeta(m);
+  });
+  window.addEventListener('beforeunload', function () {
+    if (loggingOut) return;
+    var m = readMeta() || { lastActive: Date.now() };
+    m.closedAt = Date.now();
+    writeMeta(m);
+  });
+
+  var lastActTouch = 0;
+  function onUserInput() {
+    if (document.visibilityState !== 'visible') return;
+    var now = Date.now();
+    if (now - lastActTouch < 1000) return;
+    lastActTouch = now;
+    markActive();
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (evName) {
+    document.addEventListener(evName, onUserInput, { passive: true });
+  });
+
+  setInterval(function () {
+    if (checkExpiryNow()) return;
+    if (document.visibilityState === 'visible' && (!document.hasFocus || document.hasFocus())) {
+      var m = readMeta() || {};
+      m.lastActive = Date.now();
+      m.hiddenAt = null;
+      m.closedAt = null;
+      writeMeta(m);
+    }
+  }, 3000);
+
+  if (typeof BroadcastChannel === 'function') {
+    try {
+      presenceChannel = new BroadcastChannel(CHANNEL_NAME);
+      presenceChannel.onmessage = function (ev) {
+        if (!ev || !ev.data) return;
+        if (ev.data.type === 'ping') {
+          if (!loggingOut && !checkExpiryNow()) {
+            try { presenceChannel.postMessage({ type: 'pong', ts: Date.now() }); } catch (e) {}
+          }
+        } else if (ev.data.type === 'force_logout') {
+          clearStoredAuth();
+          loggingOut = true;
+          location.replace(EXIT_PAGE);
+        }
+      };
+    } catch (e) {}
+  }
+
+  window.addEventListener('storage', function (e) {
+    if (e.key === ACTIVE_KEY && !e.newValue && !loggingOut) {
+      clearStoredAuth();
+      loggingOut = true;
+      location.replace(EXIT_PAGE);
+    }
+  });
 
   var msg = $('ad-msg');
   var ordersEl = $('panel-orders');
@@ -128,9 +317,7 @@
     options.headers = Object.assign({ Authorization: 'Bearer ' + token }, options.headers || {});
     return fetch(API + path, options).then(function (r) {
       if (r.status === 401) {
-        try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
-        try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
-        location.replace(EXIT_PAGE);
+        performLogout(true);
         throw new Error('Session expired');
       }
       return r.json().catch(function () { return {}; }).then(function (d) {
@@ -727,9 +914,7 @@
   if (fltOnline) fltOnline.addEventListener('change', function () { load(currentSection); });
 
   $('ad-logout').addEventListener('click', function () {
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
-    try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
-    location.replace(EXIT_PAGE);
+    performLogout(true);
   });
 
   api('/admin/me')

@@ -61,7 +61,7 @@
     </section>
   </main>
 
-  <script src="config.js?v=20261116a"></script>
+  <script src="config.js?v=20261127a"></script>
   <script>
     (function () {
       'use strict';
@@ -85,9 +85,85 @@
       var timer = null;
       var busy = false;
 
-      function clearStored() {
+      var META_KEY = 'ig_admin_meta';
+      var IDLE_TIMEOUT_MS = 60 * 1000;
+      var CHANNEL_NAME = 'ig_admin_presence';
+
+      function readMeta() {
+        try {
+          var raw = localStorage.getItem(META_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+      }
+
+      function writeMeta(meta) {
+        try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {}
+      }
+
+      function revokeServerToken(tok) {
+        if (!tok || !API) return;
+        try {
+          fetch(API + '/admin/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+            body: JSON.stringify({ token: tok }),
+            keepalive: true
+          }).catch(function () {});
+        } catch (e) {}
+      }
+
+      function clearStored(revokeServer) {
+        var oldTok = '';
+        try { oldTok = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || ''; } catch (e) {}
         try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
         try { localStorage.removeItem(ACTIVE_KEY); } catch (e) {}
+        try { localStorage.removeItem(META_KEY); } catch (e) {}
+        if (revokeServer && oldTok) revokeServerToken(oldTok);
+        if (revokeServer && typeof BroadcastChannel === 'function') {
+          try {
+            var bc = new BroadcastChannel(CHANNEL_NAME);
+            bc.postMessage({ type: 'force_logout' });
+            bc.close();
+          } catch (e) {}
+        }
+      }
+
+      function isMetaExpired(meta) {
+        if (!meta || !meta.lastActive) return true;
+        var now = Date.now();
+        if (now - Number(meta.lastActive) >= IDLE_TIMEOUT_MS) return true;
+        if (meta.hiddenAt && (now - Number(meta.hiddenAt) >= IDLE_TIMEOUT_MS)) return true;
+        if (meta.closedAt && (now - Number(meta.closedAt) >= IDLE_TIMEOUT_MS)) return true;
+        return false;
+      }
+
+      function pingActiveAdminTab(timeoutMs) {
+        return new Promise(function (resolve) {
+          if (typeof BroadcastChannel !== 'function') { resolve(false); return; }
+          var done = false;
+          var bc;
+          try {
+            bc = new BroadcastChannel(CHANNEL_NAME);
+            bc.onmessage = function (ev) {
+              if (!done && ev && ev.data && ev.data.type === 'pong') {
+                done = true;
+                try { bc.close(); } catch (e) {}
+                resolve(true);
+              }
+            };
+            bc.postMessage({ type: 'ping', ts: Date.now() });
+          } catch (e) {
+            resolve(false);
+            return;
+          }
+          setTimeout(function () {
+            if (!done) {
+              done = true;
+              try { bc.close(); } catch (e) {}
+              resolve(false);
+            }
+          }, timeoutMs || 320);
+        });
       }
 
       function lockRoute() {
@@ -130,30 +206,42 @@
         });
       }
 
-      // Guard: if admin is already logged in (same tab or another tab), keep this route closed
+      // Guard: clear stale/closed/expired admin sessions so user is never locked out,
+      // and only lock route if a live admin tab is actively open right now.
       var existingToken = '';
       try {
         existingToken = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(ACTIVE_KEY) || '';
       } catch (e) { existingToken = ''; }
+      var existingMeta = readMeta();
 
-      if (existingToken && API) {
-        fetch(API + '/admin/me', {
-          headers: { Authorization: 'Bearer ' + existingToken }
-        })
-          .then(function (r) {
-            if (r.ok) {
-              lockRoute();
-            } else {
-              clearStored();
-              openRoute();
-            }
-          })
-          .catch(function () {
-            // If offline/network fail while token exists, do not expose admin login
-            lockRoute();
-          });
-      } else {
+      if (!existingToken || !API) {
+        clearStored(false);
         openRoute();
+      } else if (isMetaExpired(existingMeta)) {
+        clearStored(true);
+        openRoute();
+      } else {
+        pingActiveAdminTab(320).then(function (hasLiveTab) {
+          if (!hasLiveTab) {
+            clearStored(true);
+            openRoute();
+            return;
+          }
+          fetch(API + '/admin/me', {
+            headers: { Authorization: 'Bearer ' + existingToken }
+          })
+            .then(function (r) {
+              if (r.ok) {
+                lockRoute();
+              } else {
+                clearStored(false);
+                openRoute();
+              }
+            })
+            .catch(function () {
+              lockRoute();
+            });
+        });
       }
 
       if (toggle) {
@@ -223,6 +311,12 @@
           .then(function (d) {
             try { sessionStorage.setItem(TOKEN_KEY, d.token); } catch (err) {}
             try { localStorage.setItem(ACTIVE_KEY, d.token); } catch (err) {}
+            writeMeta({
+              sid: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+              lastActive: Date.now(),
+              hiddenAt: null,
+              closedAt: null
+            });
             location.replace('admin.html');
           })
           .catch(function (err) {
