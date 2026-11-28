@@ -1,5 +1,5 @@
 // Interagood Service Worker for PWA Offline & Asset Caching
-const CACHE_NAME = 'interagood-pwa-v15';
+const CACHE_NAME = 'interagood-pwa-v16';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

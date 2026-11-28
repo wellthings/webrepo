@@ -417,16 +417,79 @@
     .cd-items-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: var(--ink); }
     .cd-items-table tr:last-child td { border-bottom: 0; }
     .cd-assigned-box {
+      padding: 14px;
+      border-radius: 12px;
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      display: grid;
+      gap: 10px;
+    }
+    .cd-assigned-head { font-size: 0.8rem; font-weight: 800; color: #15803d; letter-spacing: 0.04em; text-transform: uppercase; }
+    .cd-assigned-notice {
+      padding: 14px;
+      border-radius: 12px;
+      background: #ecfdf5;
+      border: 1.5px solid #6ee7b7;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .cd-assigned-notice-txt { display: grid; gap: 2px; min-width: 200px; flex: 1; }
+    .cd-assigned-notice-txt strong { color: #065f46; font-size: 0.92rem; }
+    .cd-assigned-notice-txt span { color: #047857; font-size: 0.82rem; font-weight: 600; }
+    .cd-pro-card {
+      background: #fff;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .cd-pro-info { display: grid; gap: 2px; min-width: 180px; flex: 1; }
+    .cd-pro-role { display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0b1f3a; background: #e0f2fe; padding: 2px 8px; border-radius: 999px; width: fit-content; margin-bottom: 2px; }
+    .cd-pro-biz { font-size: 0.96rem; font-weight: 800; color: var(--navy); }
+    .cd-pro-uname { font-size: 0.82rem; font-weight: 700; color: #15803d; }
+    .cd-pro-work { font-size: 0.78rem; color: #475569; }
+    .cd-pro-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cd-contact-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 8px 14px;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .cd-contact-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .cd-contact-btn.call { background: #0b1f3a; color: #fff; }
+    .cd-contact-btn.call:hover { background: #16335c; }
+    .cd-contact-btn.wa { background: #16a34a; color: #fff; }
+    .cd-contact-btn.wa:hover { background: #15803d; }
+    .cd-client-box {
       padding: 12px 14px;
       border-radius: 10px;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
+      background: #f8fafc;
+      border: 1px solid var(--line);
       display: grid;
-      gap: 6px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px 14px;
     }
-    .cd-assigned-head { font-size: 0.8rem; font-weight: 800; color: #15803d; letter-spacing: 0.03em; text-transform: uppercase; }
-    .cd-assigned-item { font-size: 0.88rem; color: var(--navy); }
-    .cd-assigned-item strong { color: #0f172a; }
+    .cd-client-kv { display: grid; gap: 1px; }
+    .cd-client-kv span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .cd-client-kv strong { font-size: 0.86rem; color: var(--navy); overflow-wrap: anywhere; }
+    .cd-order-row.is-highlight { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16); }
     .cd-pro-sub { display: block; font-size: 0.78rem; color: #475569; margin-top: 2px; }
     .cd-cancelled-box {
       padding: 10px 14px;
@@ -918,6 +981,6 @@
   <script src="app.js?v=20261106-a"></script>
   <script src="browse.js?v=20261126c"></script>
   <script src="gallery.js?v=20261117f"></script>
-  <script src="client-dashboard.js?v=20261126f"></script>
+  <script src="client-dashboard.js?v=20261127a"></script>
 </body>
 </html>

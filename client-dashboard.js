@@ -51,9 +51,15 @@
     return;
   }
 
+  function cleanPhone10(raw) {
+    var d = String(raw || '').replace(/\D/g, '');
+    return d.length > 10 ? d.slice(-10) : d;
+  }
+
   var state = {
     tab: 'home',
     orderFilter: 'all',
+    focusOrderId: null,
     confirmCancelId: null,
     loading: true,
     client: {
@@ -213,11 +219,37 @@
             work_type: a.work_type || 'Interior Work',
             role: pro.role === 'architect' ? 'Architect' : 'Partner',
             business_name: pro.business_name || pro.username || 'Verified Pro',
-            username: pro.username || ''
+            username: pro.username || '',
+            phone: pro.phone || ''
           });
         }
       }
     });
+
+    // Inside "All" tab: once an order is accepted, hide "Order under process" and show the Assignment notice + "Order Details" button that moves client into Assigned tab
+    if (st === 'contacted' && state.orderFilter === 'all') {
+      return (
+        '<article class="cd-order-row" data-cd-order="' + esc(o.id) + '">' +
+        '<div class="cd-order-top">' +
+        '<div>' +
+        '<div class="cd-order-id">' + (o.order_no ? 'Order #' + esc(o.order_no) : 'Service Request') + '</div>' +
+        '<div class="cd-order-meta">' +
+        esc(fmtDateTime(o.created_at) || 'Just now') +
+        (o.location_name ? ' · ' + esc(o.location_name) : '') +
+        '</div>' +
+        '</div>' +
+        '<span class="cd-status-txt st-contacted">Order Assigned</span>' +
+        '</div>' +
+        '<div class="cd-assigned-notice">' +
+        '<div class="cd-assigned-notice-txt">' +
+        '<strong>✓ Order Assigned</strong>' +
+        '<span>Aapka order successfully assign kar diya gaya hai — yahan click karke dekh sakte hain.</span>' +
+        '</div>' +
+        '<button type="button" class="cd-btn primary" data-open-assigned="' + esc(o.id) + '">Order Details</button>' +
+        '</div>' +
+        '</article>'
+      );
+    }
 
     var rowsHtml = items.map(function (it) {
       var workType = it.category || '-';
@@ -254,16 +286,49 @@
       );
     }).join('');
 
+    var clientInfoHtml = '';
+    if (st === 'contacted' || st === 'closed') {
+      var cName = o.client_name || state.client.name || 'Client';
+      var cPhone = cleanPhone10(o.client_phone || state.client.phone);
+      var cLoc = o.location_name || state.client.location_name || '-';
+      clientInfoHtml = '<div class="cd-client-box">' +
+        '<div class="cd-client-kv"><span>Client Name</span><strong>' + esc(cName) + '</strong></div>' +
+        '<div class="cd-client-kv"><span>Client Mobile</span><strong>' + esc(cPhone ? '+91 ' + cPhone : '-') + '</strong></div>' +
+        '<div class="cd-client-kv"><span>Site Address</span><strong>' + esc(cLoc) + '</strong></div>' +
+        '</div>';
+    }
+
     var statusBanner = '';
     if (st === 'cancelled') {
       statusBanner = '<div class="cd-cancelled-box">✕ Order Cancelled — Assignment was reversed across the system.</div>';
     } else if (acceptedPros.length) {
       statusBanner = '<div class="cd-assigned-box">' +
-        '<div class="cd-assigned-head">✓ Order Assigned</div>' +
+        '<div class="cd-assigned-head">✓ Assigned ' + esc(acceptedPros.length > 1 ? 'Professionals' : acceptedPros[0].role) + '</div>' +
         acceptedPros.map(function (p) {
-          return '<div class="cd-assigned-item"><strong>' + esc(p.business_name) + '</strong>' +
-            (p.username ? ' (<span>@' + esc(p.username) + '</span>)' : '') +
-            ' · ' + esc(p.role) + ' — <span style="color:#475569;">' + esc(p.work_type) + '</span></div>';
+          var p10 = cleanPhone10(p.phone);
+          var waText = 'Namaste ' + (p.business_name || p.username || 'Sir/Ma\'am') +
+            ', main Interagood ' + (o.order_no ? 'Order #' + o.order_no : 'order') +
+            ' (' + (p.work_type || 'Interior Work') + ') ke baare mein baat kar raha hoon.';
+          var contactBtns = p10.length >= 10
+            ? '<div class="cd-pro-actions">' +
+              '<a class="cd-contact-btn call" href="tel:+91' + esc(p10) + '">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3.1-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.4 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>' +
+              'Call</a>' +
+              '<a class="cd-contact-btn wa" href="https://wa.me/91' + esc(p10) + '?text=' + encodeURIComponent(waText) + '" target="_blank" rel="noopener noreferrer">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>' +
+              'Message</a>' +
+              '</div>'
+            : '<div class="cd-pro-actions"><span class="cd-order-meta">Contact number pending</span></div>';
+
+          return '<div class="cd-pro-card">' +
+            '<div class="cd-pro-info">' +
+            '<span class="cd-pro-role">' + esc(p.role) + '</span>' +
+            '<div class="cd-pro-biz">' + esc(p.business_name) + '</div>' +
+            (p.username ? '<div class="cd-pro-uname">@' + esc(p.username) + '</div>' : '') +
+            '<div class="cd-pro-work">Work: ' + esc(p.work_type) + '</div>' +
+            '</div>' +
+            contactBtns +
+            '</div>';
         }).join('') +
         '</div>';
     }
@@ -285,8 +350,9 @@
       }
     }
 
+    var isHi = state.focusOrderId && state.focusOrderId === o.id;
     return (
-      '<article class="cd-order-row">' +
+      '<article class="cd-order-row' + (isHi ? ' is-highlight' : '') + '" data-cd-order="' + esc(o.id) + '">' +
       '<div class="cd-order-top">' +
       '<div>' +
       '<div class="cd-order-id">' + (o.order_no ? 'Order #' + esc(o.order_no) : 'Service Request') + '</div>' +
@@ -297,6 +363,7 @@
       '</div>' +
       '<span class="cd-status-txt st-' + esc(st) + '">' + esc(ORDER_STATUS[st] || 'Order under process') + '</span>' +
       '</div>' +
+      clientInfoHtml +
       statusBanner +
       (items.length
         ? '<table class="cd-items-table"><thead><tr><th>Category</th><th>Work Unit</th><th>Type</th><th>Partner Status</th></tr></thead><tbody>' +
@@ -320,6 +387,20 @@
       ? state.orders
       : state.orders.filter(function (o) { return orderEffectiveStatus(o) === state.orderFilter; });
 
+    var assignedList = state.orders.filter(function (o) { return orderEffectiveStatus(o) === 'contacted'; });
+    var underProcessNotice = '';
+    if (state.orderFilter === 'new' && assignedList.length) {
+      var latestAssigned = assignedList[0];
+      underProcessNotice =
+        '<div class="cd-assigned-notice">' +
+        '<div class="cd-assigned-notice-txt">' +
+        '<strong>✓ ' + (latestAssigned.order_no ? 'Order #' + esc(latestAssigned.order_no) : 'Order') + ' Assigned</strong>' +
+        '<span>Aapka order successfully assign kar diya gaya hai — yahan click karke dekh sakte hain.</span>' +
+        '</div>' +
+        '<button type="button" class="cd-btn primary" data-open-assigned="' + esc(latestAssigned.id) + '">Order Details</button>' +
+        '</div>';
+    }
+
     var html =
       '<section class="cd-panel">' +
       '<div class="cd-panel-head">' +
@@ -331,14 +412,16 @@
       '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'closed' ? 'active' : '') + '" data-ord-flt="closed">Completed (' + counts.closed + ')</button>' +
       '<button type="button" class="cd-seg-btn ' + (state.orderFilter === 'cancelled' ? 'active' : '') + '" data-ord-flt="cancelled">Cancelled (' + counts.cancelled + ')</button>' +
       '</div>' +
-      '</div>';
+      '</div>' +
+      underProcessNotice;
 
     if (!filtered.length) {
-      html +=
-        '<div class="cd-empty">' +
-        '<span>No orders match this status yet.</span>' +
-        '<button type="button" class="cd-btn primary" data-go-home="marketplace">Explore Marketplace</button>' +
-        '</div>';
+      html += state.orderFilter === 'new' && assignedList.length
+        ? ''
+        : '<div class="cd-empty">' +
+          '<span>No orders match this status yet.</span>' +
+          '<button type="button" class="cd-btn primary" data-go-home="marketplace">Explore Marketplace</button>' +
+          '</div>';
     } else {
       html += '<div class="cd-list">' + filtered.map(renderOrderCardHtml).join('') + '</div>';
     }
@@ -633,18 +716,27 @@
       });
     });
 
+    Array.prototype.forEach.call(document.querySelectorAll('[data-open-assigned]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var targetId = btn.getAttribute('data-open-assigned') || null;
+        state.confirmCancelId = null;
+        state.focusOrderId = targetId;
+        state.orderFilter = 'contacted';
+        render();
+        setTimeout(function () {
+          var card = targetId ? document.querySelector('[data-cd-order="' + targetId + '"]') : null;
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 40);
+      });
+    });
+
     Array.prototype.forEach.call(document.querySelectorAll('[data-ord-flt]'), function (btn) {
       btn.addEventListener('click', function () {
         state.confirmCancelId = null;
+        state.focusOrderId = null;
         state.orderFilter = btn.getAttribute('data-ord-flt') || 'all';
         render();
-        apiFetch('/client/orders').then(function (d) {
-          if (d && Array.isArray(d.data)) {
-            state.orders = d.data;
-            updateCounts();
-            if (state.tab === 'orders') render();
-          }
-        }).catch(function () {});
+        syncClientOrders();
       });
     });
 
@@ -931,6 +1023,31 @@
       });
     }
   });
+
+  var ordersSyncBusy = false;
+  function syncClientOrders() {
+    if (ordersSyncBusy) return Promise.resolve();
+    ordersSyncBusy = true;
+    return apiFetch('/client/orders').then(function (d) {
+      if (d && Array.isArray(d.data)) {
+        state.orders = d.data;
+        updateCounts();
+        if (state.tab === 'orders') render();
+      }
+    }).catch(function () {}).finally(function () {
+      ordersSyncBusy = false;
+    });
+  }
+
+  window.addEventListener('focus', function () {
+    syncClientOrders();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') syncClientOrders();
+  });
+  setInterval(function () {
+    if (document.visibilityState === 'visible') syncClientOrders();
+  }, 15000);
 
   updateUserHeader();
   updateCounts();
