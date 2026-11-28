@@ -24,4 +24,10 @@ window.SITE = {
   // PayU Hosted Checkout (set payuTestMode: false when switching back to real PayU payments)
   payuHostedCheckout: true,
   payuTestMode: true,
+  // Site-wide maintenance banner toggle
+  maintenance: {
+    enabled: true,
+    badge: 'Under Maintenance',
+    message: 'Website par abhi maintenance aur upgrade ka kaam chal raha hai. Kuch services temporarily update ho rahi hain — asuvidha ke liye khed hai.'
+  },
 };

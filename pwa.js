@@ -233,10 +233,42 @@
     }
   };
 
-  // Check initial install button after DOM is ready
+  // 5. Site-wide Maintenance Banner
+  function renderMaintenanceBanner() {
+    var m = window.SITE && window.SITE.maintenance;
+    if (!m || !m.enabled || document.getElementById('ig-maintenance-banner') || !document.body) return;
+
+    var bar = document.createElement('div');
+    bar.id = 'ig-maintenance-banner';
+    bar.setAttribute('role', 'region');
+    bar.setAttribute('aria-label', 'Website maintenance notice');
+    bar.style.cssText = 'position:relative;z-index:85;background:linear-gradient(90deg,#78350f 0%,#b45309 50%,#92400e 100%);color:#fffbeb;border-bottom:2px solid #f59e0b;padding:10px 14px;font-family:inherit;box-shadow:0 2px 10px rgba(120,53,15,0.22);';
+
+    var inner = document.createElement('div');
+    inner.style.cssText = 'max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;text-align:center;line-height:1.4;';
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#78350f;font-size:0.74rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;padding:3px 10px;border-radius:6px;white-space:nowrap;';
+    badge.textContent = m.badge || 'Under Maintenance';
+
+    var msg = document.createElement('span');
+    msg.style.cssText = 'font-size:0.86rem;font-weight:600;color:#fffbeb;';
+    msg.textContent = m.message || 'Website is currently under maintenance. We will be back at full capacity shortly.';
+
+    inner.appendChild(badge);
+    inner.appendChild(msg);
+    bar.appendChild(inner);
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  // Check initial install button & maintenance banner after DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderInstallButton);
+    document.addEventListener('DOMContentLoaded', function () {
+      renderMaintenanceBanner();
+      renderInstallButton();
+    });
   } else {
+    renderMaintenanceBanner();
     renderInstallButton();
   }
 })();
